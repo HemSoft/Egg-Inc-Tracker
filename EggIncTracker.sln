@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34701.34
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EggIncTracker", "EggIncTracker.csproj", "{AB66F8C7-5A3D-4514-B65B-8BB0B75CDBD1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Models", "Models", "{148A4294-59A8-4ACB-BDCF-D868823A3F22}"
+	ProjectSection(SolutionItems) = preProject
+		PlayerInfo.cs = PlayerInfo.cs
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AB66F8C7-5A3D-4514-B65B-8BB0B75CDBD1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB66F8C7-5A3D-4514-B65B-8BB0B75CDBD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB66F8C7-5A3D-4514-B65B-8BB0B75CDBD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB66F8C7-5A3D-4514-B65B-8BB0B75CDBD1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {79E76027-4593-44D9-B49D-0DECEA012956}
+	EndGlobalSection
+EndGlobal
