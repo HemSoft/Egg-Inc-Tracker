@@ -3,12 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34701.34
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EggIncTracker", "EggIncTracker.csproj", "{AB66F8C7-5A3D-4514-B65B-8BB0B75CDBD1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Console", "Console\Console.csproj", "{1A217B21-257E-4CD0-8B85-6B24F14766C5}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Models", "Models", "{148A4294-59A8-4ACB-BDCF-D868823A3F22}"
-	ProjectSection(SolutionItems) = preProject
-		PlayerInfo.cs = PlayerInfo.cs
-	EndProjectSection
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Data", "Data\Data.csproj", "{4FF0469A-7DD1-48C8-B961-CE9411F9EF74}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domain", "Domain\Domain.csproj", "{E0EEB8D0-0F37-479B-B3CF-BE4B14319EF0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UpdatePlayerFunction", "UpdatePlayerFunction\UpdatePlayerFunction.csproj", "{23091931-7C25-4C80-A275-D3D0D0F178B2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -16,10 +17,22 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{AB66F8C7-5A3D-4514-B65B-8BB0B75CDBD1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AB66F8C7-5A3D-4514-B65B-8BB0B75CDBD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AB66F8C7-5A3D-4514-B65B-8BB0B75CDBD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AB66F8C7-5A3D-4514-B65B-8BB0B75CDBD1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1A217B21-257E-4CD0-8B85-6B24F14766C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A217B21-257E-4CD0-8B85-6B24F14766C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A217B21-257E-4CD0-8B85-6B24F14766C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A217B21-257E-4CD0-8B85-6B24F14766C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4FF0469A-7DD1-48C8-B961-CE9411F9EF74}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4FF0469A-7DD1-48C8-B961-CE9411F9EF74}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4FF0469A-7DD1-48C8-B961-CE9411F9EF74}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4FF0469A-7DD1-48C8-B961-CE9411F9EF74}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E0EEB8D0-0F37-479B-B3CF-BE4B14319EF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E0EEB8D0-0F37-479B-B3CF-BE4B14319EF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E0EEB8D0-0F37-479B-B3CF-BE4B14319EF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E0EEB8D0-0F37-479B-B3CF-BE4B14319EF0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{23091931-7C25-4C80-A275-D3D0D0F178B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{23091931-7C25-4C80-A275-D3D0D0F178B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{23091931-7C25-4C80-A275-D3D0D0F178B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{23091931-7C25-4C80-A275-D3D0D0F178B2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
