@@ -1,0 +1,136 @@
+﻿@page "/"
+
+<PageTitle>Home</PageTitle>
+
+<h1>Egg Inc -- Player Stats!</h1>
+
+@code {
+    @using HemSoft.EggIncTracker.Domain;
+    @using HemSoft.EggIncTracker.Data;
+    @using HemSoft.EggIncTracker.Data.Dtos;
+
+    private EggIncContext context = new EggIncContext();
+    protected PlayerDto? dbPlayer1;
+    protected PlayerDto? dbPlayer2;
+    protected PlayerDto? dbPlayer3;
+    protected double progress1;
+    protected double progress2;
+    protected double progress3;
+    protected DateTime updatedCst1;
+    protected DateTime updatedCst2;
+    protected DateTime updatedCst3;
+    protected DateTime projectedCst1;
+    protected DateTime projectedCst2;
+    protected DateTime projectedCst3;
+
+    protected override void OnInitialized()
+    {
+        // Player 1:
+        dbPlayer1 = context.Players
+            .Where(x => x.EID == "EI6335140328505344")
+            .OrderByDescending(z => z.Updated)
+            .FirstOrDefault();
+        progress1 = dbPlayer1?.TitleProgress ?? 0;
+        progress1 = Math.Round(progress1, 2);
+
+        TimeZoneInfo cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
+
+        DateTime updatedUtc1 = dbPlayer1.Updated;
+        updatedCst1 = TimeZoneInfo.ConvertTimeFromUtc(updatedUtc1, cstZone);
+
+        DateTime projectedUtc1 = dbPlayer1.ProjectedTitleChange;
+        projectedCst1 = TimeZoneInfo.ConvertTimeFromUtc(projectedUtc1, cstZone);
+
+        // Player 2:
+        dbPlayer2 = context.Players
+            .Where(x => x.EID == "EI5435770400276480")
+            .OrderByDescending(z => z.Updated)
+            .FirstOrDefault();
+        progress2 = dbPlayer2?.TitleProgress ?? 0;
+        progress2 = Math.Round(progress2, 2);
+
+        DateTime updatedUtc2 = dbPlayer2.Updated;
+        updatedCst2 = TimeZoneInfo.ConvertTimeFromUtc(updatedUtc2, cstZone);
+
+        DateTime projectedUtc2 = dbPlayer2.ProjectedTitleChange;
+        projectedCst2 = TimeZoneInfo.ConvertTimeFromUtc(projectedUtc2, cstZone);
+
+        // Player 3:
+        dbPlayer3 = context.Players
+            .Where(x => x.EID == "EI6306349753958400")
+            .OrderByDescending(z => z.Updated)
+            .FirstOrDefault();
+        progress3 = dbPlayer3?.TitleProgress ?? 0;
+        progress3 = Math.Round(progress3, 2);
+
+        DateTime updatedUtc3 = dbPlayer3.Updated;
+        updatedCst3 = TimeZoneInfo.ConvertTimeFromUtc(updatedUtc3, cstZone);
+
+        DateTime projectedUtc3 = dbPlayer3.ProjectedTitleChange;
+        projectedCst3 = TimeZoneInfo.ConvertTimeFromUtc(projectedUtc3, cstZone);
+    }
+}
+
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Player</th>
+            <th>Title</th>
+            <th>Progress</th>
+            <th>Next Title</th>
+            <th>Projected</th>
+            <th>SE</th>
+            <th>PE</th>
+            <th>EB</th>
+            <th>Updated</th>
+            <th>LLC</th>
+            <th>MER</th>
+            <th>JER</th>
+        </tr>
+    </thead>
+    <tr>
+        <td>King Friday!</td>
+        <td>@dbPlayer1?.Title</td>
+@*         <td>@string.Format("{0:0.00}", dbPlayer1?.TitleProgress)%</td>
+        *@
+        <td><RadzenProgressBar @bind-Value="@progress1" /></td>
+        <td>@dbPlayer1?.NextTitle</td>
+        <td>@projectedCst1</td>
+        <td>@dbPlayer1?.SoulEggs</td>
+        <td>@dbPlayer1?.ProphecyEggs</td>
+        <td>@dbPlayer1?.EarningsBonusPercentage</td>
+        <td>@updatedCst1</td>
+        <td>@dbPlayer1?.LLC</td>
+        <td>@dbPlayer1?.MER</td>
+        <td>@dbPlayer1?.JER</td>
+    </tr>
+    <tr>
+        <td>King Saturday!</td>
+        <td>@dbPlayer2?.Title</td>
+        <td><RadzenProgressBar @bind-Value="@progress2" /></td>
+        <td>@dbPlayer2?.NextTitle</td>
+        <td>@projectedCst2</td>
+        <td>@dbPlayer2?.SoulEggs</td>
+        <td>@dbPlayer2?.ProphecyEggs</td>
+        <td>@dbPlayer2?.EarningsBonusPercentage</td>
+        <td>@updatedCst2</td>
+        <td>@dbPlayer2?.LLC</td>
+        <td>@dbPlayer2?.MER</td>
+        <td>@dbPlayer2?.JER</td>
+    </tr>
+    <tr>
+        <td>King Sunday!</td>
+        <td>@dbPlayer3?.Title</td>
+        <td><RadzenProgressBar @bind-Value="@progress3" /></td>
+        <td>@dbPlayer3?.NextTitle</td>
+        <td>@projectedCst3</td>
+        <td>@dbPlayer3?.SoulEggs</td>
+        <td>@dbPlayer3?.ProphecyEggs</td>
+        <td>@dbPlayer3?.EarningsBonusPercentage</td>
+        <td>@updatedCst3</td>
+        <td>@dbPlayer3?.LLC</td>
+        <td>@dbPlayer3?.MER</td>
+        <td>@dbPlayer3?.JER</td>
+    </tr>
+</table>

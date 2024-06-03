@@ -4,6 +4,7 @@ using HemSoft.EggIncTracker.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(EggIncContext))]
-    partial class EggIncContextModelSnapshot : ModelSnapshot
+    [Migration("20240527222157_Add ProjectedTitleChange")]
+    partial class AddProjectedTitleChange
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -34,10 +37,6 @@ namespace Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("EID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("EarningsBonusPerHour")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

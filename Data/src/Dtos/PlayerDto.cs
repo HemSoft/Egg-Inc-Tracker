@@ -22,6 +22,13 @@ public class PlayerDto
     public float LLC { get; set; }
     public int ProphecyEggs { get; set; }
     public required string SoulEggs { get; set; }
+    public required string SoulEggsFull { get; set; }
+    public required string EarningsBonusPercentage { get; set; }
+    public required string EarningsBonusPerHour { get; set; }
+    public required string Title { get; set; }
+    public required string NextTitle { get; set; }
+    public double TitleProgress { get; set; }
+    public DateTime ProjectedTitleChange { get; set; }
     public float MER { get; set; }
     public float JER { get; set; }
     public int CraftingLevel { get; set; }
@@ -46,6 +53,11 @@ public class PlayerDto
             LLC = GetFloat(apiResponse, @"Your LLC:\s+(\d+\.\d+)"),
             ProphecyEggs = GetNumber(apiResponse, @"Prophecy eggs:\s+(\d+)"),
             SoulEggs = FormatBigInteger(se),
+            SoulEggsFull = se,
+            EarningsBonusPercentage = string.Empty,
+            EarningsBonusPerHour = string.Empty,
+            Title = string.Empty,
+            NextTitle = string.Empty,
             JER = GetFloat(apiResponse, @"Your JER is:\s+(\d+\.\d+)"),
             MER = GetFloat(apiResponse, @"Your MER is:\s+(\d+\.\d+)"),
             CraftingLevel = GetNumber(apiResponse, @"Crafting level:\s+(\d+)"),
@@ -134,6 +146,8 @@ public class PlayerDto
             $"Name .........: {PlayerName}\n" +
             $"Prophecy Eggs : {ProphecyEggs}\n" +
             $"Soul Eggs ....: {SoulEggs}\n" +
+            $"Earnings Bonus: {EarningsBonusPercentage}\n" +
+            $"Title ........: {Title}\n" +
             $"LLC ..........: {LLC}\n" +
             $"MER ..........: {MER}\n" +
             $"JER ..........: {JER}\n" +

@@ -18,6 +18,10 @@ public static class Api
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadAsStringAsync();
             var pi = PlayerDto.ApiToPlayer(eId, playerName, result);
+            pi.EarningsBonusPercentage = PlayerManager.CalculateEarningsBonusPercentage(pi);
+            (pi.Title, pi.NextTitle, pi.TitleProgress) = 
+                PlayerManager.GetTitleWithProgress(PlayerManager.CalculateEarningsBonusPercentageNumber(pi));
+            pi.ProjectedTitleChange = PlayerManager.CalculateProjectedTitleChange(pi);
             return pi;
         }
         catch (HttpRequestException e)

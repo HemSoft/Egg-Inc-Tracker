@@ -4,6 +4,7 @@ using HemSoft.EggIncTracker.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(EggIncContext))]
-    partial class EggIncContextModelSnapshot : ModelSnapshot
+    [Migration("20240525161428_Add Title")]
+    partial class AddTitle
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -34,10 +37,6 @@ namespace Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("EID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("EarningsBonusPerHour")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -66,10 +65,6 @@ namespace Data.Migrations
                     b.Property<float>("MER")
                         .HasColumnType("real");
 
-                    b.Property<string>("NextTitle")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("PiggyConsumeValue")
                         .HasColumnType("int");
 
@@ -82,9 +77,6 @@ namespace Data.Migrations
                     b.Property<string>("PlayerName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("ProjectedTitleChange")
-                        .HasColumnType("datetime2");
 
                     b.Property<int>("ProphecyEggs")
                         .HasColumnType("int");
@@ -103,9 +95,6 @@ namespace Data.Migrations
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<double>("TitleProgress")
-                        .HasColumnType("float");
 
                     b.Property<int>("TotalCraftsThatCanBeLegendary")
                         .HasColumnType("int");

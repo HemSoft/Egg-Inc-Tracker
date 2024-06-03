@@ -26,9 +26,9 @@ namespace UpdatePlayerFunction
 
             var player = Api.CallApi("EI6335140328505344", "King Friday!", "https://eggincdatacollection.azurewebsites.net/api/formulae/all?eid=EI6335140328505344").Result;
             PlayerManager.SavePlayer(player, _logger);
-            var player2 = Api.CallApi("EI5435770400276480", "HemSoft02", "https://eggincdatacollection.azurewebsites.net/api/formulae/all?eid=EI5435770400276480").Result;
+            var player2 = Api.CallApi("EI5435770400276480", "King Saturday!", "https://eggincdatacollection.azurewebsites.net/api/formulae/all?eid=EI5435770400276480").Result;
             PlayerManager.SavePlayer(player2, _logger);
-            var player3 = Api.CallApi("EI6306349753958400", "HemSoft03", "https://eggincdatacollection.azurewebsites.net/api/formulae/all?eid=EI6306349753958400").Result;
+            var player3 = Api.CallApi("EI6306349753958400", "King Sunday!", "https://eggincdatacollection.azurewebsites.net/api/formulae/all?eid=EI6306349753958400").Result;
             PlayerManager.SavePlayer(player3, _logger);
 
             if (myTimer.ScheduleStatus is not null)
