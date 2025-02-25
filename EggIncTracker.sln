@@ -13,6 +13,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UpdatePlayerFunction", "Upd
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Web", "Web\Web.csproj", "{2D26865F-2FFB-4B00-9B25-FB6D161187BB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EggDash", "EggDash\EggDash.csproj", "{C13DC607-59F2-B706-4655-DA0B01622564}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EggDash.Client", "EggDash.Client\EggDash.Client.csproj", "{A20D7CC7-1C38-931A-2D7D-9BACD04BE41A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +43,14 @@ Global
 		{2D26865F-2FFB-4B00-9B25-FB6D161187BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2D26865F-2FFB-4B00-9B25-FB6D161187BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2D26865F-2FFB-4B00-9B25-FB6D161187BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C13DC607-59F2-B706-4655-DA0B01622564}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C13DC607-59F2-B706-4655-DA0B01622564}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C13DC607-59F2-B706-4655-DA0B01622564}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C13DC607-59F2-B706-4655-DA0B01622564}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A20D7CC7-1C38-931A-2D7D-9BACD04BE41A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A20D7CC7-1C38-931A-2D7D-9BACD04BE41A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A20D7CC7-1C38-931A-2D7D-9BACD04BE41A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A20D7CC7-1C38-931A-2D7D-9BACD04BE41A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

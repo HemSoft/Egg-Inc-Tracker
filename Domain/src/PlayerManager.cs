@@ -1,20 +1,41 @@
 ﻿namespace HemSoft.EggIncTracker.Domain;
 
 using System.Linq;
-using System.Linq.Expressions;
 using System.Numerics;
+
+using global::Domain.src;
 
 using HemSoft.EggIncTracker.Data;
 using HemSoft.EggIncTracker.Data.Dtos;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 public static class PlayerManager
 {
-    public static void SavePlayer(PlayerDto player, ILogger ?logger)
+    public static async Task<PlayerStatsDto?> GetRankedPlayersAsync(string playerName, int recordLimit, int sampleDaysBack, ILogger? logger)
     {
-        logger?.LogInformation(@"Received request to saver player " + player.EID + " " + player.SoulEggs);
+        try
+        {
+            await using var context = new EggIncContext();
 
+            var rankings = await context.Set<PlayerStatsDto>()
+                .FromSqlRaw(
+                    $"EXEC GetRankedPlayerRecords @RecordLimit = {recordLimit}, @SampleDaysBack = {sampleDaysBack}")
+                .ToListAsync();
+
+            logger?.LogInformation("Successfully retrieved player rankings");
+            return rankings.First(x => x.PlayerName == playerName);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Failed to retrieve player rankings");
+            return null;
+        }
+    }
+
+    public static (bool, PlayerDto) SavePlayer(PlayerDto player, JsonPlayerRoot fullPlayerInfo, ILogger ?logger)
+    {
         var context = new EggIncContext();
         var getLatestEntry = context.Players
             .Where(x => x.EID == player.EID)
@@ -23,31 +44,48 @@ public static class PlayerManager
 
         if (getLatestEntry != null)
         {
-            logger?.LogInformation(@"Comparing " + player.EID + " " + player.EarningsBonusPercentage + " to " + getLatestEntry.EarningsBonusPercentage);
             if (getLatestEntry.EarningsBonusPercentage != player.EarningsBonusPercentage)
             {
-                logger?.LogInformation("Saving ...");
+                logger?.LogInformation($"\u001b[32mEB increased for " + player.PlayerName + " " + getLatestEntry.EarningsBonusPercentage + " to " + player.EarningsBonusPercentage + "\u001b[0m");
                 context.Players.Add(player);
                 context.SaveChanges();
                 logger?.LogInformation("Done ...");
-                return;
+                return (true, getLatestEntry);
             }
-        }
-        else
-        {
-            logger?.LogInformation("Saving ...");
-            context.Players.Add(player);
-            context.SaveChanges();
+
+            return (false, null);
         }
 
-        logger?.LogInformation("Done.");
+        try
+        {
+            logger?.LogInformation(@$"Saving first entry for {player.PlayerName}...");
+            context.Players.Add(player);
+            context.SaveChanges();
+            logger?.LogInformation("Done.");
+            return (true, null);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
     }
 
     public static string CalculateEarningsBonusPercentage(PlayerDto player)
     {
         var sefull = BigInteger.Parse(player.SoulEggsFull);
         var eb = sefull * new BigInteger(150 * Math.Pow(1.1, player.ProphecyEggs));
-        var ebn = PlayerDto.FormatBigInteger(eb.ToString()) + "%";
+        var ebn = Utils.FormatBigInteger(eb.ToString()) + "%";
+
+        var earningsBonusString = ebn;
+        return earningsBonusString;
+    }
+
+    public static string CalculateEarningsBonusPercentage(string soulEggString, int prophecyEggs)
+    {
+        var sefull = BigInteger.Parse(soulEggString);
+        var eb = sefull * new BigInteger(150 * Math.Pow(1.1, prophecyEggs));
+        var ebn = Utils.FormatBigInteger(eb.ToString()) + "%";
 
         var earningsBonusString = ebn;
         return earningsBonusString;
@@ -60,8 +98,8 @@ public static class PlayerManager
         return eb;
     }
 
-    private static readonly List<(BigInteger Limit, string Title)> Titles = new()
-    {
+    public static readonly List<(BigInteger Limit, string Title)> Titles =
+    [
         (1000, "Farmer"),
         (10000, "Farmer II"),
         (100000, "Farmer III"),
@@ -98,8 +136,8 @@ public static class PlayerManager
         (BigInteger.Parse("1000000000000000000000000000000000000"), "Venda"),
         (BigInteger.Parse("10000000000000000000000000000000000000"), "Venda II"),
         (BigInteger.Parse("100000000000000000000000000000000000000"), "Venda III"),
-        (BigInteger.Parse("1000000000000000000000000000000000000000"), "Uada"),
-    };
+        (BigInteger.Parse("1000000000000000000000000000000000000000"), "Uada")
+    ];
 
     public static (string CurrentTitle, string NextTitle, double Progress) GetTitleWithProgress(BigInteger earningsBonus)
     {
@@ -121,10 +159,12 @@ public static class PlayerManager
 
     public static DateTime CalculateProjectedTitleChange(PlayerDto player)
     {
+        var exponentialRegressionProjection = ProjectionCalculator.CalculateProjectedTitleChange(player);
+
         var playerName = player.PlayerName;
         var ebNeeded = CalculateEBNeededForNextTitle(playerName);
-        var ebProgressPerHour = CalculateEBProgressPerHour(playerName, 14);
-        player.EarningsBonusPerHour = PlayerDto.FormatBigInteger(ebProgressPerHour.ToString());
+        var ebProgressPerHour = CalculateEBProgressPerHour(playerName, 30);
+        player.EarningsBonusPerHour = Utils.FormatBigInteger(ebProgressPerHour.ToString());
 
         if (ebNeeded <= 0 || ebProgressPerHour <= 0)
         {
@@ -133,7 +173,18 @@ public static class PlayerManager
 
         var hoursNeeded = BigInteger.Divide(ebNeeded, ebProgressPerHour);
         var projectedTime = DateTime.Now.AddHours((double) hoursNeeded);
-        return projectedTime;
+
+
+        var returnTime = exponentialRegressionProjection;
+
+        var comparison = DateTime.Compare(exponentialRegressionProjection, projectedTime);
+        if (comparison >= 0)
+        {
+            Console.WriteLine("projectedTime happens before exponentialRegressionProjection");
+            returnTime = projectedTime;
+        }
+
+        return returnTime;
     }
 
     public static BigInteger CalculateEBNeededForNextTitle(string playerName)
@@ -144,7 +195,7 @@ public static class PlayerManager
         var playerRecord = context.Players
             .Where(p => p.PlayerName == playerName)
             .OrderByDescending(p => p.Updated)
-            .First();
+            .FirstOrDefault();
 
         if (playerRecord == null || playerRecord.EarningsBonusPercentage == null)
         {
@@ -177,7 +228,7 @@ public static class PlayerManager
 
         if (playerRecords.Count < 2)
         {
-            throw new InvalidOperationException("Not enough data to calculate progress rate.");
+            return 0;
         }
 
         var initialRecord = playerRecords.First();
@@ -188,9 +239,9 @@ public static class PlayerManager
         var totalProgress = finalEB - initEB;
         var totalHours = (finalRecord.Updated - initialRecord.Updated).TotalHours;
 
-        if (totalHours <= 0)
+        if ((BigInteger) totalHours <= 0 || totalProgress == 0)
         {
-            throw new InvalidOperationException("Invalid time range.");
+            return 0;
         }
 
         return BigInteger.Divide(totalProgress, (BigInteger) totalHours);

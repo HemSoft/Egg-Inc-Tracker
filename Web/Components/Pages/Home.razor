@@ -1,76 +1,155 @@
 ﻿@page "/"
+@using HemSoft.EggIncTracker.Data
+@using HemSoft.EggIncTracker.Data.Dtos
 
 <PageTitle>Home</PageTitle>
 
 <h1>Egg Inc -- Player Stats!</h1>
 
 @code {
-    @using HemSoft.EggIncTracker.Domain;
-    @using HemSoft.EggIncTracker.Data;
-    @using HemSoft.EggIncTracker.Data.Dtos;
-
-    private EggIncContext context = new EggIncContext();
-    protected PlayerDto? dbPlayer1;
-    protected PlayerDto? dbPlayer2;
-    protected PlayerDto? dbPlayer3;
-    protected double progress1;
-    protected double progress2;
-    protected double progress3;
-    protected DateTime updatedCst1;
-    protected DateTime updatedCst2;
-    protected DateTime updatedCst3;
-    protected DateTime projectedCst1;
-    protected DateTime projectedCst2;
-    protected DateTime projectedCst3;
+    private readonly EggIncContext _context = new EggIncContext();
+    protected PlayerDto? DbPlayer1;
+    protected PlayerDto? DbPlayer2;
+    protected PlayerDto? DbPlayer3;
+    protected PlayerDto? DbPlayer4;
+    protected double Progress1;
+    protected double Progress2;
+    protected double Progress3;
+    protected double Progress4;
+    protected DateTime UpdatedCst1;
+    protected DateTime UpdatedCst2;
+    protected DateTime UpdatedCst3;
+    protected DateTime UpdatedCst4;
+    protected DateTime ProjectedCst1;
+    protected DateTime ProjectedCst2;
+    protected DateTime ProjectedCst3;
+    protected DateTime ProjectedCst4;
 
     protected override void OnInitialized()
     {
         // Player 1:
-        dbPlayer1 = context.Players
+        DbPlayer1 = _context.Players
             .Where(x => x.EID == "EI6335140328505344")
             .OrderByDescending(z => z.Updated)
             .FirstOrDefault();
-        progress1 = dbPlayer1?.TitleProgress ?? 0;
-        progress1 = Math.Round(progress1, 2);
+        Progress1 = DbPlayer1?.TitleProgress ?? 0;
+        Progress1 = Math.Round(Progress1, 2);
 
-        TimeZoneInfo cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
+        var cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
 
-        DateTime updatedUtc1 = dbPlayer1.Updated;
-        updatedCst1 = TimeZoneInfo.ConvertTimeFromUtc(updatedUtc1, cstZone);
+        if (DbPlayer1 != null)
+        {
+            var updatedUtc1 = DbPlayer1.Updated;
+            UpdatedCst1 = TimeZoneInfo.ConvertTimeFromUtc(updatedUtc1, cstZone);
 
-        DateTime projectedUtc1 = dbPlayer1.ProjectedTitleChange;
-        projectedCst1 = TimeZoneInfo.ConvertTimeFromUtc(projectedUtc1, cstZone);
+            var projectedUtc1 = DbPlayer1.ProjectedTitleChange;
+            ProjectedCst1 = TimeZoneInfo.ConvertTimeFromUtc(projectedUtc1, cstZone);
+        }
 
         // Player 2:
-        dbPlayer2 = context.Players
+        DbPlayer2 = _context.Players
             .Where(x => x.EID == "EI5435770400276480")
             .OrderByDescending(z => z.Updated)
             .FirstOrDefault();
-        progress2 = dbPlayer2?.TitleProgress ?? 0;
-        progress2 = Math.Round(progress2, 2);
+        Progress2 = DbPlayer2?.TitleProgress ?? 0;
+        Progress2 = Math.Round(Progress2, 2);
 
-        DateTime updatedUtc2 = dbPlayer2.Updated;
-        updatedCst2 = TimeZoneInfo.ConvertTimeFromUtc(updatedUtc2, cstZone);
+        if (DbPlayer2 != null)
+        {
+            var updatedUtc2 = DbPlayer2.Updated;
+            UpdatedCst2 = TimeZoneInfo.ConvertTimeFromUtc(updatedUtc2, cstZone);
 
-        DateTime projectedUtc2 = dbPlayer2.ProjectedTitleChange;
-        projectedCst2 = TimeZoneInfo.ConvertTimeFromUtc(projectedUtc2, cstZone);
+            var projectedUtc2 = DbPlayer2.ProjectedTitleChange;
+            ProjectedCst2 = TimeZoneInfo.ConvertTimeFromUtc(projectedUtc2, cstZone);
+        }
 
         // Player 3:
-        dbPlayer3 = context.Players
+        DbPlayer3 = _context.Players
             .Where(x => x.EID == "EI6306349753958400")
             .OrderByDescending(z => z.Updated)
             .FirstOrDefault();
-        progress3 = dbPlayer3?.TitleProgress ?? 0;
-        progress3 = Math.Round(progress3, 2);
+        Progress3 = DbPlayer3?.TitleProgress ?? 0;
+        Progress3 = Math.Round(Progress3, 2);
 
-        DateTime updatedUtc3 = dbPlayer3.Updated;
-        updatedCst3 = TimeZoneInfo.ConvertTimeFromUtc(updatedUtc3, cstZone);
+        if (DbPlayer3 != null)
+        {
+            var updatedUtc3 = DbPlayer3.Updated;
+            UpdatedCst3 = TimeZoneInfo.ConvertTimeFromUtc(updatedUtc3, cstZone);
 
-        DateTime projectedUtc3 = dbPlayer3.ProjectedTitleChange;
-        projectedCst3 = TimeZoneInfo.ConvertTimeFromUtc(projectedUtc3, cstZone);
+            var projectedUtc3 = DbPlayer3.ProjectedTitleChange;
+            ProjectedCst3 = TimeZoneInfo.ConvertTimeFromUtc(projectedUtc3, cstZone);
+        }
+
+        // Player 4:
+        DbPlayer4 = _context.Players
+            .Where(x => x.EID == "EI6725967592947712")
+            .OrderByDescending(z => z.Updated)
+            .FirstOrDefault();
+        Progress4 = DbPlayer4?.TitleProgress ?? 0;
+        Progress4 = Math.Round(Progress4, 2);
+
+        if (DbPlayer4 != null)
+        {
+            var updatedUtc4 = DbPlayer4.Updated;
+            UpdatedCst4 = TimeZoneInfo.ConvertTimeFromUtc(updatedUtc4, cstZone);
+
+            var projectedUtc4 = DbPlayer4.ProjectedTitleChange;
+            ProjectedCst4 = TimeZoneInfo.ConvertTimeFromUtc(projectedUtc4, cstZone);
+        }
     }
-}
 
+
+
+    LineChart<double> lineChart;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await HandleRedraw();
+        }
+    }
+
+    async Task HandleRedraw()
+    {
+        await lineChart.Clear();
+
+        await lineChart.AddLabelsDatasetsAndUpdate(Labels, GetLineChartDataset());
+    }
+
+    LineChartDataset<double> GetLineChartDataset()
+    {
+        return new LineChartDataset<double>
+        {
+            Label = "# of randoms",
+            Data = RandomizeData(),
+            BackgroundColor = backgroundColors,
+            BorderColor = borderColors,
+            Fill = true,
+            PointRadius = 3,
+            CubicInterpolationMode = "monotone",
+        };
+    }
+
+    string[] Labels = { "Red", "Blue", "Yellow", "Green", "Purple", "Orange" };
+    List<string> backgroundColors = new List<string> { ChartColor.FromRgba(255, 99, 132, 0.2f), ChartColor.FromRgba(54, 162, 235, 0.2f), ChartColor.FromRgba(255, 206, 86, 0.2f), ChartColor.FromRgba(75, 192, 192, 0.2f), ChartColor.FromRgba(153, 102, 255, 0.2f), ChartColor.FromRgba(255, 159, 64, 0.2f) };
+    List<string> borderColors = new List<string> { ChartColor.FromRgba(255, 99, 132, 1f), ChartColor.FromRgba(54, 162, 235, 1f), ChartColor.FromRgba(255, 206, 86, 1f), ChartColor.FromRgba(75, 192, 192, 1f), ChartColor.FromRgba(153, 102, 255, 1f), ChartColor.FromRgba(255, 159, 64, 1f) };
+
+    List<double> RandomizeData()
+    {
+        var r = new Random(DateTime.Now.Millisecond);
+
+        return new List<double> {
+            r.Next( 3, 50 ) * r.NextDouble(),
+            r.Next( 3, 50 ) * r.NextDouble(),
+            r.Next( 3, 50 ) * r.NextDouble(),
+            r.Next( 3, 50 ) * r.NextDouble(),
+            r.Next( 3, 50 ) * r.NextDouble(),
+            r.Next( 3, 50 ) * r.NextDouble() };
+    }
+
+
+}
 
 <table class="table">
     <thead>
@@ -91,46 +170,60 @@
     </thead>
     <tr>
         <td>King Friday!</td>
-        <td>@dbPlayer1?.Title</td>
+        <td>@DbPlayer1?.Title</td>
 @*         <td>@string.Format("{0:0.00}", dbPlayer1?.TitleProgress)%</td>
         *@
-        <td><RadzenProgressBar @bind-Value="@progress1" /></td>
-        <td>@dbPlayer1?.NextTitle</td>
-        <td>@projectedCst1</td>
-        <td>@dbPlayer1?.SoulEggs</td>
-        <td>@dbPlayer1?.ProphecyEggs</td>
-        <td>@dbPlayer1?.EarningsBonusPercentage</td>
-        <td>@updatedCst1</td>
-        <td>@dbPlayer1?.LLC</td>
-        <td>@dbPlayer1?.MER</td>
-        <td>@dbPlayer1?.JER</td>
+        <td>@DbPlayer1?.NextTitle</td>
+        <td>@ProjectedCst1</td>
+        <td>@DbPlayer1?.SoulEggs</td>
+        <td>@DbPlayer1?.ProphecyEggs</td>
+        <td>@DbPlayer1?.EarningsBonusPercentage</td>
+        <td>@UpdatedCst1</td>
+        <td>@DbPlayer1?.LLC</td>
+        <td>@DbPlayer1?.MER</td>
+        <td>@DbPlayer1?.JER</td>
     </tr>
     <tr>
         <td>King Saturday!</td>
-        <td>@dbPlayer2?.Title</td>
-        <td><RadzenProgressBar @bind-Value="@progress2" /></td>
-        <td>@dbPlayer2?.NextTitle</td>
-        <td>@projectedCst2</td>
-        <td>@dbPlayer2?.SoulEggs</td>
-        <td>@dbPlayer2?.ProphecyEggs</td>
-        <td>@dbPlayer2?.EarningsBonusPercentage</td>
-        <td>@updatedCst2</td>
-        <td>@dbPlayer2?.LLC</td>
-        <td>@dbPlayer2?.MER</td>
-        <td>@dbPlayer2?.JER</td>
+        <td>@DbPlayer2?.Title</td>
+        <td>@DbPlayer2?.NextTitle</td>
+        <td>@ProjectedCst2</td>
+        <td>@DbPlayer2?.SoulEggs</td>
+        <td>@DbPlayer2?.ProphecyEggs</td>
+        <td>@DbPlayer2?.EarningsBonusPercentage</td>
+        <td>@UpdatedCst2</td>
+        <td>@DbPlayer2?.LLC</td>
+        <td>@DbPlayer2?.MER</td>
+        <td>@DbPlayer2?.JER</td>
     </tr>
     <tr>
         <td>King Sunday!</td>
-        <td>@dbPlayer3?.Title</td>
-        <td><RadzenProgressBar @bind-Value="@progress3" /></td>
-        <td>@dbPlayer3?.NextTitle</td>
-        <td>@projectedCst3</td>
-        <td>@dbPlayer3?.SoulEggs</td>
-        <td>@dbPlayer3?.ProphecyEggs</td>
-        <td>@dbPlayer3?.EarningsBonusPercentage</td>
-        <td>@updatedCst3</td>
-        <td>@dbPlayer3?.LLC</td>
-        <td>@dbPlayer3?.MER</td>
-        <td>@dbPlayer3?.JER</td>
+        <td>@DbPlayer3?.Title</td>
+        <td>@DbPlayer3?.NextTitle</td>
+        <td>@ProjectedCst3</td>
+        <td>@DbPlayer3?.SoulEggs</td>
+        <td>@DbPlayer3?.ProphecyEggs</td>
+        <td>@DbPlayer3?.EarningsBonusPercentage</td>
+        <td>@UpdatedCst3</td>
+        <td>@DbPlayer3?.LLC</td>
+        <td>@DbPlayer3?.MER</td>
+        <td>@DbPlayer3?.JER</td>
+    </tr>
+    <tr>
+        <td>King Monday!</td>
+        <td>@DbPlayer4?.Title</td>
+        <td>@DbPlayer4?.NextTitle</td>
+        <td>@ProjectedCst4</td>
+        <td>@DbPlayer4?.SoulEggs</td>
+        <td>@DbPlayer4?.ProphecyEggs</td>
+        <td>@DbPlayer4?.EarningsBonusPercentage</td>
+        <td>@UpdatedCst4</td>
+        <td>@DbPlayer4?.LLC</td>
+        <td>@DbPlayer4?.MER</td>
+        <td>@DbPlayer4?.JER</td>
     </tr>
 </table>
+
+<Button Color="Color.Primary" Clicked="@(async () => await HandleRedraw())">Redraw</Button>
+
+<LineChart @ref="lineChart" TItem="double" />

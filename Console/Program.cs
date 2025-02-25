@@ -10,16 +10,19 @@ public static class Program
         using var context = new EggIncContext();
         context.Database.EnsureCreated();
 
-        var player = await Api.CallApi("EI6335140328505344", "King Friday!", "https://eggincdatacollection.azurewebsites.net/api/formulae/all?eid=EI6335140328505344");
-        PlayerManager.SavePlayer(player, null);
-        var player2 = await Api.CallApi("EI5435770400276480", "King Saturday!", "https://eggincdatacollection.azurewebsites.net/api/formulae/all?eid=EI5435770400276480");
-        PlayerManager.SavePlayer(player2, null);
-        var player3 = await Api.CallApi("EI6306349753958400", "King Sunday!", "https://eggincdatacollection.azurewebsites.net/api/formulae/all?eid=EI6306349753958400");
-        PlayerManager.SavePlayer(player3, null);
+        var (player, fullPlayerInfo) = await Api.CallPlayerInfoApi("EI6335140328505344", "King Friday!");
+        PlayerManager.SavePlayer(player, fullPlayerInfo, null);
+        var (player2, fullPlayerInfo2) = await Api.CallPlayerInfoApi("EI5435770400276480", "King Saturday!");
+        PlayerManager.SavePlayer(player2, fullPlayerInfo2, null);
+        var (player3, fullPlayerInfo3) = await Api.CallPlayerInfoApi("EI6306349753958400", "King Sunday!");
+        PlayerManager.SavePlayer(player3, fullPlayerInfo3, null);
+        var (player4, fullPlayerInfo4) = await Api.CallPlayerInfoApi("EI6725967592947712", "King Monday!");
+        PlayerManager.SavePlayer(player4, fullPlayerInfo4, null);
 
         Console.WriteLine(player.ToString());
         Console.WriteLine(player2.ToString());
         Console.WriteLine(player3.ToString());
+        Console.WriteLine(player4.ToString());
         Console.WriteLine("\nPress any key to exit.");
         Console.ReadKey();
     }
