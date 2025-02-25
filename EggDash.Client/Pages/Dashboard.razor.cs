@@ -45,6 +45,10 @@ public partial class Dashboard
 
     private PlayerDto? _kingFriday;
     private PlayerStatsDto? _kingFridayStats;
+    private MajPlayerRankingDto _SEGoalBegin;
+    private MajPlayerRankingDto _SEGoalEnd;
+    private MajPlayerRankingDto _EBGoalBegin;
+    private MajPlayerRankingDto _EBGoalEnd;
 
     private PlayerDto? _kingSaturday;
     private PlayerStatsDto? _kingSaturdayStats;
@@ -116,8 +120,31 @@ public partial class Dashboard
 
     private async Task UpdateKingFriday()
     {
-        var today = DateTime.Today;
-        var startOfWeek = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Monday);
+        // Get the UTC date boundaries that correspond to "today" and "start of week" in CST
+        TimeZoneInfo cstZone;
+        try
+        {
+            cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            cstZone = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+        }
+        catch (InvalidTimeZoneException)
+        {
+            cstZone = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+        }
+
+        // Get current date in CST
+        var cstDateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cstZone);
+        var cstToday = cstDateTime.Date;
+
+        // Convert CST today back to UTC for database comparison
+        var todayUtcStart = TimeZoneInfo.ConvertTimeToUtc(cstToday, cstZone);
+
+        // Calculate start of week in CST, then convert to UTC
+        var cstStartOfWeek = cstToday.AddDays(-(int)cstToday.DayOfWeek + (int)DayOfWeek.Monday);
+        var startOfWeekUtc = TimeZoneInfo.ConvertTimeToUtc(cstStartOfWeek, cstZone);
 
         // Fetch data using DbContext
         _kingFriday = await DbContext.Players
@@ -127,13 +154,16 @@ public partial class Dashboard
 
         if (_kingFriday != null)
         {
+            // Update the player's last update time in DashboardState
+            DashboardState.SetPlayerLastUpdated(_kingFriday.Updated);
+
             var firstToday = await DbContext.Players
-                .Where(x => x.PlayerName == "King Friday!" && x.Updated >= today)
+                .Where(x => x.PlayerName == "King Friday!" && x.Updated >= todayUtcStart)
                 .OrderBy(x => x.Updated)
                 .FirstOrDefaultAsync();
 
             var firstThisWeek = await DbContext.Players
-                .Where(x => x.PlayerName == "King Friday!" && x.Updated >= startOfWeek)
+                .Where(x => x.PlayerName == "King Friday!" && x.Updated >= startOfWeekUtc)
                 .OrderBy(x => x.Updated)
                 .FirstOrDefaultAsync();
 
@@ -143,9 +173,12 @@ public partial class Dashboard
             _kingFridayTitleProgressData = new double[] { _kingFriday.TitleProgress, 100 - _kingFriday.TitleProgress };
             _kingFridayTitleProgressLabels = new string[]
             {
-                FormatTitleChangeLabel(DateTime.Parse(_kingFridayStats.ProjectedTitleChange)),
-                _kingFriday.NextTitle
+            FormatTitleChangeLabel(DateTime.Parse(_kingFridayStats?.ProjectedTitleChange)),
+            _kingFriday.NextTitle
             };
+
+            (_SEGoalBegin, _SEGoalEnd) = MajPlayerRankingManager.GetSurroundingSEPlayers("King Friday!", _kingFriday.SoulEggs);
+            (_EBGoalBegin, _EBGoalEnd) = MajPlayerRankingManager.GetSurroundingEBPlayers("King Friday!", _kingFriday.EarningsBonusPercentage);
         }
     }
 
@@ -317,6 +350,26 @@ public partial class Dashboard
         catch
         {
             return false;
+        }
+    }
+
+    private string GetLocalTimeString(DateTime utcTime)
+    {
+        // Convert UTC time to local time
+        DateTime localTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, TimeZoneInfo.Local);
+
+        // Format for display with date if not today
+        if (localTime.Date == DateTime.Today)
+        {
+            return $"Today {localTime.ToString("HH:mm")}";
+        }
+        else if (localTime.Date == DateTime.Today.AddDays(-1))
+        {
+            return $"Yesterday {localTime.ToString("HH:mm")}";
+        }
+        else
+        {
+            return localTime.ToString("MM/dd HH:mm");
         }
     }
 }

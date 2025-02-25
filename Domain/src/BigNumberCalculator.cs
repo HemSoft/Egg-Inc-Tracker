@@ -7,6 +7,21 @@ using System.Numerics;
 
 public static class BigNumberCalculator
 {
+    private static readonly Dictionary<char, BigInteger> Suffixes = new()
+    {
+        { 'k', BigInteger.Parse("1000") },
+        { 'm', BigInteger.Parse("1000000") },
+        { 'b', BigInteger.Parse("1000000000") },
+        { 't', BigInteger.Parse("1000000000000") },
+        { 'q', BigInteger.Parse("1000000000000000") },
+        { 'Q', BigInteger.Parse("1000000000000000000") },
+        { 's', BigInteger.Parse("1000000000000000000000") },
+        { 'S', BigInteger.Parse("1000000000000000000000000") },
+        { 'o', BigInteger.Parse("1000000000000000000000000000") },
+        { 'n', BigInteger.Parse("1000000000000000000000000000000") },
+        { 'd', BigInteger.Parse("1000000000000000000000000000000000") }
+    };
+
     private static readonly Dictionary<string, int> SuffixRanks = new()
     {
         { "", 0 }, { "K", 1 }, { "M", 2 }, { "B", 3 }, { "T", 4 },
@@ -26,21 +41,44 @@ public static class BigNumberCalculator
         return FormatBigNumber(difference);
     }
 
-    private static BigInteger ParseBigNumber(string bigNumber)
+    public static BigInteger ParseBigNumber(string bigNumber)
     {
-        if (string.IsNullOrWhiteSpace(bigNumber))
-            throw new ArgumentException("Input number cannot be null or empty.");
+        if (string.IsNullOrEmpty(bigNumber))
+        {
+            throw new ArgumentException("Input string cannot be null or empty.", nameof(bigNumber));
+        }
 
-        // Extract suffix and numeric part
-        string suffix = GetSuffix(bigNumber);
-        string numericPart = bigNumber.Substring(0, bigNumber.Length - suffix.Length);
+        try
+        {
+            // Remove the '%' character if it exists at the end
+            bigNumber = bigNumber.TrimEnd('%');
 
-        if (!decimal.TryParse(numericPart, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal decimalValue))
-            throw new ArgumentException($"Invalid numeric part in: {bigNumber}");
+            char suffix = bigNumber[^1];
+            if (Suffixes.ContainsKey(suffix))
+            {
+                string numberPart = bigNumber[..^1];
+                if (double.TryParse(numberPart, out double number))
+                {
+                    return new BigInteger(number) * Suffixes[suffix];
+                }
+            }
+            else
+            {
+                if (double.TryParse(bigNumber, out double number))
+                {
+                    return new BigInteger(number);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error parsing big number: {bigNumber}. Exception: {ex}");
+            throw;
+        }
 
-        BigInteger baseValue = new BigInteger(decimalValue * (decimal)Math.Pow(10, SuffixRanks[suffix] * 3));
-        return baseValue;
+        throw new KeyNotFoundException($"The given key '{bigNumber[^1]}' was not present in the dictionary.");
     }
+
 
     private static string GetSuffix(string input)
     {

@@ -101,4 +101,28 @@ public static class Api
             throw;
         }
     }
+
+    public static async Task<List<MajPlayerRankingDto>> CallMajSEPlayerRankingsApi()
+    {
+        try
+        {
+            var spreadSheetId = "17juaBpcUiw1Rw3sMnVRbRkY_rxW-AdTCD-WyIO8YPs8";
+            var range = "P1:Y50";
+            var apiKey = "AIzaSyBHa9pXDpkfxAtRKc2uzfrX5Q4KdjJ3dkw";
+            var httpEndpoint = $"https://sheets.googleapis.com/v4/spreadsheets/{spreadSheetId}/values/SE!{range}?key={apiKey}";
+            HttpResponseMessage response = await client.GetAsync(httpEndpoint);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadAsStringAsync();
+
+            var prs = MajPlayerRankingDto.ApiToMajPlayerRankings(result);
+            return prs;
+        }
+        catch (HttpRequestException e)
+        {
+            Console.WriteLine("\nException Caught!");
+            Console.WriteLine("Message :{0} ", e.Message);
+            throw;
+        }
+    }
+
 }

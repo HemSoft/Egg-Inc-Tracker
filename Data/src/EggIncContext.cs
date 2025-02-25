@@ -10,6 +10,7 @@ public class EggIncContext : DbContext
     public DbSet<ContractDto> Contracts { get; set; } = null!;
     public DbSet<PlayerContractDto> PlayerContracts { get; set; } = null!;
     public DbSet<GoalDto> Goals { get; set; } = null!;
+    public DbSet<MajPlayerRankingDto> MajPlayerRankings { get; set; }
     public virtual DbSet<PlayerStatsDto> PlayerRankings { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

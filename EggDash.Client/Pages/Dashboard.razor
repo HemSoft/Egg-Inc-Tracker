@@ -2,7 +2,7 @@
 
 <PageTitle>Dashboard</PageTitle>
 
-<div class="dashboard-container">
+<div class="dashboard-container mt-4 px-3">
     <MudGrid Spacing="2" Class="fill-grid">
 
         <!----------------->
@@ -12,7 +12,20 @@
             <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
                 <div class="mb-4 text-center">
                     <MudText Typo="Typo.h4" Align="Align.Center">King Friday</MudText>
-                    <MudText Typo="Typo.body1" Align="Align.Center">(@_kingFriday?.Title)</MudText>
+                    <MudText Typo="Typo.body1" Align="Align.Center">
+                        @if (DashboardState.PlayerLastUpdated != DateTime.MinValue)
+                        {
+                            <MudText Inline="true" Class="ml-2 align-bottom">
+                                (@_kingFriday?.Title -- Last Updated: @GetLocalTimeString(DashboardState.PlayerLastUpdated))
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudText Inline="true" Class="ml-2 align-bottom">
+                                (@_kingFriday?.Title)
+                            </MudText>
+                        }
+                    </MudText>
                     <MudText Typo="Typo.body1" Align="Align.Center">
                         <span class="d-inline-flex align-center mr-2">
                             <MudImage src="/assets/egg_of_prophecy.webp" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
@@ -37,8 +50,8 @@
                     </MudText>
                 </div>
                 <MudChart ChartType="ChartType.Donut"
-                          Width="200px"
-                          Height="200px"
+                          Width="160px"
+                          Height="160px"
                           InputData="@_kingFridayTitleProgressData"
                           InputLabels="@_kingFridayTitleProgressLabels"
                           ChartOptions="@_options">
@@ -48,10 +61,14 @@
                         </text>
                     </CustomGraphics>
                 </MudChart>
+                <!---------------------->
+                <!-- SE Progress Bar: -->
+                <!---------------------->
                 <div class="mt-n2 px-4" style="width: 100%;">
                     <MudText Typo="Typo.subtitle2" Class="mb-0">SE (@_kingFridayStats?.SE) -- Goal Progress:</MudText>
                     @{
-                        var kingFridaySEGoalPercentage = CalculateProgressPercentage(_kingFridayStats?.SE, _kingFridayStats?.SEGoal, _seGoalBaseline);
+                        var kingFridaySEGoalPercentage = CalculateProgressPercentage
+                        (_kingFridayStats?.SE, _SEGoalEnd?.SEString, _SEGoalBegin?.SEString);
                     }
                     <MudProgressLinear Color="Color.Success"
                                        Value="@kingFridaySEGoalPercentage"
@@ -65,14 +82,22 @@
                         </MudText>
                     </MudProgressLinear>
                     <div class="d-flex justify-space-between mt-n1">
-                        <MudText Typo="Typo.caption">@_seGoalBaseline</MudText>
-                        <MudText Typo="Typo.caption">@_kingFridayStats?.SEGoal</MudText>
+                        <MudText Typo="Typo.caption">
+                            (@_SEGoalBegin?.SEString) @(_SEGoalBegin?.IGN?.Length > 8 ? _SEGoalBegin.IGN.Substring(0, 8) : _SEGoalBegin?.IGN)
+                        </MudText>
+                        <MudText Typo="Typo.caption">
+                            @(_SEGoalEnd?.IGN?.Length > 8 ? _SEGoalEnd.IGN.Substring(0, 8) : _SEGoalEnd?.IGN) (@_SEGoalEnd?.SEString)
+                        </MudText>
                     </div>
                 </div>
+                <!---------------------->
+                <!-- EB Progress Bar: -->
+                <!---------------------->
                 <div class="mt-2 px-4" style="width: 100%;">
                     <MudText Typo="Typo.subtitle2" Class="mb-0">EB (@_kingFridayStats?.EB) -- Goal Progress:</MudText>
                     @{
-                        var kingFridayEBGoalPercentage = CalculateProgressPercentage(_kingFridayStats?.EB, _kingFridayStats?.EBGoal, _ebGoalBaseline);
+                        var kingFridayEBGoalPercentage = CalculateProgressPercentage
+                            (_kingFridayStats?.EB, _EBGoalEnd?.EBString, _EBGoalBegin?.EBString);
                     }
                     <MudProgressLinear Color="Color.Success"
                                        Value="@kingFridayEBGoalPercentage"
@@ -86,8 +111,12 @@
                         </MudText>
                     </MudProgressLinear>
                     <div class="d-flex justify-space-between mt-n1">
-                        <MudText Typo="Typo.caption">@_ebGoalBaseline</MudText>
-                        <MudText Typo="Typo.caption">@_kingFridayStats?.EBGoal</MudText>
+                        <MudText Typo="Typo.caption">
+                            (@_EBGoalBegin?.EBString) @(_EBGoalBegin?.IGN?.Length > 8 ? _EBGoalBegin.IGN.Substring(0, 8) : _EBGoalBegin?.IGN)
+                        </MudText>
+                        <MudText Typo="Typo.caption">
+                            @(_EBGoalEnd?.IGN?.Length > 8 ? _EBGoalEnd.IGN.Substring(0, 8) : _EBGoalEnd?.IGN) (@_EBGoalEnd?.EBString)
+                        </MudText>
                     </div>
                 </div>
                 <div class="mt-2 px-4" style="width: 100%;">

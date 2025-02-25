@@ -155,6 +155,47 @@ public class UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory)
             }
         }
     }
+   
+    [Function("CheckMajSEPlayerRankings")]
+    //public async Task CheckMajSEPlayerRankings([TimerTrigger("0 0 * * * *")] TimerInfo myTimer)
+    public async Task CheckMajSEPlayerRankings([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer)
+    {
+        try
+        {
+            // Read the request body
+            _logger.LogInformation($"V1.05 -- C# CheckMajSEPlayerRankings triggered at: {DateTime.Now}");
+
+            await using var context = new EggIncContext();
+            await context.Database.EnsureCreatedAsync();
+
+            CheckMajSEPlayerRankings();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in CheckPlayerContracts");
+            await SendDiscordMessage(ex.ToString());
+        }
+        finally
+        {
+            if (myTimer.ScheduleStatus is not null)
+            {
+                _logger.LogInformation($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
+            }
+        }
+    }
+
+    #region CheckMajSEPlayerRankings()
+
+    private async Task CheckMajSEPlayerRankings()
+    {
+        var playerMajSERankings = await Api.CallMajSEPlayerRankingsApi();
+        foreach (var p in playerMajSERankings)
+        {
+            var result = MajPlayerRankingManager.SaveMajPlayerRanking(p, _logger);
+        }
+    }
+
+    #endregion
 
     #region CheckPlayerContracts()
 
