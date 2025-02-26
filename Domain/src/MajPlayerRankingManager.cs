@@ -180,12 +180,18 @@ public static class MajPlayerRankingManager
             var context = new EggIncContext();
             var prs = context.MajPlayerRankings;
             var getLatestEntry = context.MajPlayerRankings
-                .Where(x => x.IGN == majPlayerRanking.IGN)
+                .Where(x => x.IGN == majPlayerRanking.IGN && x.DiscordName == majPlayerRanking.DiscordName)
                 .OrderByDescending(z => z.Updated)
                 .FirstOrDefault();
 
             if (getLatestEntry != null)
             {
+                // This check to avoid Mordeekakh having two entries with 28 PE difference.
+                if (getLatestEntry.PE - majPlayerRanking.PE > 5)
+                {
+                    return (false, null);
+                }
+
                 if (getLatestEntry.SEString != majPlayerRanking.SEString)
                 {
                     logger?.LogInformation($"\u001b[32mSE increased for " + getLatestEntry.IGN + " " + getLatestEntry.SEString + " to " + majPlayerRanking.SEString + "\u001b[0m");
