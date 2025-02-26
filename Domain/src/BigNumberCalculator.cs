@@ -9,17 +9,23 @@ public static class BigNumberCalculator
 {
     private static readonly Dictionary<char, BigInteger> Suffixes = new()
     {
-        { 'k', BigInteger.Parse("1000") },
-        { 'm', BigInteger.Parse("1000000") },
-        { 'b', BigInteger.Parse("1000000000") },
-        { 't', BigInteger.Parse("1000000000000") },
-        { 'q', BigInteger.Parse("1000000000000000") },
-        { 'Q', BigInteger.Parse("1000000000000000000") },
-        { 's', BigInteger.Parse("1000000000000000000000") },
-        { 'S', BigInteger.Parse("1000000000000000000000000") },
-        { 'o', BigInteger.Parse("1000000000000000000000000000") },
-        { 'n', BigInteger.Parse("1000000000000000000000000000000") },
-        { 'd', BigInteger.Parse("1000000000000000000000000000000000") }
+        { 'k', BigInteger.Parse("1000") },                   // Thousand (10^3)
+        { 'K', BigInteger.Parse("1000") },                   // Thousand (10^3)
+        { 'm', BigInteger.Parse("1000000") },                // Million (10^6)
+        { 'M', BigInteger.Parse("1000000") },                // Million (10^6)
+        { 'b', BigInteger.Parse("1000000000") },             // Billion (10^9)
+        { 'B', BigInteger.Parse("1000000000") },             // Billion (10^9)
+        { 't', BigInteger.Parse("1000000000000") },          // Trillion (10^12)
+        { 'T', BigInteger.Parse("1000000000000") },          // Trillion (10^12)
+        { 'q', BigInteger.Parse("1000000000000000") },       // Quadrillion (10^15)
+        { 'Q', BigInteger.Parse("1000000000000000000") },    // Quintillion (10^18)
+        { 's', BigInteger.Parse("1000000000000000000000") }, // Sextillion (10^21)
+        { 'S', BigInteger.Parse("1000000000000000000000000") }, // Septillion (10^24)
+        { 'o', BigInteger.Parse("1000000000000000000000000000") }, // Octillion (10^27)
+        { 'N', BigInteger.Parse("1000000000000000000000000000000") }, // Nonillion (10^30)
+        { 'd', BigInteger.Parse("1000000000000000000000000000000000") }, // Decillion (10^33)
+        { 'U', BigInteger.Parse("1000000000000000000000000000000000000") }, // Undecillion (10^36)
+        { 'D', BigInteger.Parse("1000000000000000000000000000000000000000") } // Duodecillion (10^39)
     };
 
     private static readonly Dictionary<string, int> SuffixRanks = new()
@@ -57,14 +63,17 @@ public static class BigNumberCalculator
             if (Suffixes.ContainsKey(suffix))
             {
                 string numberPart = bigNumber[..^1];
-                if (double.TryParse(numberPart, out double number))
+                if (decimal.TryParse(numberPart, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal number))
                 {
-                    return new BigInteger(number) * Suffixes[suffix];
+                    // Convert to BigInteger without going through decimal conversion
+                    var mantissa = new BigInteger((long)(number * 1000000)); // Preserve 6 decimal places
+                    var suffixValue = Suffixes[suffix];
+                    return (mantissa * suffixValue) / 1000000;
                 }
             }
             else
             {
-                if (double.TryParse(bigNumber, out double number))
+                if (decimal.TryParse(bigNumber, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal number))
                 {
                     return new BigInteger(number);
                 }

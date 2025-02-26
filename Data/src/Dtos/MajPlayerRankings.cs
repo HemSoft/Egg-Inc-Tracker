@@ -61,30 +61,36 @@ public class MajPlayerRankingDto
             var rankings = new List<MajPlayerRankingDto>();
             foreach (var row in dataRows)
             {
-                var dto = new MajPlayerRankingDto
+                // Ensure row has enough elements
+                if (row == null || row.Count < 10)
                 {
-                    // Assuming the order of columns matches your DTO properties
-                    Ranking = int.Parse(row[0].Split('.')[0]), // Extract number before the dot
-                    IGN = row[0].Substring(row[0].IndexOf('.') + 2), // Extract IGN after ranking
-                    DiscordName = row[1],
-                    EBString = row[2],
-                    Role = row[3],
-                    SENumber = decimal.Parse(row[4], System.Globalization.NumberStyles.Any),
-                    SEString = row[5],
-                    PE = int.Parse(row[6]),
-                    Prestiges = row[7] == "-" ? null : row[7], // Handle "-" as null or empty
-                    MER = decimal.Parse(row[8]),
-                    JER = decimal.Parse(row[9]),
-                    Updated = DateTime.UtcNow
-                };
+                    // Skip.
+                    continue;
+                }
+
+                var dto = new MajPlayerRankingDto();
+                dto.Ranking = int.Parse(row[0].Split('.')[0]); // Extract number before the dot
+                dto.IGN = row[0].Substring(row[0].IndexOf('.') + 2);
+                dto.DiscordName = row[1];
+                dto.EBString = row[2];
+                dto.Role = row[3];
+                dto.SENumber = decimal.Parse(row[4], System.Globalization.NumberStyles.Any);
+                dto.SEString = row[5];
+                dto.PE = int.Parse(row[6]);
+                dto.Prestiges = row[7] == "-" ? null : row[7]; // Handle "-" as null or empty
+                dto.MER = decimal.Parse(row[8]);
+                dto.JER = decimal.Parse(row[9]);
+                dto.Updated = DateTime.UtcNow;
+
                 rankings.Add(dto);
             }
 
             return rankings;
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Console.WriteLine(e);
+            Console.WriteLine($"Error processing row. Exception: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
             throw;
         }
     }

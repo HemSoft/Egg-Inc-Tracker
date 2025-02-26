@@ -2,6 +2,7 @@
 
 using System.Linq;
 using System.Numerics;
+using System.Runtime.ConstrainedExecution;
 
 using global::Domain.src;
 
@@ -24,6 +25,8 @@ public static class MajPlayerRankingManager
 
             var context = new EggIncContext();
             var rankings = context.MajPlayerRankings
+                .GroupBy(x => x.IGN)
+                .Select(g => g.OrderByDescending(r => r.Updated).First()) // Get most recent record per IGN
                 .ToList() // Bring data into memory for in-memory sorting
                 .Select(mrp => new
                 {
@@ -31,19 +34,23 @@ public static class MajPlayerRankingManager
                     Ranking = mrp,
                     EBValue = BigNumberCalculator.ParseBigNumber(mrp.EBString.TrimEnd('%'))
                 })
-                .OrderBy(x => x.EBValue)
+                .OrderByDescending(x => x.EBValue)
                 .ToList();
 
+            var ranking = 1;
             foreach (var mrp in rankings)
             {
+                ranking++;
                 if (playerEB > mrp.EBValue && mrp.IGN != playerName)
                 {
                     p1 = mrp.Ranking;
+                    p1.Ranking = ranking;
+                    break;
                 }
                 else if (mrp.EBValue >= playerEB && mrp.IGN != playerName)
                 {
                     p2 = mrp.Ranking;
-                    break;
+                    p2.Ranking = ranking;
                 }
             }
         }
@@ -56,30 +63,111 @@ public static class MajPlayerRankingManager
         return (p1, p2);
     }
 
-
     public static (MajPlayerRankingDto, MajPlayerRankingDto) GetSurroundingSEPlayers(string playerName, string se)
     {
-        MajPlayerRankingDto p1 = null;
-        MajPlayerRankingDto p2 = null;
+        MajPlayerRankingDto lowerPlayer = null;
+        MajPlayerRankingDto upperPlayer = null;
 
         var playerSE = (decimal)BigNumberCalculator.ParseBigNumber(se);
 
         var context = new EggIncContext();
         var rankings = context.MajPlayerRankings
-            .OrderBy(mrp => mrp.SENumber)
+            .OrderByDescending(mrp => mrp.SENumber)
             .ToList();
 
         foreach (var mrp in rankings)
         {
             if (mrp.SENumber < playerSE && mrp.IGN != playerName)
             {
-                p1 = mrp;
-            }
-            else if (mrp.SENumber > playerSE)
-            {
-                p2 = mrp;
+                lowerPlayer = mrp;
                 break;
             }
+            else if (mrp.SENumber > playerSE && mrp.IGN != playerName)
+            {
+                upperPlayer = mrp;
+            }
+        }
+
+        return (lowerPlayer, upperPlayer);
+    }
+
+    public static (MajPlayerRankingDto, MajPlayerRankingDto) GetSurroundingMERPlayers(string playerName, decimal mer)
+    {
+        MajPlayerRankingDto p1 = null;
+        MajPlayerRankingDto p2 = null;
+
+        try
+        {
+            var context = new EggIncContext();
+            var rankings = context.MajPlayerRankings
+                .GroupBy(x => x.IGN)
+                .Select(g => g.OrderByDescending(r => r.Updated).First()) // Get most recent record per IGN
+                .ToList() // Bring data into memory for in-memory sorting
+                .OrderByDescending(x => x.MER)
+                .ToList();
+
+            var ranking = 1;
+            foreach (var mrp in rankings)
+            {
+                ranking++;
+                if (mer > mrp.MER && mrp.IGN != playerName)
+                {
+                    p1 = mrp;
+                    p1.Ranking = ranking;
+                    break;
+                }
+                else if (mrp.MER >= mer && mrp.IGN != playerName)
+                {
+                    p2 = mrp;
+                    p2.Ranking = ranking;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in GetSurroundingMERPlayers for player {playerName} with MER {mer}. Exception: {ex}");
+            throw;
+        }
+
+        return (p1, p2);
+    }
+
+    public static (MajPlayerRankingDto, MajPlayerRankingDto) GetSurroundingJERPlayers(string playerName, decimal jer)
+    {
+        MajPlayerRankingDto p1 = null;
+        MajPlayerRankingDto p2 = null;
+
+        try
+        {
+            var context = new EggIncContext();
+            var rankings = context.MajPlayerRankings
+                .GroupBy(x => x.IGN)
+                .Select(g => g.OrderByDescending(r => r.Updated).First()) // Get most recent record per IGN
+                .ToList() // Bring data into memory for in-memory sorting
+                .OrderByDescending(x => x.JER)
+                .ToList();
+
+            var ranking = 1;
+            foreach (var mrp in rankings)
+            {
+                ranking++;
+                if (jer > mrp.JER && mrp.IGN != playerName)
+                {
+                    p1 = mrp;
+                    p1.Ranking = ranking;
+                    break;
+                }
+                else if (mrp.JER >= jer && mrp.IGN != playerName)
+                {
+                    p2 = mrp;
+                    p2.Ranking = ranking;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in GetSurroundingjerPlayers for player {playerName} with jer {jer}. Exception: {ex}");
+            throw;
         }
 
         return (p1, p2);

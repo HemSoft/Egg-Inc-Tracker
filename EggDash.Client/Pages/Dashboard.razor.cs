@@ -26,6 +26,7 @@ public partial class Dashboard
     [Inject]
     private DashboardState DashboardState { get; set; } = default!;
 
+    private const int NameCutOff = 12;
 
     private ST.Timer? _timer;
     private DateTime _lastUpdated;
@@ -49,6 +50,10 @@ public partial class Dashboard
     private MajPlayerRankingDto _SEGoalEnd;
     private MajPlayerRankingDto _EBGoalBegin;
     private MajPlayerRankingDto _EBGoalEnd;
+    private MajPlayerRankingDto _MERGoalBegin;
+    private MajPlayerRankingDto _MERGoalEnd;
+    private MajPlayerRankingDto _JERGoalBegin;
+    private MajPlayerRankingDto _JERGoalEnd;
 
     private PlayerDto? _kingSaturday;
     private PlayerStatsDto? _kingSaturdayStats;
@@ -58,11 +63,6 @@ public partial class Dashboard
 
     private PlayerDto? _kingMonday;
     private PlayerStatsDto? _kingMondayStats;
-
-    private readonly string _seGoalBaseline = "34.000s";
-    private readonly string _ebGoalBaseline = "3.000d";
-    private readonly string _merGoalBaseline = "39.900";
-    private readonly string _jerGoalBaseline = "85.000";
 
     private readonly ChartOptions _options = new()
     {
@@ -179,6 +179,8 @@ public partial class Dashboard
 
             (_SEGoalBegin, _SEGoalEnd) = MajPlayerRankingManager.GetSurroundingSEPlayers("King Friday!", _kingFriday.SoulEggs);
             (_EBGoalBegin, _EBGoalEnd) = MajPlayerRankingManager.GetSurroundingEBPlayers("King Friday!", _kingFriday.EarningsBonusPercentage);
+            (_MERGoalBegin, _MERGoalEnd) = MajPlayerRankingManager.GetSurroundingMERPlayers("King Friday!", (decimal) _kingFriday.MER);
+            (_JERGoalBegin, _JERGoalEnd) = MajPlayerRankingManager.GetSurroundingJERPlayers("King Friday!", (decimal) _kingFriday.JER);
         }
     }
 

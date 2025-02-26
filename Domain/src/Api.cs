@@ -107,7 +107,7 @@ public static class Api
         try
         {
             var spreadSheetId = "17juaBpcUiw1Rw3sMnVRbRkY_rxW-AdTCD-WyIO8YPs8";
-            var range = "P1:Y50";
+            var range = "P1:Y1000";
             var apiKey = "AIzaSyBHa9pXDpkfxAtRKc2uzfrX5Q4KdjJ3dkw";
             var httpEndpoint = $"https://sheets.googleapis.com/v4/spreadsheets/{spreadSheetId}/values/SE!{range}?key={apiKey}";
             HttpResponseMessage response = await client.GetAsync(httpEndpoint);
