@@ -75,9 +75,9 @@ public class UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory)
             await using var context = new EggIncContext();
             await context.Database.EnsureCreatedAsync();
 
-            ProcessPlayer(KingSaturdayEid, KingSaturdayPlayerName);
-            ProcessPlayer(KingSundayEid, KingSundayPlayerName);
-            ProcessPlayer(KingMondayEid, KingMondayPlayerName);
+            await ProcessPlayer(KingSaturdayEid, KingSaturdayPlayerName);
+            await ProcessPlayer(KingSundayEid, KingSundayPlayerName);
+            await ProcessPlayer(KingMondayEid, KingMondayPlayerName);
         }
         catch (Exception ex)
         {
@@ -140,7 +140,7 @@ public class UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory)
             await using var context = new EggIncContext();
             await context.Database.EnsureCreatedAsync();
 
-            CheckPlayerContracts(KingFridayEid, KingFridayPlayerName);
+            await CheckPlayerContracts(KingFridayEid, KingFridayPlayerName);
         }
         catch (Exception ex)
         {
@@ -168,7 +168,7 @@ public class UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory)
             await using var context = new EggIncContext();
             await context.Database.EnsureCreatedAsync();
 
-            CheckMajSEPlayerRankings();
+            await CheckMajSEPlayerRankings();
         }
         catch (Exception ex)
         {
