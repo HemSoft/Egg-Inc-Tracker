@@ -1,0 +1,49 @@
+﻿@page "/majplayerupdates"
+@using HemSoft.EggIncTracker.Data.Dtos
+
+@attribute [StreamRendering]
+
+<PageTitle>Recent Player Updates</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudCard>
+        <MudCardHeader>
+            <MudText Typo="Typo.h5">Recent Player Updates</MudText>
+        </MudCardHeader>
+        <MudCardContent>
+            @if (isLoading)
+            {
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            }
+            else if (playerUpdates.Any())
+            {
+                <MudList Clickable="false" T="MajPlayerRankingDto">
+                    @foreach (var update in playerUpdates)
+                    {
+                        <MudListItem>
+                            <div class="d-flex align-center">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@update.Updated.ToString("yyyy-MM-dd hh:mm tt")</MudText>
+                                <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+                                <MudText Typo="Typo.body1" Class="mx-2"><b>@update.IGN</b></MudText>
+                                <MudText Typo="Typo.body2">
+                                    PE: <b>@update.PE</b>
+                                    SE: <b>@update.SEString</b>
+                                    EB: <b>@update.EBString</b>
+                                </MudText>
+                            </div>
+                        </MudListItem>
+                        <MudDivider Class="my-1" />
+                    }
+                </MudList>
+
+                <div class="d-flex justify-center mt-4">
+                    <MudPagination Count="@totalPages" Selected="@currentPage" SelectedChanged="OnPageChanged" Color="Color.Primary" />
+                </div>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info">No player updates found</MudAlert>
+            }
+        </MudCardContent>
+    </MudCard>
+</MudContainer>

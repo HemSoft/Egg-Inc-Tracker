@@ -173,6 +173,25 @@ public static class MajPlayerRankingManager
         return (p1, p2);
     }
 
+    public static List<MajPlayerRankingDto> GetMajPlayerRankings(int lmitTo = 30)
+    {
+        try
+        {
+            var context = new EggIncContext();
+            var rankings = context.Set<MajPlayerRankingDto>()
+                .FromSqlRaw("EXEC GetLatestMajPlayerRankingsByIGN")
+                .ToList()
+                .Take(lmitTo)
+                .ToList();
+            return rankings;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in GetMajPlayerRankings -- Exception: {ex}");
+            throw;
+        }
+    }
+
     public static (bool, MajPlayerRankingDto) SaveMajPlayerRanking(MajPlayerRankingDto majPlayerRanking, ILogger ?logger)
     {
         try
