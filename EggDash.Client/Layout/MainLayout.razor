@@ -47,7 +47,7 @@
                         }
                     </MudText>
                 </div>
-                <div @onclick="ResetMinuteProgress" style="cursor: pointer; height: 10px; margin-top: 3px;">
+                <div @onclick="IncrementLegs" style="cursor: pointer; height: 10px; margin-top: 3px;">
                     <MudProgressLinear Color="@GetProgressColor(0, 60, _minuteStartTime)"
                                        Value="@GetProgressValue(0, 60, _minuteStartTime)"
                                        Class="my-0" />
@@ -58,11 +58,20 @@
                                        Class="my-0" />
                 </div>
             </MudStack>
+            <MudButton Class="ml-3" Style="height: 100%; min-width: 50px;" 
+                       Variant="Variant.Outlined" 
+                       OnClick="IncrementLegs"
+                       Color="Color.Primary">
+                <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.caption">Legs</MudText>
+                    <MudText Typo="Typo.h5" Style="font-family: monospace;">@_legCount</MudText>
+                </MudStack>
+            </MudButton>
         </MudPaper>
 
         <!-- Last Updated -->
-        <MudText Typo="Typo.caption" Class="mr-4">
-            Dashboard: @(DashboardState.LastUpdated.ToString("HH:mm"))
+        <MudText Typo="Typo.h1" Class="mr-4">
+            @(DashboardState.LastUpdated.ToString("HH:mm"))
         </MudText>
         <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
         <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
@@ -84,12 +93,14 @@
 @code {
     private DateTime _minuteStartTime = DateTime.Now;
     private DateTime _25minStartTime = DateTime.Now;
+    private int _legCount = 0;
 
     private class StopwatchState
     {
         public bool IsRunning { get; set; }
         public DateTime StartTime { get; set; }
         public TimeSpan Elapsed { get; set; }
+        public int LegCount { get; set; }
     }
 
     private bool _drawerOpen = true;
@@ -186,7 +197,8 @@
                 {
                     IsRunning = _isRunning,
                     StartTime = _startTime,
-                    Elapsed = _elapsed
+                    Elapsed = _elapsed,
+                    LegCount = _legCount
                 };
 
             await JSRuntime.InvokeVoidAsync(
@@ -218,6 +230,7 @@
                     _isRunning = state.IsRunning;
                     _startTime = state.StartTime;
                     _elapsed = state.Elapsed;
+                    _legCount = state.LegCount;
 
                     if (_isRunning)
                     {
@@ -247,6 +260,12 @@
         {
             _startTime = DateTime.Now - _elapsed;
             _timer?.Start();
+            
+            // Initialize leg count to 1 when starting from zero
+            if (_elapsed.TotalSeconds < 0.1 && _legCount == 0)
+            {
+                _legCount = 1;
+            }
         }
         _isRunning = !_isRunning;
         await SaveStopwatchState();
@@ -258,6 +277,7 @@
         _isRunning = false;
         _elapsed = TimeSpan.Zero;
         _startTime = DateTime.Now;
+        _legCount = 0;
 
         // Reset the progress bars when stopwatch is reset
         _minuteStartTime = DateTime.Now;
@@ -286,6 +306,16 @@
     private string GetFormattedTime()
     {
         return $"{(int)_elapsed.TotalHours:D2}:{_elapsed.Minutes:D2}:{_elapsed.Seconds:D2}";
+    }
+
+    private void IncrementLegs()
+    {
+        if (_isRunning)
+        {
+            _legCount++;
+            _minuteStartTime = DateTime.Now;
+            StateHasChanged();
+        }
     }
 
     private readonly PaletteLight _lightPalette = new()
