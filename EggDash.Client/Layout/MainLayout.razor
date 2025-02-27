@@ -75,7 +75,6 @@
     </MudMainContent>
 </MudLayout>
 
-
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
@@ -159,10 +158,10 @@
 
     private Color GetProgressColor(double currentSeconds, double maxSeconds, DateTime? startTime = null)
     {
-        var progress = startTime.HasValue 
+        var progress = startTime.HasValue
             ? (DateTime.Now - startTime.Value).TotalSeconds / maxSeconds
             : currentSeconds / maxSeconds;
-        
+
         if (progress >= 1) return Color.Error;
         return progress < 0.5 ? Color.Success : Color.Warning;
     }
@@ -259,11 +258,11 @@
         _isRunning = false;
         _elapsed = TimeSpan.Zero;
         _startTime = DateTime.Now;
-    
+
         // Reset the progress bars when stopwatch is reset
         _minuteStartTime = DateTime.Now;
         _25minStartTime = DateTime.Now;
-    
+
         StateHasChanged();
         await SaveStopwatchState();
     }

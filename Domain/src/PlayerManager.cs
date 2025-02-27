@@ -180,7 +180,6 @@ public static class PlayerManager
         var comparison = DateTime.Compare(exponentialRegressionProjection, projectedTime);
         if (comparison >= 0)
         {
-            Console.WriteLine("projectedTime happens before exponentialRegressionProjection");
             returnTime = projectedTime;
         }
 
