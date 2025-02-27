@@ -21,7 +21,7 @@ public partial class Dashboard
     private ILogger<Dashboard> Logger { get; set; } = default!;
 
     [Inject]
-    private EggIncContext DbContext { get; set; } = default!;
+    private PlayerApiClient ApiClient { get; set; } = default!;
 
     [Inject]
     private DashboardState DashboardState { get; set; } = default!;
@@ -120,112 +120,64 @@ public partial class Dashboard
 
     private async Task UpdateKingFriday()
     {
-        // Get the UTC date boundaries that correspond to "today" and "start of week" in CST
-        TimeZoneInfo cstZone;
-        try
-        {
-            cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            cstZone = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
-        }
-        catch (InvalidTimeZoneException)
-        {
-            cstZone = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
-        }
-
-        // Get current date in CST
-        var cstDateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cstZone);
-        var cstToday = cstDateTime.Date;
-
-        // Convert CST today back to UTC for database comparison
-        var todayUtcStart = TimeZoneInfo.ConvertTimeToUtc(cstToday, cstZone);
-
-        // Calculate start of week in CST, then convert to UTC
-        var cstStartOfWeek = cstToday.AddDays(-(int)cstToday.DayOfWeek + (int)DayOfWeek.Monday);
-        var startOfWeekUtc = TimeZoneInfo.ConvertTimeToUtc(cstStartOfWeek, cstZone);
-
-        // Fetch data using DbContext
-        _kingFriday = await DbContext.Players
-            .OrderByDescending(x => x.Updated)
-            .FirstOrDefaultAsync(x => x.PlayerName == "King Friday!");
-        _kingFridayStats = await PlayerManager.GetRankedPlayersAsync("King Friday!", 1, 30, Logger);
+        _kingFriday = await ApiClient.GetLatestPlayerAsync("King Friday!");
+        _kingFridayStats = await ApiClient.GetPlayerStatsAsync("King Friday!", 30);
 
         if (_kingFriday != null)
         {
             // Update the player's last update time in DashboardState
             DashboardState.SetPlayerLastUpdated(_kingFriday.Updated);
 
-            var firstToday = await DbContext.Players
-                .Where(x => x.PlayerName == "King Friday!" && x.Updated >= todayUtcStart)
-                .OrderBy(x => x.Updated)
-                .FirstOrDefaultAsync();
-
-            var firstThisWeek = await DbContext.Players
-                .Where(x => x.PlayerName == "King Friday!" && x.Updated >= startOfWeekUtc)
-                .OrderBy(x => x.Updated)
-                .FirstOrDefaultAsync();
-
-            _kingFriday.PrestigesToday = _kingFriday.Prestiges - (firstToday?.Prestiges ?? _kingFriday.Prestiges);
-            _kingFriday.PrestigesThisWeek = _kingFriday.Prestiges - (firstThisWeek?.Prestiges ?? _kingFriday.Prestiges);
-
             _kingFridayTitleProgressData = new double[] { _kingFriday.TitleProgress, 100 - _kingFriday.TitleProgress };
             _kingFridayTitleProgressLabels = new string[]
             {
-            FormatTitleChangeLabel(DateTime.Parse(_kingFridayStats?.ProjectedTitleChange)),
-            _kingFriday.NextTitle
+                FormatTitleChangeLabel(DateTime.Parse(_kingFridayStats?.ProjectedTitleChange ?? DateTime.Now.ToString())),
+                _kingFriday.NextTitle
             };
 
-            (_SEGoalBegin, _SEGoalEnd) = MajPlayerRankingManager.GetSurroundingSEPlayers("King Friday!", _kingFriday.SoulEggs);
-            (_EBGoalBegin, _EBGoalEnd) = MajPlayerRankingManager.GetSurroundingEBPlayers("King Friday!", _kingFriday.EarningsBonusPercentage);
-            (_MERGoalBegin, _MERGoalEnd) = MajPlayerRankingManager.GetSurroundingMERPlayers("King Friday!", (decimal) _kingFriday.MER);
-            (_JERGoalBegin, _JERGoalEnd) = MajPlayerRankingManager.GetSurroundingJERPlayers("King Friday!", (decimal) _kingFriday.JER);
+            // Use the API client for surrounding players
+            (_SEGoalBegin, _SEGoalEnd) = await ApiClient.GetSurroundingSEPlayersAsync("King Friday!", _kingFriday.SoulEggs);
+            (_EBGoalBegin, _EBGoalEnd) = await ApiClient.GetSurroundingEBPlayersAsync("King Friday!", _kingFriday.EarningsBonusPercentage);
+            (_MERGoalBegin, _MERGoalEnd) = await ApiClient.GetSurroundingMERPlayersAsync("King Friday!", (decimal)_kingFriday.MER);
+            (_JERGoalBegin, _JERGoalEnd) = await ApiClient.GetSurroundingJERPlayersAsync("King Friday!", (decimal)_kingFriday.JER);
         }
     }
 
     private async Task UpdateKingSaturday()
     {
-        // Fetch data using DbContext
-        _kingSaturday = await DbContext.Players
-            .OrderByDescending(x => x.Updated)
-            .FirstOrDefaultAsync(x => x.PlayerName == "King Saturday!");
-        _kingSaturdayStats = await PlayerManager.GetRankedPlayersAsync("King Saturday!", 1, 30, Logger);
+        _kingSaturday = await ApiClient.GetLatestPlayerAsync("King Saturday!");
+        _kingSaturdayStats = await ApiClient.GetPlayerStatsAsync("King Saturday!", 30);
 
         _kingSaturdayTitleProgressData = new double[] { _kingSaturday.TitleProgress, 100 - _kingSaturday.TitleProgress };
         _kingSaturdayTitleProgressLabels = new string[]
         {
-            FormatTitleChangeLabel(DateTime.Parse(_kingSaturdayStats.ProjectedTitleChange)),
+            FormatTitleChangeLabel(DateTime.Parse(_kingSaturdayStats.ProjectedTitleChange ?? DateTime.Now.ToString())),
             _kingSaturday.NextTitle
         };
     }
 
     private async Task UpdateKingSunday()
     {
-        _kingSunday = await DbContext.Players
-            .OrderByDescending(x => x.Updated)
-            .FirstOrDefaultAsync(x => x.PlayerName == "King Sunday!");
-        _kingSundayStats = await PlayerManager.GetRankedPlayersAsync("King Sunday!", 1, 30, Logger);
+        _kingSunday = await ApiClient.GetLatestPlayerAsync("King Sunday!");
+        _kingSundayStats = await ApiClient.GetPlayerStatsAsync("King Sunday!", 30);
 
         _kingSundayTitleProgressData = new double[] { _kingSunday.TitleProgress, 100 - _kingSunday.TitleProgress };
         _kingSundayTitleProgressLabels = new string[]
         {
-            FormatTitleChangeLabel(DateTime.Parse(_kingSundayStats.ProjectedTitleChange)),
+            FormatTitleChangeLabel(DateTime.Parse(_kingSundayStats.ProjectedTitleChange ?? DateTime.Now.ToString())),
             _kingSundayStats.NextTitle
         };
     }
 
     private async Task UpdateKingMonday()
     {
-        _kingMonday = await DbContext.Players
-            .OrderByDescending(x => x.Updated)
-            .FirstOrDefaultAsync(x => x.PlayerName == "King Monday!");
-        _kingMondayStats = await PlayerManager.GetRankedPlayersAsync("King Monday!", 1, 30, Logger);
+        _kingMonday = await ApiClient.GetLatestPlayerAsync("King Monday!");
+        _kingMondayStats = await ApiClient.GetPlayerStatsAsync("King Monday!", 30);
 
         _kingMondayTitleProgressData = new double[] { _kingMonday.TitleProgress, 100 - _kingMonday.TitleProgress };
         _kingMondayTitleProgressLabels = new string[]
         {
-            FormatTitleChangeLabel(DateTime.Parse(_kingMondayStats.ProjectedTitleChange)),
+            FormatTitleChangeLabel(DateTime.Parse(_kingMondayStats.ProjectedTitleChange ?? DateTime.Now.ToString())),
             _kingMondayStats.NextTitle
         };
     }

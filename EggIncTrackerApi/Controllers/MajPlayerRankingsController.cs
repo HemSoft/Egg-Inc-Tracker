@@ -1,5 +1,7 @@
 using HemSoft.EggIncTracker.Data;
 using HemSoft.EggIncTracker.Data.Dtos;
+using HemSoft.EggIncTracker.Domain;
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -162,6 +164,67 @@ namespace EggIncTrackerApi.Controllers
                 .ToListAsync();
 
             return Ok(rankings);
+        }
+
+        [HttpGet("surroundingSE")]
+        public async Task<ActionResult<(MajPlayerRankingDto?, MajPlayerRankingDto?)>> GetSurroundingSEPlayers(string playerName, string soulEggs)
+        {
+            try
+            {
+                var result = MajPlayerRankingManager.GetSurroundingSEPlayers(playerName, soulEggs);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching surrounding SE players for {PlayerName} with soul eggs {SoulEggs}", playerName, soulEggs);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        // Implement similar methods for other surrounding players (EB, MER, JER)
+        [HttpGet("surroundingEB")]
+        public async Task<ActionResult<(MajPlayerRankingDto?, MajPlayerRankingDto?)>> GetSurroundingEBPlayers(string playerName, string earningsBonus)
+        {
+            try
+            {
+                var result = MajPlayerRankingManager.GetSurroundingEBPlayers(playerName, earningsBonus);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching surrounding EB players for {PlayerName} with earnings bonus {EarningsBonus}", playerName, earningsBonus);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpGet("surroundingMER")]
+        public async Task<ActionResult<(MajPlayerRankingDto?, MajPlayerRankingDto?)>> GetSurroundingMERPlayers(string playerName, decimal mer)
+        {
+            try
+            {
+                var result = MajPlayerRankingManager.GetSurroundingMERPlayers(playerName, mer);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching surrounding MER players for {PlayerName} with MER {MER}", playerName, mer);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpGet("surroundingJER")]
+        public async Task<ActionResult<(MajPlayerRankingDto?, MajPlayerRankingDto?)>> GetSurroundingJERPlayers(string playerName, decimal jer)
+        {
+            try
+            {
+                var result = MajPlayerRankingManager.GetSurroundingJERPlayers(playerName, jer);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching surrounding JER players for {PlayerName} with JER {JER}", playerName, jer);
+                return StatusCode(500, "Internal server error");
+            }
         }
     }
 } 
