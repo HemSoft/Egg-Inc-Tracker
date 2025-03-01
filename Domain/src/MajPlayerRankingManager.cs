@@ -63,7 +63,7 @@ public static class MajPlayerRankingManager
         return (p1, p2);
     }
 
-    public static (MajPlayerRankingDto, MajPlayerRankingDto) GetSurroundingSEPlayers(string playerName, string se)
+    public static async Task<(MajPlayerRankingDto, MajPlayerRankingDto)> GetSurroundingSEPlayers(string playerName, string se)
     {
         MajPlayerRankingDto lowerPlayer = null;
         MajPlayerRankingDto upperPlayer = null;
@@ -71,9 +71,9 @@ public static class MajPlayerRankingManager
         var playerSE = (decimal)BigNumberCalculator.ParseBigNumber(se);
 
         var context = new EggIncContext();
-        var rankings = context.MajPlayerRankings
+        var rankings = await context.MajPlayerRankings
             .OrderByDescending(mrp => mrp.SENumber)
-            .ToList();
+            .ToListAsync();
 
         foreach (var mrp in rankings)
         {
@@ -82,7 +82,8 @@ public static class MajPlayerRankingManager
                 lowerPlayer = mrp;
                 break;
             }
-            else if (mrp.SENumber > playerSE && mrp.IGN != playerName)
+
+            if (mrp.SENumber > playerSE && mrp.IGN != playerName)
             {
                 upperPlayer = mrp;
             }

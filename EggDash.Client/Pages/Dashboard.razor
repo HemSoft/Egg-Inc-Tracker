@@ -42,43 +42,6 @@
                 </MudChart>
             </MudPaper>
         </MudItem>
-        <!------------------->
-        <!-- King Saturday -->
-        <!------------------->
-        <MudItem xs="3">
-            <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
-                <div class="mb-4 text-center">
-                    <MudText Typo="Typo.h4" Align="Align.Center">King Saturday</MudText>
-                    <MudText Typo="Typo.h6" Align="Align.Center">(@_kingSaturday?.Title)</MudText>
-                    <MudText Typo="Typo.body1" Align="Align.Center">
-                        <span class="d-inline-flex align-center mr-2">
-                            <MudImage src="/assets/egg_of_prophecy.webp" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
-                            @_kingSaturday?.ProphecyEggs
-                        </span>
-                        <span class="d-inline-flex align-center mr-2">
-                            <MudImage src="/assets/egg_soul.webp" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
-                            @_kingSaturday?.SoulEggs
-                        </span>
-                        <span class="d-inline-flex align-center mr-2">
-                            <MudImage src="/assets/chart.png" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
-                            @_kingSaturday?.EarningsBonusPercentage
-                        </span>
-                    </MudText>
-                </div>
-                <MudChart ChartType="ChartType.Donut"
-                          Width="300px"
-                          Height="300px"
-                          InputData="@_kingSaturdayTitleProgressData"
-                          InputLabels="@_kingSaturdayTitleProgressLabels"
-                          ChartOptions="@_options">
-                    <CustomGraphics>
-                        <text class="donut-inner-text" x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#BBBBBB" font-family="Helvetica" font-size="5">
-                            @_kingSaturday?.TitleProgress.ToString("F0")%
-                        </text>
-                    </CustomGraphics>
-                </MudChart>
-            </MudPaper>
-        </MudItem>
         <!----------------->
         <!-- King Sunday -->
         <!----------------->
@@ -111,6 +74,43 @@
                     <CustomGraphics>
                         <text class="donut-inner-text" x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#BBBBBB" font-family="Helvetica" font-size="5">
                             @_kingSunday?.TitleProgress.ToString("F0")%
+                        </text>
+                    </CustomGraphics>
+                </MudChart>
+            </MudPaper>
+        </MudItem>
+        <!------------------->
+        <!-- King Saturday -->
+        <!------------------->
+        <MudItem xs="3">
+            <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+                <div class="mb-4 text-center">
+                    <MudText Typo="Typo.h4" Align="Align.Center">King Saturday</MudText>
+                    <MudText Typo="Typo.h6" Align="Align.Center">(@_kingSaturday?.Title)</MudText>
+                    <MudText Typo="Typo.body1" Align="Align.Center">
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/egg_of_prophecy.webp" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingSaturday?.ProphecyEggs
+                        </span>
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/egg_soul.webp" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingSaturday?.SoulEggs
+                        </span>
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/chart.png" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingSaturday?.EarningsBonusPercentage
+                        </span>
+                    </MudText>
+                </div>
+                <MudChart ChartType="ChartType.Donut"
+                          Width="300px"
+                          Height="300px"
+                          InputData="@_kingSaturdayTitleProgressData"
+                          InputLabels="@_kingSaturdayTitleProgressLabels"
+                          ChartOptions="@_options">
+                    <CustomGraphics>
+                        <text class="donut-inner-text" x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#BBBBBB" font-family="Helvetica" font-size="5">
+                            @_kingSaturday?.TitleProgress.ToString("F0")%
                         </text>
                     </CustomGraphics>
                 </MudChart>

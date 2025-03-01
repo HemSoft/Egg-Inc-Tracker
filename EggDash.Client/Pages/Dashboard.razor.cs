@@ -28,7 +28,7 @@ public partial class Dashboard
 
     private const int NameCutOff = 12;
 
-    private ST.Timer? _timer;
+    private System.Threading.Timer? _timer;
     private DateTime _lastUpdated;
     private string _timeSinceLastUpdate = "Never";
 
@@ -69,28 +69,42 @@ public partial class Dashboard
         ChartPalette = new[] { "#4CAF50", "#666666" }
     };
 
+    private bool _isRefreshing = false;
+
     protected override async Task OnInitializedAsync()
     {
         await RefreshData();
 
-        _timer = new ST.Timer(30000); // 30 seconds
-        _timer.Elapsed += async (sender, e) =>
+        _timer = new System.Threading.Timer(async _ =>
         {
             try
             {
-                // Ensure we're on the UI thread
                 await InvokeAsync(async () =>
                 {
-                    await RefreshData();
+                    if (!_isRefreshing)
+                    {
+                        _isRefreshing = true;
+                        try
+                        {
+                            await RefreshData();
+                        }
+                        finally
+                        {
+                            _isRefreshing = false;
+                        }
+                    }
                 });
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Timer refresh error");
             }
-        };
-        _timer.AutoReset = true;
-        _timer.Enabled = true;
+        }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
     }
 
     private async Task RefreshData()
@@ -177,7 +191,7 @@ public partial class Dashboard
             _kingFriday.NextTitle
             };
 
-            (_SEGoalBegin, _SEGoalEnd) = MajPlayerRankingManager.GetSurroundingSEPlayers("King Friday!", _kingFriday.SoulEggs);
+            (_SEGoalBegin, _SEGoalEnd) = await MajPlayerRankingManager.GetSurroundingSEPlayers("King Friday!", _kingFriday.SoulEggs);
             (_EBGoalBegin, _EBGoalEnd) = MajPlayerRankingManager.GetSurroundingEBPlayers("King Friday!", _kingFriday.EarningsBonusPercentage);
             (_MERGoalBegin, _MERGoalEnd) = MajPlayerRankingManager.GetSurroundingMERPlayers("King Friday!", (decimal) _kingFriday.MER);
             (_JERGoalBegin, _JERGoalEnd) = MajPlayerRankingManager.GetSurroundingJERPlayers("King Friday!", (decimal) _kingFriday.JER);

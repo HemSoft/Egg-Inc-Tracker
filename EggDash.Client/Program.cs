@@ -12,8 +12,11 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 // Register the DashboardState service
 builder.Services.AddSingleton<DashboardState>();
 
-// Register the DbContextFactory for EggIncContext
-builder.Services.AddDbContext<EggIncContext>();
+// Register the ApiService
+builder.Services.AddHttpClient<ApiService>(client => 
+{
+    client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
+});
 
 builder.Services.AddMudServices();
 
