@@ -28,7 +28,7 @@ public partial class Dashboard
 
     private const int NameCutOff = 12;
 
-    private System.Threading.Timer? _timer;
+    private ST.Timer? _timer;
     private DateTime _lastUpdated;
     private string _timeSinceLastUpdate = "Never";
 
@@ -69,42 +69,32 @@ public partial class Dashboard
         ChartPalette = new[] { "#4CAF50", "#666666" }
     };
 
-    private bool _isRefreshing = false;
+    private ChartSeries[] _kingFridaySEHistorySeries = Array.Empty<ChartSeries>();
+    private string[] _kingFridaySEHistoryLabels = Array.Empty<string>();
+    private double[] _kingFridaySEHistoryData = Array.Empty<double>();
 
     protected override async Task OnInitializedAsync()
     {
         await RefreshData();
 
-        _timer = new System.Threading.Timer(async _ =>
+        _timer = new ST.Timer(30000); // 30 seconds
+        _timer.Elapsed += async (sender, e) =>
         {
             try
             {
+                // Ensure we're on the UI thread
                 await InvokeAsync(async () =>
                 {
-                    if (!_isRefreshing)
-                    {
-                        _isRefreshing = true;
-                        try
-                        {
-                            await RefreshData();
-                        }
-                        finally
-                        {
-                            _isRefreshing = false;
-                        }
-                    }
+                    await RefreshData();
                 });
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Timer refresh error");
             }
-        }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
-    }
-
-    public void Dispose()
-    {
-        _timer?.Dispose();
+        };
+        _timer.AutoReset = true;
+        _timer.Enabled = true;
     }
 
     private async Task RefreshData()
@@ -116,6 +106,7 @@ public partial class Dashboard
             await UpdateKingSaturday();
             await UpdateKingSunday();
             await UpdateKingMonday();
+            await LoadKingFridaySEHistory();
 
             _lastUpdated = DateTime.Now;
             _timeSinceLastUpdate = GetTimeSinceLastUpdate();
@@ -242,6 +233,64 @@ public partial class Dashboard
             FormatTitleChangeLabel(DateTime.Parse(_kingMondayStats.ProjectedTitleChange)),
             _kingMondayStats.NextTitle
         };
+    }
+
+    private async Task LoadKingFridaySEHistory()
+    {
+        try
+        {
+            // Calculate date range (14 days ago until now)
+            var endDate = DateTime.UtcNow;
+            var startDate = endDate.AddDays(-14);
+            
+            // Get historical player data for King Friday
+            var historicalData = await ApiService.GetPlayerHistoryAsync(
+                "King Friday!", 
+                startDate, 
+                endDate);
+                
+            if (historicalData?.Any() == true)
+            {
+                // Format the data for the chart
+                _kingFridaySEHistoryLabels = historicalData
+                    .Select(p => p.Updated.ToString("MM/dd"))
+                    .ToArray();
+                    
+                // Convert SE values to numeric values for the chart
+                // This is simplified and might need adjustment based on how SE is stored
+                _kingFridaySEHistoryData = historicalData
+                    .Select(p => ParseSoulEggs(p.SoulEggs))
+                    .ToArray();
+                    
+                // Create the chart series
+                _kingFridaySEHistorySeries = new ChartSeries[]
+                {
+                    new ChartSeries 
+                    { 
+                        Name = "Soul Eggs", 
+                        Data = _kingFridaySEHistoryData,
+                        Color = "#4CAF50" 
+                    }
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading King Friday SE history data");
+        }
+    }
+
+    private double ParseSoulEggs(string? soulEggs)
+    {
+        if (string.IsNullOrEmpty(soulEggs))
+            return 0;
+        
+        // Remove any non-numeric characters and try to parse the value
+        // This is a simple implementation and might need to be adjusted
+        if (double.TryParse(soulEggs.TrimEnd('Q', 'q', 's'), out double result))
+            return result;
+        
+        return 0;
     }
 
     private string GetTimeSinceLastUpdate()

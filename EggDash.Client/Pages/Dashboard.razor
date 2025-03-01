@@ -298,8 +298,24 @@
         </MudItem>
 
         <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 5: Graphs</MudText>
+            <MudPaper Class="dashboard-tile p-4" Style="height: 100%;">
+                <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-3">King Friday's SE Progress</MudText>
+                @if (_kingFridaySEHistoryData == null || _kingFridaySEHistoryData.Length == 0)
+                {
+                    <MudProgressCircular Indeterminate="true" />
+                }
+                else
+                {
+                    <MudChart ChartType="ChartType.Line"
+                             ChartSeries="@_kingFridaySEHistorySeries"
+                             XAxisLabels="@_kingFridaySEHistoryLabels"
+                             Width="100%"
+                             Height="300px">
+                    </MudChart>
+                    <MudText Typo="Typo.caption" Align="Align.Center" Class="mt-2">
+                        Soul Eggs Progress (Last 14 Days)
+                    </MudText>
+                }
             </MudPaper>
         </MudItem>
         <MudItem xs="3">

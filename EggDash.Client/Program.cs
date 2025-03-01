@@ -13,10 +13,10 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.Services.AddSingleton<DashboardState>();
 
 // Register the ApiService
-builder.Services.AddHttpClient<ApiService>(client => 
-{
-    client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
-});
+//builder.Services.AddHttpClient<ApiService>(client => 
+//{
+//    client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
+//});
 
 builder.Services.AddMudServices();
 
