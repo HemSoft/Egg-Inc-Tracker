@@ -82,14 +82,19 @@ public partial class Dashboard
     private int _selectedDaysToDisplay = 7;
     private Dictionary<string, List<double>> _metricHistoryData = new();
     
-    // Chart options with a custom palette for the multiple metrics
+    // Chart options with a custom palette for the Soul Eggs chart
     private readonly ChartOptions _multiSeriesChartOptions = new()
     {
-        ChartPalette = new[] { "#4CAF50", "#FF9800", "#2196F3", "#F44336" },
-        InterpolationOption = InterpolationOption.Straight,
-        YAxisFormat = "0.##",
-        XAxisLines = true,
-        YAxisLines = true
+        ChartPalette = new[] { "#4CAF50" }, // Green color for Soul Eggs
+        InterpolationOption = InterpolationOption.Straight, // Use straight lines between points
+        YAxisFormat = "0.##", // Format for Y-axis values
+        XAxisLines = true, // Show X-axis grid lines
+        YAxisLines = true, // Show Y-axis grid lines
+        YAxisTicks = 1, // Increase number of ticks on Y-axis to show more granular values
+        ShowLabels = true,
+        ShowLegend = true,
+        ShowLegendLabels = true,
+        ShowToolTips = true
     };
 
     protected override async Task OnInitializedAsync()
@@ -350,7 +355,6 @@ public partial class Dashboard
                     .ToArray();
                     
                 // Convert SE values to numeric values for the chart
-                // This is simplified and might need adjustment based on how SE is stored
                 _kingFridaySEHistoryData = historicalData
                     .Select(p => ParseSoulEggs(p.SoulEggs))
                     .ToArray();
@@ -548,7 +552,7 @@ public partial class Dashboard
     // Generate test data for the chart - only used as a fallback when real data isn't available
     private void InitializeTestData()
     {
-        Logger.LogInformation("Using test data for historical metrics chart");
+        Logger.LogInformation("Using test data for Soul Eggs chart");
         
         // Create mock data for the last 7 days
         var today = DateTime.Now;
@@ -559,23 +563,25 @@ public partial class Dashboard
             
         _kingFridayMultiSeriesLabels = dates.Select(d => d.ToString("MM/dd")).ToArray();
         
-        // Initialize the metrics dictionary with random test data
+        // Initialize the metrics dictionary with random test data for Soul Eggs only
         _metricHistoryData = new Dictionary<string, List<double>>
         {
             // Soul Eggs (increasing trend)
-            ["SE"] = new List<double> { 100, 110, 125, 145, 160, 185, 210 },
-            
-            // Earnings Bonus (increasing trend)
-            ["EB"] = new List<double> { 50, 55, 60, 67, 75, 80, 90 },
-            
-            // MER (Maximum Egg Rate - more variable)
-            ["MER"] = new List<double> { 30, 32, 28, 35, 33, 38, 42 },
-            
-            // JER (Job Egg Rate - more variable)
-            ["JER"] = new List<double> { 15, 18, 14, 20, 17, 22, 25 }
+            ["Soul Eggs"] = new List<double> { 100, 110, 125, 145, 160, 185, 210 }
         };
         
-        UpdateMultiSeriesChart();
+        // Create chart series directly
+        _kingFridayMultiSeriesData = new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "Soul Eggs",
+                Data = _metricHistoryData["Soul Eggs"].ToArray()
+            }
+        };
+        
+        // Update labels
+        _kingFridayMultiSeriesLabels = dates.Select(d => d.ToString("MM/dd")).ToArray();
     }
     
     // Update the chart based on the selected number of days
@@ -616,37 +622,21 @@ public partial class Dashboard
                     .Select(p => p.Updated.ToString("MM/dd"))
                     .ToArray();
                 
-                // Process metrics data
-                var seValues = new List<double>();
-                var ebValues = new List<double>();
-                var merValues = new List<double>();
-                var jerValues = new List<double>();
+                // Process Soul Eggs data
+                var soulEggsValues = new List<double>();
                 
                 foreach (var dataPoint in groupedByDay)
                 {
-                    // Process Soul Eggs
-                    seValues.Add(ParseSoulEggs(dataPoint.SoulEggs));
-                    
-                    // Process Earnings Bonus
-                    ebValues.Add(ParseEarningsBonus(dataPoint.EarningsBonusPercentage));
-                    
-                    // Process MER (Maximum Egg Rate)
-                    merValues.Add(dataPoint.MER);
-                    
-                    // Process JER (Job Egg Rate)
-                    jerValues.Add(dataPoint.JER);
+                    soulEggsValues.Add(ParseSoulEggs(dataPoint.SoulEggs));
                 }
                 
-                // Update the metrics dictionary with real data
+                // Update the metrics dictionary with Soul Eggs data only
                 _metricHistoryData = new Dictionary<string, List<double>>
                 {
-                    ["SE"] = seValues,
-                    ["EB"] = ebValues,
-                    ["MER"] = merValues,
-                    ["JER"] = jerValues
+                    ["Soul Eggs"] = soulEggsValues
                 };
                 
-                Logger.LogInformation("Successfully loaded historical metrics data with {Count} data points", groupedByDay.Count);
+                Logger.LogInformation("Successfully loaded Soul Eggs data with {Count} data points", groupedByDay.Count);
             }
             else
             {
@@ -656,30 +646,27 @@ public partial class Dashboard
                 return;
             }
             
-            // Format the chart data based on the selected days to display
+            // Format the chart data based on the selected number of days
             // Limit the labels and data to the selected number of days
             var daysToShow = Math.Min(_selectedDaysToDisplay, _kingFridayMultiSeriesLabels.Length);
             var labels = _kingFridayMultiSeriesLabels.TakeLast(daysToShow).ToArray();
             
-            // Create series for each metric
+            // Create single series for Soul Eggs
             _kingFridayMultiSeriesData = new List<ChartSeries>();
             
-            foreach (var metric in _metricHistoryData)
+            var soulEggData = _metricHistoryData["Soul Eggs"].TakeLast(daysToShow).ToArray();
+            _kingFridayMultiSeriesData.Add(new ChartSeries
             {
-                var data = metric.Value.TakeLast(daysToShow).ToArray();
-                _kingFridayMultiSeriesData.Add(new ChartSeries
-                {
-                    Name = metric.Key,
-                    Data = data
-                });
-            }
+                Name = "Soul Eggs",
+                Data = soulEggData
+            });
             
             // Update the labels
             _kingFridayMultiSeriesLabels = labels;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error loading King Friday historical metrics data");
+            Logger.LogError(ex, "Error loading King Friday Soul Eggs data");
             // If there's an error, fall back to test data
             InitializeTestData();
         }

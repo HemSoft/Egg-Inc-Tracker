@@ -326,21 +326,11 @@
                 
                 <!-- Legend for the chart -->
                 <div class="d-flex justify-center mt-2 mb-1">
-                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="mr-2">SE - Soul Eggs</MudChip>
-                    <MudChip T="string" Color="Color.Warning" Size="Size.Small" Class="mr-2">EB - Earnings Bonus</MudChip>
-                    <MudChip T="string" Color="Color.Info" Size="Size.Small" Class="mr-2">MER - Maximum Egg Rate</MudChip>
-                    <MudChip T="string" Color="Color.Error" Size="Size.Small">JER - Job Egg Rate</MudChip>
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small">Soul Eggs</MudChip>
                 </div>
             </MudPaper>
         </MudItem>
     </MudGrid>
-
-    <!-- Dashboard last updated time -->
-    <div class="dashboard-footer d-flex justify-end mt-2">
-        <MudText Typo="Typo.caption">
-            Dashboard last updated: @_timeSinceLastUpdate
-        </MudText>
-    </div>
 </div>
 
 <style>
@@ -367,5 +357,33 @@
 
     .fill-grid {
         min-height: 90%;
+    }
+    
+    /* Enhanced styling for chart points */
+    ::deep .mud-chart-line .chartjs-point {
+        r: 8 !important; /* Larger radius for better visibility */
+        stroke: #1B5E20 !important; /* Darker green border for contrast */
+        stroke-width: 3px !important; /* Thicker border for visibility */
+        fill: #4CAF50 !important; /* Green fill */
+    }
+    
+    ::deep .mud-chart-line .chartjs-point:hover {
+        r: 10 !important; /* Even larger on hover */
+        stroke-width: 4px !important; /* Thicker border on hover */
+        cursor: pointer;
+    }
+    
+    ::deep .mud-chart-line .chartjs-line {
+        stroke-width: 3px !important; /* Make the line thicker */
+    }
+    
+    /* Additional styling to ensure points are visible */
+    ::deep .chartjs-render-monitor {
+        pointer-events: auto !important;
+    }
+    
+    ::deep .chartjs-point-0 {
+        visibility: visible !important;
+        opacity: 1 !important;
     }
 </style>
