@@ -1,10 +1,5 @@
 using EggDash.Client.Services;
-
-using HemSoft.EggIncTracker.Data;
-
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.EntityFrameworkCore;
-
 using MudBlazor.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -12,11 +7,16 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 // Register the DashboardState service
 builder.Services.AddSingleton<DashboardState>();
 
-// Register the ApiService
-builder.Services.AddHttpClient<ApiService>(client => 
+// Register HttpClient with proper BaseAddress
+builder.Services.AddHttpClient<ApiService>(client =>
 {
-    client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
+    // Use the application URL from launchSettings.json or configuration
+    var baseAddress = builder.Configuration["ApplicationUrl"] ?? "http://localhost:7117"; // Default for local dev
+    client.BaseAddress = new Uri(baseAddress.EndsWith("/") ? baseAddress : baseAddress + "/");
 });
+
+// Register ApiService
+builder.Services.AddScoped<ApiService>();
 
 builder.Services.AddMudServices();
 

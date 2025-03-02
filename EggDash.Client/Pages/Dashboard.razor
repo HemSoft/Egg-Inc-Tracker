@@ -297,66 +297,93 @@
             </MudPaper>
         </MudItem>
 
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 5: Graphs</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 6: Player Stats</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 7: Achievements</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 8: Goals</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 9: Contracts</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 10: Player Rankings</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 11: Events</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 12: Notifications</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 13: Fuel Status</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 14: Mission Stats</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 15: Coop Status</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 16: Miscellaneous</MudText>
+        <!------------------------------------>
+        <!-- King Friday Historical Metrics -->
+        <!------------------------------------>
+        <MudItem xs="12" Class="mt-4">
+            <MudPaper Class="dashboard-tile d-flex flex-column" Style="height: 100%;">
+                <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-2">King Friday Metrics History</MudText>
+                
+                <!-- Slider to control days display -->
+                <div class="d-flex justify-center align-center px-4 mb-2">
+                    <MudText Class="mr-4">Days to display:</MudText>
+                    <MudSlider @bind-Value="_selectedDaysToDisplay" Min="1" Max="30" Step="1" Class="mx-4" Style="width: 300px;">
+                        @_selectedDaysToDisplay days
+                    </MudSlider>
+                    <MudButton Size="Size.Small" Color="Color.Primary" OnClick="@(() => OnDaysSliderChanged(_selectedDaysToDisplay))">
+                        Update
+                    </MudButton>
+                </div>
+
+                <!-- Line chart for multiple metrics -->
+                <MudChart ChartType="ChartType.Line"
+                         ChartSeries="@_kingFridayMultiSeriesData"
+                         XAxisLabels="@_kingFridayMultiSeriesLabels"
+                         Width="100%"
+                         Height="350px"
+                         ChartOptions="@_multiSeriesChartOptions">
+                </MudChart>
+                
+                <!-- Legend for the chart -->
+                <div class="d-flex justify-center mt-2 mb-1">
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small">Soul Eggs</MudChip>
+                </div>
             </MudPaper>
         </MudItem>
     </MudGrid>
-
 </div>
+
+<style>
+    .dashboard-container {
+        position: relative;
+        min-height: calc(100vh - 70px);
+    }
+
+    .dashboard-tile {
+        padding: 16px;
+        border-radius: 8px;
+        height: 100%;
+    }
+
+    .donut-inner-text {
+        font-size: 5 !important;
+    }
+
+    .dashboard-footer {
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+    }
+
+    .fill-grid {
+        min-height: 90%;
+    }
+    
+    /* Enhanced styling for chart points */
+    ::deep .mud-chart-line .chartjs-point {
+        r: 8 !important; /* Larger radius for better visibility */
+        stroke: #1B5E20 !important; /* Darker green border for contrast */
+        stroke-width: 3px !important; /* Thicker border for visibility */
+        fill: #4CAF50 !important; /* Green fill */
+    }
+    
+    ::deep .mud-chart-line .chartjs-point:hover {
+        r: 10 !important; /* Even larger on hover */
+        stroke-width: 4px !important; /* Thicker border on hover */
+        cursor: pointer;
+    }
+    
+    ::deep .mud-chart-line .chartjs-line {
+        stroke-width: 3px !important; /* Make the line thicker */
+    }
+    
+    /* Additional styling to ensure points are visible */
+    ::deep .chartjs-render-monitor {
+        pointer-events: auto !important;
+    }
+    
+    ::deep .chartjs-point-0 {
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+</style>
