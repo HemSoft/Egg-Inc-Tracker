@@ -1,0 +1,14 @@
+﻿.dashboard-container {
+    height: calc(100vh - 100px); /* Adjust as necessary based on header/footer */
+    padding: 16px;
+}
+
+.fill-grid {
+    height: 100%;
+}
+
+.dashboard-tile {
+    border: 1px solid lightgray;
+    border-radius: 8px;
+    padding: 8px;
+}

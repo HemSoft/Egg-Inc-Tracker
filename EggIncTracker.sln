@@ -1,5 +1,4 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34701.34
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -12,6 +11,12 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UpdatePlayerFunction", "UpdatePlayerFunction\UpdatePlayerFunction.csproj", "{23091931-7C25-4C80-A275-D3D0D0F178B2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Web", "Web\Web.csproj", "{2D26865F-2FFB-4B00-9B25-FB6D161187BB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EggDash", "EggDash\EggDash.csproj", "{C13DC607-59F2-B706-4655-DA0B01622564}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EggDash.Client", "EggDash.Client\EggDash.Client.csproj", "{A20D7CC7-1C38-931A-2D7D-9BACD04BE41A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EggIncTrackerApi", "EggIncTrackerApi\EggIncTrackerApi.csproj", "{81F5D5CB-7DA2-4820-9BF0-4FC51AFEF95D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +44,18 @@ Global
 		{2D26865F-2FFB-4B00-9B25-FB6D161187BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2D26865F-2FFB-4B00-9B25-FB6D161187BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2D26865F-2FFB-4B00-9B25-FB6D161187BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C13DC607-59F2-B706-4655-DA0B01622564}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C13DC607-59F2-B706-4655-DA0B01622564}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C13DC607-59F2-B706-4655-DA0B01622564}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C13DC607-59F2-B706-4655-DA0B01622564}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A20D7CC7-1C38-931A-2D7D-9BACD04BE41A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A20D7CC7-1C38-931A-2D7D-9BACD04BE41A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A20D7CC7-1C38-931A-2D7D-9BACD04BE41A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A20D7CC7-1C38-931A-2D7D-9BACD04BE41A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81F5D5CB-7DA2-4820-9BF0-4FC51AFEF95D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81F5D5CB-7DA2-4820-9BF0-4FC51AFEF95D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81F5D5CB-7DA2-4820-9BF0-4FC51AFEF95D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81F5D5CB-7DA2-4820-9BF0-4FC51AFEF95D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

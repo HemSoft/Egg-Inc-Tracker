@@ -1,0 +1,365 @@
+﻿@inherits LayoutComponentBase
+
+@inject IJSRuntime JSRuntime
+@inject DashboardState DashboardState
+@using System.Text.Json
+@using EggDash.Client.Services
+@implements IDisposable
+
+<MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudLayout>
+    <MudAppBar Elevation="1" Style="padding: 8px; height: auto;">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        <MudText Typo="Typo.h5" GutterBottom="true">Egg-Inc Royal Dashboard </MudText>
+        <MudSpacer />
+
+        <MudPaper Class="d-flex align-center py-2 px-4 rounded-xl mr-5"
+                  Style="background-color: rgba(128,128,128,0.1); border: 1px solid rgba(180,180,180,0.3); margin-bottom: 4px; margin-top: 4px;">
+            <MudStack Spacing="0" Class="mr-4">
+                <MudButton Variant="Variant.Filled"
+                           Color="@(_isRunning ? Color.Error : Color.Success)"
+                           Size="Size.Small"
+                           Style="height: 24px; min-height: 24px;"
+                           OnClick="ToggleStopwatch">
+                    @(_isRunning ? "Stop" : "Start")
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           Style="height: 24px; min-height: 24px; margin-top: 4px;"
+                           OnClick="ResetStopwatch">
+                    Reset
+                </MudButton>
+            </MudStack>
+            <MudStack Style="min-width: 160px;" Spacing="0">
+                <div class="d-flex justify-center mb-1">
+                    <MudText Typo="Typo.h6" Style="font-family: monospace; line-height: 1;" Class="mb-1">
+                        @if (_isLoading)
+                        {
+                            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Small" />
+                        }
+                        else
+                        {
+                            @GetFormattedTime()
+                        }
+                    </MudText>
+                </div>
+                <div @onclick="IncrementLegs" style="cursor: pointer; height: 10px; margin-top: 3px;">
+                    <MudProgressLinear Color="@GetProgressColor(0, 60, _minuteStartTime)"
+                                       Value="@GetProgressValue(0, 60, _minuteStartTime)"
+                                       Class="my-0" />
+                </div>
+                <div @onclick="Reset25MinProgress" style="cursor: pointer; height: 10px; margin-top: 5px;">
+                    <MudProgressLinear Color="@GetProgressColor(0, 1510, _25minStartTime)"
+                                       Value="@GetProgressValue(0, 1510, _25minStartTime)"
+                                       Class="my-0" />
+                </div>
+            </MudStack>
+            <MudButton Class="ml-3" Style="height: 100%; min-width: 50px;" 
+                       Variant="Variant.Outlined" 
+                       OnClick="IncrementLegs"
+                       Color="Color.Primary">
+                <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.caption">Legs</MudText>
+                    <MudText Typo="Typo.h5" Style="font-family: monospace;">@_legCount</MudText>
+                </MudStack>
+            </MudButton>
+        </MudPaper>
+
+        <!-- Last Updated -->
+        <MudText Typo="Typo.h2" Class="mr-4">
+            @(DashboardState.LastUpdated.ToString("HH:mm"))
+        </MudText>
+        <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
+        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
+    </MudAppBar>
+    <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2" Style="padding-top: 32px;">
+        <NavMenu />
+    </MudDrawer>
+    <MudMainContent Class="mt-16 pa-4">
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private DateTime _minuteStartTime = DateTime.Now;
+    private DateTime _25minStartTime = DateTime.Now;
+    private int _legCount = 0;
+
+    private class StopwatchState
+    {
+        public bool IsRunning { get; set; }
+        public DateTime StartTime { get; set; }
+        public TimeSpan Elapsed { get; set; }
+        public int LegCount { get; set; }
+    }
+
+    private bool _drawerOpen = true;
+    private bool _isDarkMode = true;
+    private MudTheme? _theme = null;
+
+    private bool _isRunning;
+    private DateTime _startTime;
+    private TimeSpan _elapsed = TimeSpan.Zero;
+    private System.Timers.Timer? _timer;
+
+    private bool _initialized;
+    private bool _isLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _timer = new System.Timers.Timer(1000);
+        _timer.Elapsed += async (sender, e) =>
+        {
+            if (_isRunning)
+            {
+                _elapsed = DateTime.Now - _startTime;
+                await InvokeAsync(async () =>
+                {
+                    await SaveStopwatchState();
+                    StateHasChanged();
+                });
+            }
+        };
+
+        _theme = new()
+            {
+                PaletteLight = _lightPalette,
+                PaletteDark = _darkPalette,
+                LayoutProperties = new LayoutProperties()
+            };
+
+        DashboardState.OnChange += StateHasChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            _isLoading = true;
+            StateHasChanged();
+
+            await RestoreStopwatchState();
+
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private double GetProgressValue(double currentSeconds, double maxSeconds, DateTime? startTime = null)
+    {
+        if (startTime.HasValue)
+        {
+            // Calculate elapsed time since the specific start time
+            var elapsed = (DateTime.Now - startTime.Value).TotalSeconds;
+            return Math.Min((elapsed / maxSeconds) * 100, 100);
+        }
+        return Math.Min((currentSeconds / maxSeconds) * 100, 100);
+    }
+
+    private Color GetProgressColor(double currentSeconds, double maxSeconds, DateTime? startTime = null)
+    {
+        var progress = startTime.HasValue
+            ? (DateTime.Now - startTime.Value).TotalSeconds / maxSeconds
+            : currentSeconds / maxSeconds;
+
+        if (progress >= 1) return Color.Error;
+        return progress < 0.5 ? Color.Success : Color.Warning;
+    }
+
+    private void ResetMinuteProgress()
+    {
+        _minuteStartTime = DateTime.Now;
+        StateHasChanged();
+    }
+
+    private void Reset25MinProgress()
+    {
+        _25minStartTime = DateTime.Now;
+        StateHasChanged();
+    }
+
+    private async Task SaveStopwatchState()
+    {
+        try
+        {
+            var state = new StopwatchState
+                {
+                    IsRunning = _isRunning,
+                    StartTime = _startTime,
+                    Elapsed = _elapsed,
+                    LegCount = _legCount
+                };
+
+            await JSRuntime.InvokeVoidAsync(
+                "localStorage.setItem",
+                "stopwatchState",
+                JsonSerializer.Serialize(state)
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving stopwatch state: {ex.Message}");
+        }
+    }
+
+    private async Task RestoreStopwatchState()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>(
+                "localStorage.getItem",
+                "stopwatchState"
+            );
+
+            if (!string.IsNullOrEmpty(json))
+            {
+                var state = JsonSerializer.Deserialize<StopwatchState>(json);
+                if (state != null)
+                {
+                    _isRunning = state.IsRunning;
+                    _startTime = state.StartTime;
+                    _elapsed = state.Elapsed;
+                    _legCount = state.LegCount;
+
+                    if (_isRunning)
+                    {
+                        // Adjust the start time based on the current time
+                        _elapsed = DateTime.Now - _startTime;
+                        _startTime = DateTime.Now - _elapsed;
+                        _timer?.Start();
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error restoring stopwatch state: {ex.Message}");
+            await ResetStopwatch();
+        }
+    }
+
+    private async Task ToggleStopwatch()
+    {
+        if (_isRunning)
+        {
+            _timer?.Stop();
+            _elapsed = DateTime.Now - _startTime;
+        }
+        else
+        {
+            _startTime = DateTime.Now - _elapsed;
+            _timer?.Start();
+            
+            // Initialize leg count to 1 when starting from zero
+            if (_elapsed.TotalSeconds < 0.1 && _legCount == 0)
+            {
+                _legCount = 1;
+            }
+        }
+        _isRunning = !_isRunning;
+        await SaveStopwatchState();
+    }
+
+    private async Task ResetStopwatch()
+    {
+        _timer?.Stop();
+        _isRunning = false;
+        _elapsed = TimeSpan.Zero;
+        _startTime = DateTime.Now;
+        _legCount = 0;
+
+        // Reset the progress bars when stopwatch is reset
+        _minuteStartTime = DateTime.Now;
+        _25minStartTime = DateTime.Now;
+
+        StateHasChanged();
+        await SaveStopwatchState();
+    }
+
+    public void Dispose()
+    {
+        DashboardState.OnChange -= StateHasChanged;
+        _timer?.Dispose();
+    }
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private void DarkModeToggle()
+    {
+        _isDarkMode = !_isDarkMode;
+    }
+
+    private string GetFormattedTime()
+    {
+        return $"{(int)_elapsed.TotalHours:D2}:{_elapsed.Minutes:D2}:{_elapsed.Seconds:D2}";
+    }
+
+    private void IncrementLegs()
+    {
+        if (_isRunning)
+        {
+            _legCount++;
+            _minuteStartTime = DateTime.Now;
+            StateHasChanged();
+        }
+    }
+
+    private readonly PaletteLight _lightPalette = new()
+        {
+            Black = "#110e2d",
+            AppbarText = "#424242",
+            AppbarBackground = "rgba(255,255,255,0.8)",
+            DrawerBackground = "#ffffff",
+            GrayLight = "#e8e8e8",
+            GrayLighter = "#f9f9f9",
+        };
+
+    private readonly PaletteDark _darkPalette = new()
+        {
+            Primary = "#7e6fff",
+            Surface = "#1e1e2d",
+            Background = "#1a1a27",
+            BackgroundGray = "#151521",
+            AppbarText = "#92929f",
+            AppbarBackground = "rgba(26,26,39,0.8)",
+            DrawerBackground = "#1a1a27",
+            ActionDefault = "#74718e",
+            ActionDisabled = "#9999994d",
+            ActionDisabledBackground = "#605f6d4d",
+            TextPrimary = "#b2b0bf",
+            TextSecondary = "#92929f",
+            TextDisabled = "#ffffff33",
+            DrawerIcon = "#92929f",
+            DrawerText = "#92929f",
+            GrayLight = "#2a2833",
+            GrayLighter = "#1e1e2d",
+            Info = "#4a86ff",
+            Success = "#3dcb6c",
+            Warning = "#ffb545",
+            Error = "#ff3f5f",
+            LinesDefault = "#33323e",
+            TableLines = "#33323e",
+            Divider = "#292838",
+            OverlayLight = "#1e1e2d80",
+        };
+
+    public string DarkLightModeButtonIcon => _isDarkMode switch
+    {
+        true => Icons.Material.Rounded.AutoMode,
+        false => Icons.Material.Outlined.DarkMode,
+    };
+}

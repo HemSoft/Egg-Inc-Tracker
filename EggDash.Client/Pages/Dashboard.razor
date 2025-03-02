@@ -1,0 +1,389 @@
+﻿@page "/dashboard"
+
+<PageTitle>Dashboard</PageTitle>
+
+<div class="dashboard-container mt-4 px-3">
+    <MudGrid Spacing="2" Class="fill-grid">
+
+        <!----------------->
+        <!-- King Monday -->
+        <!----------------->
+        <MudItem xs="3">
+            <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+                <div class="mb-4 text-center">
+                    <MudText Typo="Typo.h4" Align="Align.Center">King Monday</MudText>
+                    <MudText Typo="Typo.h6" Align="Align.Center">(@_kingMonday?.Title)</MudText>
+                    <MudText Typo="Typo.body1" Align="Align.Center">
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/egg_of_prophecy.webp" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingMonday?.ProphecyEggs
+                        </span>
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/egg_soul.webp" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingMonday?.SoulEggs
+                        </span>
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/chart.png" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingMonday?.EarningsBonusPercentage
+                        </span>
+                    </MudText>
+                </div>
+                <MudChart ChartType="ChartType.Donut"
+                          Width="300px"
+                          Height="300px"
+                          InputData="@_kingMondayTitleProgressData"
+                          InputLabels="@_kingMondayTitleProgressLabels"
+                          ChartOptions="@_options">
+                    <CustomGraphics>
+                        <text class="donut-inner-text" x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#BBBBBB" font-family="Helvetica" font-size="5">
+                            @_kingMonday?.TitleProgress.ToString("F0")%
+                        </text>
+                    </CustomGraphics>
+                </MudChart>
+            </MudPaper>
+        </MudItem>
+        <!----------------->
+        <!-- King Sunday -->
+        <!----------------->
+        <MudItem xs="3">
+            <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+                <div class="mb-4 text-center">
+                    <MudText Typo="Typo.h4" Align="Align.Center">King Sunday</MudText>
+                    <MudText Typo="Typo.h6" Align="Align.Center">(@_kingSunday?.Title)</MudText>
+                    <MudText Typo="Typo.body1" Align="Align.Center">
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/egg_of_prophecy.webp" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingSunday?.ProphecyEggs
+                        </span>
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/egg_soul.webp" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingSunday?.SoulEggs
+                        </span>
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/chart.png" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingSunday?.EarningsBonusPercentage
+                        </span>
+                    </MudText>
+                </div>
+                <MudChart ChartType="ChartType.Donut"
+                          Width="300px"
+                          Height="300px"
+                          InputData="@_kingSundayTitleProgressData"
+                          InputLabels="@_kingSundayTitleProgressLabels"
+                          ChartOptions="@_options">
+                    <CustomGraphics>
+                        <text class="donut-inner-text" x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#BBBBBB" font-family="Helvetica" font-size="5">
+                            @_kingSunday?.TitleProgress.ToString("F0")%
+                        </text>
+                    </CustomGraphics>
+                </MudChart>
+            </MudPaper>
+        </MudItem>
+        <!------------------->
+        <!-- King Saturday -->
+        <!------------------->
+        <MudItem xs="3">
+            <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+                <div class="mb-4 text-center">
+                    <MudText Typo="Typo.h4" Align="Align.Center">King Saturday</MudText>
+                    <MudText Typo="Typo.h6" Align="Align.Center">(@_kingSaturday?.Title)</MudText>
+                    <MudText Typo="Typo.body1" Align="Align.Center">
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/egg_of_prophecy.webp" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingSaturday?.ProphecyEggs
+                        </span>
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/egg_soul.webp" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingSaturday?.SoulEggs
+                        </span>
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/chart.png" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingSaturday?.EarningsBonusPercentage
+                        </span>
+                    </MudText>
+                </div>
+                <MudChart ChartType="ChartType.Donut"
+                          Width="300px"
+                          Height="300px"
+                          InputData="@_kingSaturdayTitleProgressData"
+                          InputLabels="@_kingSaturdayTitleProgressLabels"
+                          ChartOptions="@_options">
+                    <CustomGraphics>
+                        <text class="donut-inner-text" x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#BBBBBB" font-family="Helvetica" font-size="5">
+                            @_kingSaturday?.TitleProgress.ToString("F0")%
+                        </text>
+                    </CustomGraphics>
+                </MudChart>
+            </MudPaper>
+        </MudItem>
+        <!----------------->
+        <!-- King Friday -->
+        <!----------------->
+        <MudItem xs="3">
+            <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+                <div class="mb-4 text-center">
+                    <MudText Typo="Typo.h4" Align="Align.Center">King Friday</MudText>
+                    <MudText Typo="Typo.body1" Align="Align.Center">
+                        @if (DashboardState.PlayerLastUpdated != DateTime.MinValue)
+                        {
+                            <MudText Inline="true" Class="ml-2 align-bottom">
+                                (@_kingFriday?.Title -- Last Updated: @GetLocalTimeString(DashboardState.PlayerLastUpdated))
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudText Inline="true" Class="ml-2 align-bottom">
+                                (@_kingFriday?.Title)
+                            </MudText>
+                        }
+                    </MudText>
+                    <MudText Typo="Typo.body1" Align="Align.Center">
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/egg_of_prophecy.webp" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingFriday?.ProphecyEggs
+                        </span>
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/egg_soul.webp" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingFriday?.SoulEggs
+                        </span>
+                        <span class="d-inline-flex align-center mr-2">
+                            <MudImage src="/assets/chart.png" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
+                            @_kingFriday?.EarningsBonusPercentage
+                        </span>
+                    </MudText>
+                    <MudText Typo="Typo.subtitle2" Align="Align.Center">
+                        <span class="d-inline-flex align-center mr-2">
+                            SE/Week: (@_kingFridayStats?.SEPerWeek)
+                        </span>
+                        <span class="d-inline-flex align-center mr-2">
+                            Stiges Today/Week: @_kingFriday?.PrestigesToday / @_kingFriday?.PrestigesThisWeek
+                        </span>
+                    </MudText>
+                </div>
+                <MudChart ChartType="ChartType.Donut"
+                          Width="160px"
+                          Height="160px"
+                          InputData="@_kingFridayTitleProgressData"
+                          InputLabels="@_kingFridayTitleProgressLabels"
+                          ChartOptions="@_options">
+                    <CustomGraphics>
+                        <text class="donut-inner-text" x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#BBBBBB" font-family="Helvetica" font-size="5">
+                            @_kingFriday?.TitleProgress.ToString("F0")%
+                        </text>
+                    </CustomGraphics>
+                </MudChart>
+                <!---------------------->
+                <!-- SE Progress Bar: -->
+                <!---------------------->
+                <div class="mt-n2 px-4" style="width: 100%;">
+                    <MudText Typo="Typo.subtitle2" Class="mb-0">
+                        SE (@_kingFridayStats?.SE) -- Rank: @((_SEGoalEnd?.Ranking ?? 0) + 1)
+                    </MudText>
+                    @{
+                        var kingFridaySEGoalPercentage = CalculateProgressPercentage
+                        (_kingFridayStats?.SE, _SEGoalEnd?.SEString, _SEGoalBegin?.SEString);
+                    }
+                    <MudProgressLinear Color="Color.Success"
+                                       Value="@kingFridaySEGoalPercentage"
+                                       Max="100"
+                                       Striped="false"
+                                       Size="Size.Large"
+                                       Style="height: 20px; border-radius: 4px;"
+                                       Class="my-0">
+                        <MudText Typo="Typo.caption" Style="color: white;">
+                            @kingFridaySEGoalPercentage.ToString("F1")%
+                        </MudText>
+                    </MudProgressLinear>
+                    <div class="d-flex justify-space-between mt-n1">
+                        <MudText Typo="Typo.caption">
+                            (@_SEGoalBegin?.SEString) @(_SEGoalBegin?.IGN?.Length > NameCutOff ? _SEGoalBegin.IGN.Substring(0, NameCutOff) : _SEGoalBegin?.IGN)
+                        </MudText>
+                        <MudText Typo="Typo.caption">
+                            @(_SEGoalEnd?.IGN?.Length > NameCutOff ? _SEGoalEnd.IGN.Substring(0, NameCutOff) : _SEGoalEnd?.IGN) (@_SEGoalEnd?.SEString)
+                        </MudText>
+                    </div>
+                </div>
+                <!---------------------->
+                <!-- EB Progress Bar: -->
+                <!---------------------->
+                <div class="mt-2 px-4" style="width: 100%;">
+                    <MudText Typo="Typo.subtitle2" Class="mb-0">
+                        EB (@_kingFridayStats?.EB) -- Rank: @(_EBGoalEnd?.Ranking + 1)
+                    </MudText>
+                    @{
+                        var kingFridayEBGoalPercentage = CalculateProgressPercentage
+                        (_kingFridayStats?.EB, _EBGoalEnd?.EBString, _EBGoalBegin?.EBString);
+                    }
+                    <MudProgressLinear Color="Color.Success"
+                                       Value="@kingFridayEBGoalPercentage"
+                                       Max="100"
+                                       Striped="false"
+                                       Size="Size.Large"
+                                       Style="height: 20px; border-radius: 4px;"
+                                       Class="my-0">
+                        <MudText Typo="Typo.caption" Style="color: white;">
+                            @kingFridayEBGoalPercentage.ToString("F1")%
+                        </MudText>
+                    </MudProgressLinear>
+                    <div class="d-flex justify-space-between mt-n1">
+                        <MudText Typo="Typo.caption">
+                            (@_EBGoalBegin?.EBString) @(_EBGoalBegin?.IGN?.Length > NameCutOff ? _EBGoalBegin.IGN.Substring(0, NameCutOff) : _EBGoalBegin?.IGN)
+                        </MudText>
+                        <MudText Typo="Typo.caption">
+                            @(_EBGoalEnd?.IGN?.Length > NameCutOff ? _EBGoalEnd.IGN.Substring(0, NameCutOff) : _EBGoalEnd?.IGN) (@_EBGoalEnd?.EBString)
+                        </MudText>
+                    </div>
+                </div>
+                <!----------------------->
+                <!-- MER Progress Bar: -->
+                <!----------------------->
+                <div class="mt-2 px-4" style="width: 100%;">
+                    <MudText Typo="Typo.subtitle2" Class="mb-0">
+                        MER (@_kingFridayStats?.MER) -- Rank: @_MERGoalEnd?.Ranking
+                    </MudText>
+                    @{
+                        var kingFridayMERGoalPercentage = CalculateProgressPercentage(_kingFridayStats?.MER.ToString(), _MERGoalEnd?.MER.ToString(), _MERGoalBegin?.MER.ToString());
+                    }
+                    <MudProgressLinear Color="Color.Success"
+                                       Value="@kingFridayMERGoalPercentage"
+                                       Max="100"
+                                       Striped="false"
+                                       Size="Size.Large"
+                                       Style="height: 20px; border-radius: 4px;"
+                                       Class="my-0">
+                        <MudText Typo="Typo.caption" Style="color: white;">
+                            @kingFridayMERGoalPercentage.ToString("F1")%
+                        </MudText>
+                    </MudProgressLinear>
+                    <div class="d-flex justify-space-between mt-n1">
+                        <MudText Typo="Typo.caption">
+                            (@_MERGoalBegin?.MER) @(_MERGoalBegin?.IGN?.Length > NameCutOff ? _MERGoalBegin.IGN.Substring(0, NameCutOff) : _MERGoalBegin?.IGN)
+                        </MudText>
+                        <MudText Typo="Typo.caption">
+                            @(_MERGoalEnd?.IGN?.Length > NameCutOff ? _MERGoalEnd.IGN.Substring(0, NameCutOff) : _MERGoalEnd?.IGN) (@_MERGoalEnd?.MER)
+                        </MudText>
+                    </div>
+                </div>
+                <!----------------------->
+                <!-- JER Progress Bar: -->
+                <!----------------------->
+                <div class="mt-2 px-4" style="width: 100%;">
+                    <MudText Typo="Typo.subtitle2" Class="mb-0">
+                        JER (@_kingFridayStats?.JER) -- Rank: @_JERGoalEnd?.Ranking
+                    </MudText>
+                    @{
+                        var kingFridayJERGoalPercentage = CalculateProgressPercentage(_kingFridayStats?.JER.ToString(), _JERGoalEnd?.JER.ToString(), _JERGoalBegin?.JER.ToString());
+                    }
+                    <MudProgressLinear Color="Color.Success"
+                                       Value="@kingFridayJERGoalPercentage"
+                                       Max="100"
+                                       Striped="false"
+                                       Size="Size.Large"
+                                       Style="height: 20px; border-radius: 4px;"
+                                       Class="my-0">
+                        <MudText Typo="Typo.caption" Style="color: white;">
+                            @kingFridayJERGoalPercentage.ToString("F1")%
+                        </MudText>
+                    </MudProgressLinear>
+                    <div class="d-flex justify-space-between mt-n1">
+                        <MudText Typo="Typo.caption">
+                            (@_JERGoalBegin?.JER) @(_JERGoalBegin?.IGN?.Length > NameCutOff ? _JERGoalBegin.IGN.Substring(0, NameCutOff) : _JERGoalBegin?.IGN)
+                        </MudText>
+                        <MudText Typo="Typo.caption">
+                            @(_JERGoalEnd?.IGN?.Length > NameCutOff ? _JERGoalEnd.IGN.Substring(0, NameCutOff) : _JERGoalEnd?.IGN) (@_JERGoalEnd?.JER)
+                        </MudText>
+                    </div>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <!------------------------------------>
+        <!-- King Friday Historical Metrics -->
+        <!------------------------------------>
+        <MudItem xs="12" Class="mt-4">
+            <MudPaper Class="dashboard-tile d-flex flex-column" Style="height: 100%;">
+                <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-2">King Friday Metrics History</MudText>
+                
+                <!-- Slider to control days display -->
+                <div class="d-flex justify-center align-center px-4 mb-2">
+                    <MudText Class="mr-4">Days to display:</MudText>
+                    <MudSlider @bind-Value="_selectedDaysToDisplay" Min="1" Max="30" Step="1" Class="mx-4" Style="width: 300px;">
+                        @_selectedDaysToDisplay days
+                    </MudSlider>
+                    <MudButton Size="Size.Small" Color="Color.Primary" OnClick="@(() => OnDaysSliderChanged(_selectedDaysToDisplay))">
+                        Update
+                    </MudButton>
+                </div>
+
+                <!-- Line chart for multiple metrics -->
+                <MudChart ChartType="ChartType.Line"
+                         ChartSeries="@_kingFridayMultiSeriesData"
+                         XAxisLabels="@_kingFridayMultiSeriesLabels"
+                         Width="100%"
+                         Height="350px"
+                         ChartOptions="@_multiSeriesChartOptions">
+                </MudChart>
+                
+                <!-- Legend for the chart -->
+                <div class="d-flex justify-center mt-2 mb-1">
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small">Soul Eggs</MudChip>
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</div>
+
+<style>
+    .dashboard-container {
+        position: relative;
+        min-height: calc(100vh - 70px);
+    }
+
+    .dashboard-tile {
+        padding: 16px;
+        border-radius: 8px;
+        height: 100%;
+    }
+
+    .donut-inner-text {
+        font-size: 5 !important;
+    }
+
+    .dashboard-footer {
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+    }
+
+    .fill-grid {
+        min-height: 90%;
+    }
+    
+    /* Enhanced styling for chart points */
+    ::deep .mud-chart-line .chartjs-point {
+        r: 8 !important; /* Larger radius for better visibility */
+        stroke: #1B5E20 !important; /* Darker green border for contrast */
+        stroke-width: 3px !important; /* Thicker border for visibility */
+        fill: #4CAF50 !important; /* Green fill */
+    }
+    
+    ::deep .mud-chart-line .chartjs-point:hover {
+        r: 10 !important; /* Even larger on hover */
+        stroke-width: 4px !important; /* Thicker border on hover */
+        cursor: pointer;
+    }
+    
+    ::deep .mud-chart-line .chartjs-line {
+        stroke-width: 3px !important; /* Make the line thicker */
+    }
+    
+    /* Additional styling to ensure points are visible */
+    ::deep .chartjs-render-monitor {
+        pointer-events: auto !important;
+    }
+    
+    ::deep .chartjs-point-0 {
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+</style>
