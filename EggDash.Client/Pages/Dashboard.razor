@@ -297,82 +297,75 @@
             </MudPaper>
         </MudItem>
 
-        <MudItem xs="3">
-            <MudPaper Class="dashboard-tile p-4" Style="height: 100%;">
-                <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-3">King Friday's SE Progress</MudText>
-                @if (_kingFridaySEHistoryData == null || _kingFridaySEHistoryData.Length == 0)
-                {
-                    <MudProgressCircular Indeterminate="true" />
-                }
-                else
-                {
-                    <MudChart ChartType="ChartType.Line"
-                             ChartSeries="@_kingFridaySEHistorySeries"
-                             XAxisLabels="@_kingFridaySEHistoryLabels"
-                             Width="100%"
-                             Height="300px">
-                    </MudChart>
-                    <MudText Typo="Typo.caption" Align="Align.Center" Class="mt-2">
-                        Soul Eggs Progress (Last 14 Days)
-                    </MudText>
-                }
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 6: Player Stats</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 7: Achievements</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 8: Goals</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 9: Contracts</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 10: Player Rankings</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 11: Events</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 12: Notifications</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 13: Fuel Status</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 14: Mission Stats</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 15: Coop Status</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="d-flex justify-center align-center" Style="height: 100%;">
-                <MudText>Tile 16: Miscellaneous</MudText>
+        <!------------------------------------>
+        <!-- King Friday Historical Metrics -->
+        <!------------------------------------>
+        <MudItem xs="12" Class="mt-4">
+            <MudPaper Class="dashboard-tile d-flex flex-column" Style="height: 100%;">
+                <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-2">King Friday Metrics History</MudText>
+                
+                <!-- Slider to control days display -->
+                <div class="d-flex justify-center align-center px-4 mb-2">
+                    <MudText Class="mr-4">Days to display:</MudText>
+                    <MudSlider @bind-Value="_selectedDaysToDisplay" Min="1" Max="30" Step="1" Class="mx-4" Style="width: 300px;">
+                        @_selectedDaysToDisplay days
+                    </MudSlider>
+                    <MudButton Size="Size.Small" Color="Color.Primary" OnClick="@(() => OnDaysSliderChanged(_selectedDaysToDisplay))">
+                        Update
+                    </MudButton>
+                </div>
+
+                <!-- Line chart for multiple metrics -->
+                <MudChart ChartType="ChartType.Line"
+                         ChartSeries="@_kingFridayMultiSeriesData"
+                         XAxisLabels="@_kingFridayMultiSeriesLabels"
+                         Width="100%"
+                         Height="350px"
+                         ChartOptions="@_multiSeriesChartOptions">
+                </MudChart>
+                
+                <!-- Legend for the chart -->
+                <div class="d-flex justify-center mt-2 mb-1">
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="mr-2">SE - Soul Eggs</MudChip>
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Small" Class="mr-2">EB - Earnings Bonus</MudChip>
+                    <MudChip T="string" Color="Color.Info" Size="Size.Small" Class="mr-2">MER - Maximum Egg Rate</MudChip>
+                    <MudChip T="string" Color="Color.Error" Size="Size.Small">JER - Job Egg Rate</MudChip>
+                </div>
             </MudPaper>
         </MudItem>
     </MudGrid>
 
+    <!-- Dashboard last updated time -->
+    <div class="dashboard-footer d-flex justify-end mt-2">
+        <MudText Typo="Typo.caption">
+            Dashboard last updated: @_timeSinceLastUpdate
+        </MudText>
+    </div>
 </div>
+
+<style>
+    .dashboard-container {
+        position: relative;
+        min-height: calc(100vh - 70px);
+    }
+
+    .dashboard-tile {
+        padding: 16px;
+        border-radius: 8px;
+        height: 100%;
+    }
+
+    .donut-inner-text {
+        font-size: 5 !important;
+    }
+
+    .dashboard-footer {
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+    }
+
+    .fill-grid {
+        min-height: 90%;
+    }
+</style>

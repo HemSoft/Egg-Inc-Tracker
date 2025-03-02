@@ -1,3 +1,5 @@
+using HemSoft.EggIncTracker.Domain;
+
 namespace EggDash.Client.Pages;
 
 using System.Globalization;
@@ -6,7 +8,8 @@ using EggDash.Client.Services;
 
 using HemSoft.EggIncTracker.Data;
 using HemSoft.EggIncTracker.Data.Dtos;
-using HemSoft.EggIncTracker.Domain;
+// Remove Domain reference and use only API service
+// using HemSoft.EggIncTracker.Domain;
 
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
@@ -21,10 +24,10 @@ public partial class Dashboard
     private ILogger<Dashboard> Logger { get; set; } = default!;
 
     [Inject]
-    private EggIncContext DbContext { get; set; } = default!;
+    private DashboardState DashboardState { get; set; } = default!;
 
     [Inject]
-    private DashboardState DashboardState { get; set; } = default!;
+    private EggDash.Client.Services.ApiService ApiService { get; set; } = default!;
 
     private const int NameCutOff = 12;
 
@@ -69,12 +72,31 @@ public partial class Dashboard
         ChartPalette = new[] { "#4CAF50", "#666666" }
     };
 
-    private ChartSeries[] _kingFridaySEHistorySeries = Array.Empty<ChartSeries>();
+    private List<ChartSeries> _kingFridaySEHistorySeries = new List<ChartSeries>(Array.Empty<ChartSeries>());
     private string[] _kingFridaySEHistoryLabels = Array.Empty<string>();
     private double[] _kingFridaySEHistoryData = Array.Empty<double>();
 
+    // New properties for the multi-series line chart
+    private List<ChartSeries> _kingFridayMultiSeriesData = new();
+    private string[] _kingFridayMultiSeriesLabels = Array.Empty<string>();
+    private int _selectedDaysToDisplay = 7;
+    private Dictionary<string, List<double>> _metricHistoryData = new();
+    
+    // Chart options with a custom palette for the multiple metrics
+    private readonly ChartOptions _multiSeriesChartOptions = new()
+    {
+        ChartPalette = new[] { "#4CAF50", "#FF9800", "#2196F3", "#F44336" },
+        InterpolationOption = InterpolationOption.Straight,
+        YAxisFormat = "0.##",
+        XAxisLines = true,
+        YAxisLines = true
+    };
+
     protected override async Task OnInitializedAsync()
     {
+        // We'll no longer initialize test data by default
+        // InitializeTestData();
+        
         await RefreshData();
 
         _timer = new ST.Timer(30000); // 30 seconds
@@ -107,6 +129,9 @@ public partial class Dashboard
             await UpdateKingSunday();
             await UpdateKingMonday();
             await LoadKingFridaySEHistory();
+            
+            // Call the chart update method which now handles the API call directly
+            await UpdateMultiSeriesChart();
 
             _lastUpdated = DateTime.Now;
             _timeSinceLastUpdate = GetTimeSinceLastUpdate();
@@ -115,7 +140,6 @@ public partial class Dashboard
 
             // StateHasChanged is now called on the UI thread
             StateHasChanged();
-
         }
         catch (Exception ex)
         {
@@ -151,37 +175,56 @@ public partial class Dashboard
         var cstStartOfWeek = cstToday.AddDays(-(int)cstToday.DayOfWeek + (int)DayOfWeek.Monday);
         var startOfWeekUtc = TimeZoneInfo.ConvertTimeToUtc(cstStartOfWeek, cstZone);
 
-        // Fetch data using DbContext
-        _kingFriday = await DbContext.Players
-            .OrderByDescending(x => x.Updated)
-            .FirstOrDefaultAsync(x => x.PlayerName == "King Friday!");
-        _kingFridayStats = await PlayerManager.GetRankedPlayersAsync("King Friday!", 1, 30, Logger);
+        _kingFriday = await ApiService.GetLatestPlayerAsync("King Friday!");
+        // Replace direct call to PlayerManager with API service call
+        _kingFridayStats = await ApiService.GetRankedPlayerAsync("King Friday!", 1, 30);
 
         if (_kingFriday != null)
         {
             // Update the player's last update time in DashboardState
             DashboardState.SetPlayerLastUpdated(_kingFriday.Updated);
 
-            var firstToday = await DbContext.Players
-                .Where(x => x.PlayerName == "King Friday!" && x.Updated >= todayUtcStart)
-                .OrderBy(x => x.Updated)
-                .FirstOrDefaultAsync();
+            // Get player history for today
+            var playerHistoryToday = await ApiService.GetPlayerHistoryAsync(
+                "King Friday!",
+                todayUtcStart,
+                DateTime.UtcNow);
+            
+            // Get player history for this week
+            var playerHistoryWeek = await ApiService.GetPlayerHistoryAsync(
+                "King Friday!",
+                startOfWeekUtc,
+                DateTime.UtcNow);
 
-            var firstThisWeek = await DbContext.Players
-                .Where(x => x.PlayerName == "King Friday!" && x.Updated >= startOfWeekUtc)
-                .OrderBy(x => x.Updated)
-                .FirstOrDefaultAsync();
+            var firstToday = playerHistoryToday?.OrderBy(x => x.Updated).FirstOrDefault();
+            var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
 
             _kingFriday.PrestigesToday = _kingFriday.Prestiges - (firstToday?.Prestiges ?? _kingFriday.Prestiges);
             _kingFriday.PrestigesThisWeek = _kingFriday.Prestiges - (firstThisWeek?.Prestiges ?? _kingFriday.Prestiges);
 
-            _kingFridayTitleProgressData = new double[] { _kingFriday.TitleProgress, 100 - _kingFriday.TitleProgress };
-            _kingFridayTitleProgressLabels = new string[]
+            // Get title information from the API
+            var titleInfo = await ApiService.GetTitleInfoAsync("King Friday!");
+            if (titleInfo != null)
             {
-            FormatTitleChangeLabel(DateTime.Parse(_kingFridayStats?.ProjectedTitleChange)),
-            _kingFriday.NextTitle
-            };
+                _kingFridayTitleProgressData = new double[] { titleInfo.TitleProgress, 100 - titleInfo.TitleProgress };
+                _kingFridayTitleProgressLabels = new string[]
+                {
+                    FormatTitleChangeLabel(DateTime.Parse(titleInfo.ProjectedTitleChange)),
+                    titleInfo.NextTitle
+                };
+            }
+            else
+            {
+                // Fallback if API call fails
+                _kingFridayTitleProgressData = new double[] { _kingFriday.TitleProgress, 100 - _kingFriday.TitleProgress };
+                _kingFridayTitleProgressLabels = new string[]
+                {
+                    FormatTitleChangeLabel(DateTime.Parse(_kingFridayStats?.ProjectedTitleChange)),
+                    _kingFriday.NextTitle
+                };
+            }
 
+            // Update goal data from MajPlayerRankingManager (left in the Domain for now)
             (_SEGoalBegin, _SEGoalEnd) = await MajPlayerRankingManager.GetSurroundingSEPlayers("King Friday!", _kingFriday.SoulEggs);
             (_EBGoalBegin, _EBGoalEnd) = MajPlayerRankingManager.GetSurroundingEBPlayers("King Friday!", _kingFriday.EarningsBonusPercentage);
             (_MERGoalBegin, _MERGoalEnd) = MajPlayerRankingManager.GetSurroundingMERPlayers("King Friday!", (decimal) _kingFriday.MER);
@@ -191,48 +234,98 @@ public partial class Dashboard
 
     private async Task UpdateKingSaturday()
     {
-        // Fetch data using DbContext
-        _kingSaturday = await DbContext.Players
-            .OrderByDescending(x => x.Updated)
-            .FirstOrDefaultAsync(x => x.PlayerName == "King Saturday!");
-        _kingSaturdayStats = await PlayerManager.GetRankedPlayersAsync("King Saturday!", 1, 30, Logger);
+        _kingSaturday = await ApiService.GetLatestPlayerAsync("King Saturday!");
+        // Replace direct call to PlayerManager with API service call
+        _kingSaturdayStats = await ApiService.GetRankedPlayerAsync("King Saturday!", 1, 30);
 
-        _kingSaturdayTitleProgressData = new double[] { _kingSaturday.TitleProgress, 100 - _kingSaturday.TitleProgress };
-        _kingSaturdayTitleProgressLabels = new string[]
+        if (_kingSaturday != null)
         {
-            FormatTitleChangeLabel(DateTime.Parse(_kingSaturdayStats.ProjectedTitleChange)),
-            _kingSaturday.NextTitle
-        };
+            // Get title information from the API
+            var titleInfo = await ApiService.GetTitleInfoAsync("King Saturday!");
+            if (titleInfo != null)
+            {
+                _kingSaturdayTitleProgressData = new double[] { titleInfo.TitleProgress, 100 - titleInfo.TitleProgress };
+                _kingSaturdayTitleProgressLabels = new string[]
+                {
+                    FormatTitleChangeLabel(DateTime.Parse(titleInfo.ProjectedTitleChange)),
+                    titleInfo.NextTitle
+                };
+            }
+            else
+            {
+                // Fallback if API call fails
+                _kingSaturdayTitleProgressData = new double[] { _kingSaturday.TitleProgress, 100 - _kingSaturday.TitleProgress };
+                _kingSaturdayTitleProgressLabels = new string[]
+                {
+                    FormatTitleChangeLabel(DateTime.Parse(_kingSaturdayStats?.ProjectedTitleChange)),
+                    _kingSaturday.NextTitle
+                };
+            }
+        }
     }
 
     private async Task UpdateKingSunday()
     {
-        _kingSunday = await DbContext.Players
-            .OrderByDescending(x => x.Updated)
-            .FirstOrDefaultAsync(x => x.PlayerName == "King Sunday!");
-        _kingSundayStats = await PlayerManager.GetRankedPlayersAsync("King Sunday!", 1, 30, Logger);
+        _kingSunday = await ApiService.GetLatestPlayerAsync("King Sunday!");
+        // Replace direct call to PlayerManager with API service call
+        _kingSundayStats = await ApiService.GetRankedPlayerAsync("King Sunday!", 1, 30);
 
-        _kingSundayTitleProgressData = new double[] { _kingSunday.TitleProgress, 100 - _kingSunday.TitleProgress };
-        _kingSundayTitleProgressLabels = new string[]
+        if (_kingSunday != null)
         {
-            FormatTitleChangeLabel(DateTime.Parse(_kingSundayStats.ProjectedTitleChange)),
-            _kingSundayStats.NextTitle
-        };
+            // Get title information from the API
+            var titleInfo = await ApiService.GetTitleInfoAsync("King Sunday!");
+            if (titleInfo != null)
+            {
+                _kingSundayTitleProgressData = new double[] { titleInfo.TitleProgress, 100 - titleInfo.TitleProgress };
+                _kingSundayTitleProgressLabels = new string[]
+                {
+                    FormatTitleChangeLabel(DateTime.Parse(titleInfo.ProjectedTitleChange)),
+                    titleInfo.NextTitle
+                };
+            }
+            else
+            {
+                // Fallback if API call fails
+                _kingSundayTitleProgressData = new double[] { _kingSunday.TitleProgress, 100 - _kingSunday.TitleProgress };
+                _kingSundayTitleProgressLabels = new string[]
+                {
+                    FormatTitleChangeLabel(DateTime.Parse(_kingSundayStats?.ProjectedTitleChange)),
+                    _kingSunday.NextTitle
+                };
+            }
+        }
     }
 
     private async Task UpdateKingMonday()
     {
-        _kingMonday = await DbContext.Players
-            .OrderByDescending(x => x.Updated)
-            .FirstOrDefaultAsync(x => x.PlayerName == "King Monday!");
-        _kingMondayStats = await PlayerManager.GetRankedPlayersAsync("King Monday!", 1, 30, Logger);
+        _kingMonday = await ApiService.GetLatestPlayerAsync("King Monday!");
+        // Replace direct call to PlayerManager with API service call
+        _kingMondayStats = await ApiService.GetRankedPlayerAsync("King Monday!", 1, 30);
 
-        _kingMondayTitleProgressData = new double[] { _kingMonday.TitleProgress, 100 - _kingMonday.TitleProgress };
-        _kingMondayTitleProgressLabels = new string[]
+        if (_kingMonday != null)
         {
-            FormatTitleChangeLabel(DateTime.Parse(_kingMondayStats.ProjectedTitleChange)),
-            _kingMondayStats.NextTitle
-        };
+            // Get title information from the API
+            var titleInfo = await ApiService.GetTitleInfoAsync("King Monday!");
+            if (titleInfo != null)
+            {
+                _kingMondayTitleProgressData = new double[] { titleInfo.TitleProgress, 100 - titleInfo.TitleProgress };
+                _kingMondayTitleProgressLabels = new string[]
+                {
+                    FormatTitleChangeLabel(DateTime.Parse(titleInfo.ProjectedTitleChange)),
+                    titleInfo.NextTitle
+                };
+            }
+            else
+            {
+                // Fallback if API call fails
+                _kingMondayTitleProgressData = new double[] { _kingMonday.TitleProgress, 100 - _kingMonday.TitleProgress };
+                _kingMondayTitleProgressLabels = new string[]
+                {
+                    FormatTitleChangeLabel(DateTime.Parse(_kingMondayStats?.ProjectedTitleChange)),
+                    _kingMonday.NextTitle
+                };
+            }
+        }
     }
 
     private async Task LoadKingFridaySEHistory()
@@ -263,15 +356,14 @@ public partial class Dashboard
                     .ToArray();
                     
                 // Create the chart series
-                _kingFridaySEHistorySeries = new ChartSeries[]
-                {
-                    new ChartSeries 
-                    { 
-                        Name = "Soul Eggs", 
-                        Data = _kingFridaySEHistoryData,
-                        Color = "#4CAF50" 
+                _kingFridaySEHistorySeries =
+                [
+                    new ChartSeries
+                    {
+                        Name = "Soul Eggs",
+                        Data = _kingFridaySEHistoryData
                     }
-                };
+                ];
             }
         }
         catch (Exception ex)
@@ -285,10 +377,25 @@ public partial class Dashboard
         if (string.IsNullOrEmpty(soulEggs))
             return 0;
         
-        // Remove any non-numeric characters and try to parse the value
-        // This is a simple implementation and might need to be adjusted
-        if (double.TryParse(soulEggs.TrimEnd('Q', 'q', 's'), out double result))
-            return result;
+        // Remove any suffix like 'Q' for quintillion, etc.
+        var cleanedValue = soulEggs;
+        var suffixes = new[] { 'Q', 'q', 's', 'S', 'T', 't', 'B', 'b', 'M', 'm' };
+        foreach (var suffix in suffixes)
+        {
+            cleanedValue = cleanedValue.TrimEnd(suffix);
+        }
+        
+        // Try to parse using the existing number parsing method
+        if (TryParseAnyNumber(cleanedValue, out decimal result))
+        {
+            return (double)result;
+        }
+        
+        // Fallback to simpler parsing
+        if (double.TryParse(cleanedValue, NumberStyles.Any, CultureInfo.InvariantCulture, out double simpleResult))
+        {
+            return simpleResult;
+        }
         
         return 0;
     }
@@ -436,5 +543,177 @@ public partial class Dashboard
         {
             return localTime.ToString("MM/dd HH:mm");
         }
+    }
+
+    // Generate test data for the chart - only used as a fallback when real data isn't available
+    private void InitializeTestData()
+    {
+        Logger.LogInformation("Using test data for historical metrics chart");
+        
+        // Create mock data for the last 7 days
+        var today = DateTime.Now;
+        var dates = Enumerable.Range(0, 7)
+            .Select(i => today.AddDays(-i))
+            .Reverse()
+            .ToArray();
+            
+        _kingFridayMultiSeriesLabels = dates.Select(d => d.ToString("MM/dd")).ToArray();
+        
+        // Initialize the metrics dictionary with random test data
+        _metricHistoryData = new Dictionary<string, List<double>>
+        {
+            // Soul Eggs (increasing trend)
+            ["SE"] = new List<double> { 100, 110, 125, 145, 160, 185, 210 },
+            
+            // Earnings Bonus (increasing trend)
+            ["EB"] = new List<double> { 50, 55, 60, 67, 75, 80, 90 },
+            
+            // MER (Maximum Egg Rate - more variable)
+            ["MER"] = new List<double> { 30, 32, 28, 35, 33, 38, 42 },
+            
+            // JER (Job Egg Rate - more variable)
+            ["JER"] = new List<double> { 15, 18, 14, 20, 17, 22, 25 }
+        };
+        
+        UpdateMultiSeriesChart();
+    }
+    
+    // Update the chart based on the selected number of days
+    private async Task UpdateMultiSeriesChart()
+    {
+        try
+        {
+            // Calculate date range (30 days ago until now)
+            var endDate = DateTime.UtcNow;
+            var startDate = endDate.AddDays(-30); // Get data for up to 30 days
+            
+            // Get historical player data for King Friday directly from the API
+            var historicalData = await ApiService.GetPlayerHistoryAsync(
+                "King Friday!", 
+                startDate, 
+                endDate);
+                
+            if (historicalData?.Any() == true)
+            {
+                // Process actual historical data
+                // First, ensure the data is sorted by date
+                var sortedData = historicalData
+                    .OrderBy(p => p.Updated)
+                    .ToList();
+                
+                // Group data by day and take only the last entry for each day
+                var groupedByDay = sortedData
+                    .GroupBy(p => p.Updated.Date)
+                    .Select(g => g.OrderByDescending(p => p.Updated).First())
+                    .OrderBy(p => p.Updated)
+                    .ToList();
+                
+                Logger.LogInformation("Reduced data points from {OriginalCount} to {GroupedCount} (one per day)", 
+                    sortedData.Count, groupedByDay.Count);
+                
+                // Extract the dates for the x-axis
+                _kingFridayMultiSeriesLabels = groupedByDay
+                    .Select(p => p.Updated.ToString("MM/dd"))
+                    .ToArray();
+                
+                // Process metrics data
+                var seValues = new List<double>();
+                var ebValues = new List<double>();
+                var merValues = new List<double>();
+                var jerValues = new List<double>();
+                
+                foreach (var dataPoint in groupedByDay)
+                {
+                    // Process Soul Eggs
+                    seValues.Add(ParseSoulEggs(dataPoint.SoulEggs));
+                    
+                    // Process Earnings Bonus
+                    ebValues.Add(ParseEarningsBonus(dataPoint.EarningsBonusPercentage));
+                    
+                    // Process MER (Maximum Egg Rate)
+                    merValues.Add(dataPoint.MER);
+                    
+                    // Process JER (Job Egg Rate)
+                    jerValues.Add(dataPoint.JER);
+                }
+                
+                // Update the metrics dictionary with real data
+                _metricHistoryData = new Dictionary<string, List<double>>
+                {
+                    ["SE"] = seValues,
+                    ["EB"] = ebValues,
+                    ["MER"] = merValues,
+                    ["JER"] = jerValues
+                };
+                
+                Logger.LogInformation("Successfully loaded historical metrics data with {Count} data points", groupedByDay.Count);
+            }
+            else
+            {
+                Logger.LogWarning("No historical data found for King Friday");
+                // No real data available, initialize with test data
+                InitializeTestData();
+                return;
+            }
+            
+            // Format the chart data based on the selected days to display
+            // Limit the labels and data to the selected number of days
+            var daysToShow = Math.Min(_selectedDaysToDisplay, _kingFridayMultiSeriesLabels.Length);
+            var labels = _kingFridayMultiSeriesLabels.TakeLast(daysToShow).ToArray();
+            
+            // Create series for each metric
+            _kingFridayMultiSeriesData = new List<ChartSeries>();
+            
+            foreach (var metric in _metricHistoryData)
+            {
+                var data = metric.Value.TakeLast(daysToShow).ToArray();
+                _kingFridayMultiSeriesData.Add(new ChartSeries
+                {
+                    Name = metric.Key,
+                    Data = data
+                });
+            }
+            
+            // Update the labels
+            _kingFridayMultiSeriesLabels = labels;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading King Friday historical metrics data");
+            // If there's an error, fall back to test data
+            InitializeTestData();
+        }
+    }
+    
+    // Handle the slider value change
+    private async void OnDaysSliderChanged(int value)
+    {
+        _selectedDaysToDisplay = value;
+        await UpdateMultiSeriesChart();
+        StateHasChanged();
+    }
+
+    // Helper method to parse earnings bonus percentage
+    private double ParseEarningsBonus(string? earningsBonus)
+    {
+        if (string.IsNullOrEmpty(earningsBonus))
+            return 0;
+        
+        // Remove the '%' character if present
+        earningsBonus = earningsBonus.TrimEnd('%');
+        
+        // Try to parse using the existent number parsing method
+        if (TryParseAnyNumber(earningsBonus, out decimal result))
+        {
+            return (double)result;
+        }
+        
+        // Fallback to simpler parsing if needed
+        if (double.TryParse(earningsBonus, NumberStyles.Any, CultureInfo.InvariantCulture, out double simpleResult))
+        {
+            return simpleResult;
+        }
+        
+        return 0;
     }
 }

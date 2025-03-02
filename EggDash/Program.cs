@@ -2,6 +2,7 @@ using EggDash.Client.Services;
 using MudBlazor.Services;
 using EggDash.Components;
 using HemSoft.EggIncTracker.Data;
+using Microsoft.AspNetCore.Components.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,18 @@ builder.Services.AddDbContext<EggIncContext>();
 
 builder.Services.AddSingleton<DashboardState>();
 
+// Register HttpClient
+builder.Services.AddHttpClient<ApiService>();
+
+// Register ApiService
+builder.Services.AddScoped<ApiService>();
+
+// Configure CircuitOptions
+builder.Services.Configure<CircuitOptions>(options =>
+{
+    options.DetailedErrors = true;
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -33,7 +46,6 @@ else
 }
 
 app.UseHttpsRedirection();
-
 
 app.UseAntiforgery();
 
