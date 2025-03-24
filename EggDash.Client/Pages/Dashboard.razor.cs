@@ -35,17 +35,17 @@ public partial class Dashboard
     private DateTime _lastUpdated;
     private string _timeSinceLastUpdate = "Never";
 
-    private double[] _kingFridayTitleProgressData = Array.Empty<double>();
-    private string[] _kingFridayTitleProgressLabels = Array.Empty<string>();
+    private double[] _kingFridayTitleProgressData = new double[] { 0, 100 };
+    private string[] _kingFridayTitleProgressLabels = new string[] { "", "" };
 
-    private double[] _kingSaturdayTitleProgressData = Array.Empty<double>();
-    private string[] _kingSaturdayTitleProgressLabels = Array.Empty<string>();
+    private double[] _kingSaturdayTitleProgressData = new double[] { 0, 100 };
+    private string[] _kingSaturdayTitleProgressLabels = new string[] { "", "" };
 
-    private double[] _kingSundayTitleProgressData = Array.Empty<double>();
-    private string[] _kingSundayTitleProgressLabels = Array.Empty<string>();
+    private double[] _kingSundayTitleProgressData = new double[] { 0, 100 };
+    private string[] _kingSundayTitleProgressLabels = new string[] { "", "" };
 
-    private double[] _kingMondayTitleProgressData = Array.Empty<double>();
-    private string[] _kingMondayTitleProgressLabels = Array.Empty<string>();
+    private double[] _kingMondayTitleProgressData = new double[] { 0, 100 };
+    private string[] _kingMondayTitleProgressLabels = new string[] { "", "" };
 
     private PlayerDto? _kingFriday;
     private PlayerStatsDto? _kingFridayStats;
