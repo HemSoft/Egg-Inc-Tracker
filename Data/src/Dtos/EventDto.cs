@@ -197,7 +197,7 @@ public class JsonEventContract
     public int MaxBoosts { get; set; }
 
     [JsonPropertyName("minutesPerToken")]
-    public int MinutesPerToken { get; set; }
+    public float MinutesPerToken { get; set; }
 
     [JsonPropertyName("chickenRunCooldownMinutes")]
     public int ChickenRunCooldownMinutes { get; set; }

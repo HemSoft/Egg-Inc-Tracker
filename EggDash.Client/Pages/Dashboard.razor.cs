@@ -81,7 +81,7 @@ public partial class Dashboard
     private string[] _kingFridayMultiSeriesLabels = Array.Empty<string>();
     private int _selectedDaysToDisplay = 7;
     private Dictionary<string, List<double>> _metricHistoryData = new();
-    
+
     // Chart options with a custom palette for the Soul Eggs chart
     private readonly ChartOptions _multiSeriesChartOptions = new()
     {
@@ -99,9 +99,18 @@ public partial class Dashboard
 
     protected override async Task OnInitializedAsync()
     {
-        // We'll no longer initialize test data by default
-        // InitializeTestData();
-        
+        // Register ApiService and Logger if they weren't registered globally
+        // This ensures backward compatibility if the global registration fails
+        if (ServiceLocator.GetService<IApiService>() == null)
+        {
+            ServiceLocator.RegisterService<IApiService>(ApiService);
+        }
+
+        if (ServiceLocator.GetService<ILogger>() == null)
+        {
+            ServiceLocator.RegisterService<ILogger>(Logger);
+        }
+
         await RefreshData();
 
         _timer = new ST.Timer(30000); // 30 seconds
@@ -134,7 +143,7 @@ public partial class Dashboard
             await UpdateKingSunday();
             await UpdateKingMonday();
             await LoadKingFridaySEHistory();
-            
+
             // Call the chart update method which now handles the API call directly
             await UpdateMultiSeriesChart();
 
@@ -178,7 +187,15 @@ public partial class Dashboard
 
         // Calculate start of week in CST, then convert to UTC
         var cstStartOfWeek = cstToday.AddDays(-(int)cstToday.DayOfWeek + (int)DayOfWeek.Monday);
+        if (cstToday.DayOfWeek == DayOfWeek.Sunday) // If today is Sunday, use last Monday
+        {
+            cstStartOfWeek = cstToday.AddDays(-6); // Go back 6 days to previous Monday
+        }
         var startOfWeekUtc = TimeZoneInfo.ConvertTimeToUtc(cstStartOfWeek, cstZone);
+
+        // Log for debugging purposes
+        Logger.LogInformation($"Today (CST): {cstToday}, Start of Week (CST): {cstStartOfWeek}");
+        Logger.LogInformation($"Today (UTC): {todayUtcStart}, Start of Week (UTC): {startOfWeekUtc}");
 
         _kingFriday = await ApiService.GetLatestPlayerAsync("King Friday!");
         // Replace direct call to PlayerManager with API service call
@@ -194,18 +211,45 @@ public partial class Dashboard
                 "King Friday!",
                 todayUtcStart,
                 DateTime.UtcNow);
-            
+
             // Get player history for this week
             var playerHistoryWeek = await ApiService.GetPlayerHistoryAsync(
                 "King Friday!",
                 startOfWeekUtc,
                 DateTime.UtcNow);
 
+            // If weekly data is empty or null but we have daily data, use daily data for weekly calculation
+            if ((playerHistoryWeek == null || !playerHistoryWeek.Any()) && playerHistoryToday != null && playerHistoryToday.Any())
+            {
+                Logger.LogInformation("No weekly history found, using daily history for weekly calculation");
+                playerHistoryWeek = playerHistoryToday;
+            }
+
             var firstToday = playerHistoryToday?.OrderBy(x => x.Updated).FirstOrDefault();
             var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
 
+            // Log the data we're working with
+            Logger.LogInformation($"Current prestiges: {_kingFriday.Prestiges}");
+            Logger.LogInformation($"First today prestiges: {firstToday?.Prestiges}, timestamp: {firstToday?.Updated}");
+            Logger.LogInformation($"First this week prestiges: {firstThisWeek?.Prestiges}, timestamp: {firstThisWeek?.Updated}");
+
             _kingFriday.PrestigesToday = _kingFriday.Prestiges - (firstToday?.Prestiges ?? _kingFriday.Prestiges);
             _kingFriday.PrestigesThisWeek = _kingFriday.Prestiges - (firstThisWeek?.Prestiges ?? _kingFriday.Prestiges);
+
+            // Log calculated values
+            Logger.LogInformation($"Calculated prestiges today: {_kingFriday.PrestigesToday}");
+            Logger.LogInformation($"Calculated prestiges this week: {_kingFriday.PrestigesThisWeek}");
+
+            // Ensure PrestigesThisWeek is at least equal to PrestigesToday and handle null values
+            if (_kingFriday.PrestigesToday.HasValue)
+            {
+                // If PrestigesThisWeek is null or less than PrestigesToday, set it to PrestigesToday
+                if (!_kingFriday.PrestigesThisWeek.HasValue || _kingFriday.PrestigesThisWeek.Value < _kingFriday.PrestigesToday.Value)
+                {
+                    _kingFriday.PrestigesThisWeek = _kingFriday.PrestigesToday;
+                    Logger.LogInformation($"Applied fix for weekly prestiges: updated to {_kingFriday.PrestigesThisWeek}");
+                }
+            }
 
             // Get title information from the API
             var titleInfo = await ApiService.GetTitleInfoAsync("King Friday!");
@@ -229,11 +273,11 @@ public partial class Dashboard
                 };
             }
 
-            // Update goal data from MajPlayerRankingManager (left in the Domain for now)
+            // Update goal data from MajPlayerRankingManager
             (_SEGoalBegin, _SEGoalEnd) = await MajPlayerRankingManager.GetSurroundingSEPlayers("King Friday!", _kingFriday.SoulEggs);
-            (_EBGoalBegin, _EBGoalEnd) = MajPlayerRankingManager.GetSurroundingEBPlayers("King Friday!", _kingFriday.EarningsBonusPercentage);
-            (_MERGoalBegin, _MERGoalEnd) = MajPlayerRankingManager.GetSurroundingMERPlayers("King Friday!", (decimal) _kingFriday.MER);
-            (_JERGoalBegin, _JERGoalEnd) = MajPlayerRankingManager.GetSurroundingJERPlayers("King Friday!", (decimal) _kingFriday.JER);
+            (_EBGoalBegin, _EBGoalEnd) = await MajPlayerRankingManager.GetSurroundingEBPlayers("King Friday!", _kingFriday.EarningsBonusPercentage);
+            (_MERGoalBegin, _MERGoalEnd) = await MajPlayerRankingManager.GetSurroundingMERPlayers("King Friday!", (decimal)_kingFriday.MER);
+            (_JERGoalBegin, _JERGoalEnd) = await MajPlayerRankingManager.GetSurroundingJERPlayers("King Friday!", (decimal)_kingFriday.JER);
         }
     }
 
@@ -340,25 +384,25 @@ public partial class Dashboard
             // Calculate date range (14 days ago until now)
             var endDate = DateTime.UtcNow;
             var startDate = endDate.AddDays(-14);
-            
+
             // Get historical player data for King Friday
             var historicalData = await ApiService.GetPlayerHistoryAsync(
-                "King Friday!", 
-                startDate, 
+                "King Friday!",
+                startDate,
                 endDate);
-                
+
             if (historicalData?.Any() == true)
             {
                 // Format the data for the chart
                 _kingFridaySEHistoryLabels = historicalData
                     .Select(p => p.Updated.ToString("MM/dd"))
                     .ToArray();
-                    
+
                 // Convert SE values to numeric values for the chart
                 _kingFridaySEHistoryData = historicalData
                     .Select(p => ParseSoulEggs(p.SoulEggs))
                     .ToArray();
-                    
+
                 // Create the chart series
                 _kingFridaySEHistorySeries =
                 [
@@ -380,7 +424,7 @@ public partial class Dashboard
     {
         if (string.IsNullOrEmpty(soulEggs))
             return 0;
-        
+
         // Remove any suffix like 'Q' for quintillion, etc.
         var cleanedValue = soulEggs;
         var suffixes = new[] { 'Q', 'q', 's', 'S', 'T', 't', 'B', 'b', 'M', 'm' };
@@ -388,19 +432,19 @@ public partial class Dashboard
         {
             cleanedValue = cleanedValue.TrimEnd(suffix);
         }
-        
+
         // Try to parse using the existing number parsing method
         if (TryParseAnyNumber(cleanedValue, out decimal result))
         {
             return (double)result;
         }
-        
+
         // Fallback to simpler parsing
         if (double.TryParse(cleanedValue, NumberStyles.Any, CultureInfo.InvariantCulture, out double simpleResult))
         {
             return simpleResult;
         }
-        
+
         return 0;
     }
 
@@ -553,23 +597,23 @@ public partial class Dashboard
     private void InitializeTestData()
     {
         Logger.LogInformation("Using test data for Soul Eggs chart");
-        
+
         // Create mock data for the last 7 days
         var today = DateTime.Now;
         var dates = Enumerable.Range(0, 7)
             .Select(i => today.AddDays(-i))
             .Reverse()
             .ToArray();
-            
+
         _kingFridayMultiSeriesLabels = dates.Select(d => d.ToString("MM/dd")).ToArray();
-        
+
         // Initialize the metrics dictionary with random test data for Soul Eggs only
         _metricHistoryData = new Dictionary<string, List<double>>
         {
             // Soul Eggs (increasing trend)
             ["Soul Eggs"] = new List<double> { 100, 110, 125, 145, 160, 185, 210 }
         };
-        
+
         // Create chart series directly
         _kingFridayMultiSeriesData = new List<ChartSeries>
         {
@@ -579,11 +623,11 @@ public partial class Dashboard
                 Data = _metricHistoryData["Soul Eggs"].ToArray()
             }
         };
-        
+
         // Update labels
         _kingFridayMultiSeriesLabels = dates.Select(d => d.ToString("MM/dd")).ToArray();
     }
-    
+
     // Update the chart based on the selected number of days
     private async Task UpdateMultiSeriesChart()
     {
@@ -592,13 +636,13 @@ public partial class Dashboard
             // Calculate date range (30 days ago until now)
             var endDate = DateTime.UtcNow;
             var startDate = endDate.AddDays(-30); // Get data for up to 30 days
-            
+
             // Get historical player data for King Friday directly from the API
             var historicalData = await ApiService.GetPlayerHistoryAsync(
-                "King Friday!", 
-                startDate, 
+                "King Friday!",
+                startDate,
                 endDate);
-                
+
             if (historicalData?.Any() == true)
             {
                 // Process actual historical data
@@ -606,36 +650,36 @@ public partial class Dashboard
                 var sortedData = historicalData
                     .OrderBy(p => p.Updated)
                     .ToList();
-                
+
                 // Group data by day and take only the last entry for each day
                 var groupedByDay = sortedData
                     .GroupBy(p => p.Updated.Date)
                     .Select(g => g.OrderByDescending(p => p.Updated).First())
                     .OrderBy(p => p.Updated)
                     .ToList();
-                
-                Logger.LogInformation("Reduced data points from {OriginalCount} to {GroupedCount} (one per day)", 
+
+                Logger.LogInformation("Reduced data points from {OriginalCount} to {GroupedCount} (one per day)",
                     sortedData.Count, groupedByDay.Count);
-                
+
                 // Extract the dates for the x-axis
                 _kingFridayMultiSeriesLabels = groupedByDay
                     .Select(p => p.Updated.ToString("MM/dd"))
                     .ToArray();
-                
+
                 // Process Soul Eggs data
                 var soulEggsValues = new List<double>();
-                
+
                 foreach (var dataPoint in groupedByDay)
                 {
                     soulEggsValues.Add(ParseSoulEggs(dataPoint.SoulEggs));
                 }
-                
+
                 // Update the metrics dictionary with Soul Eggs data only
                 _metricHistoryData = new Dictionary<string, List<double>>
                 {
                     ["Soul Eggs"] = soulEggsValues
                 };
-                
+
                 Logger.LogInformation("Successfully loaded Soul Eggs data with {Count} data points", groupedByDay.Count);
             }
             else
@@ -645,22 +689,22 @@ public partial class Dashboard
                 InitializeTestData();
                 return;
             }
-            
+
             // Format the chart data based on the selected number of days
             // Limit the labels and data to the selected number of days
             var daysToShow = Math.Min(_selectedDaysToDisplay, _kingFridayMultiSeriesLabels.Length);
             var labels = _kingFridayMultiSeriesLabels.TakeLast(daysToShow).ToArray();
-            
+
             // Create single series for Soul Eggs
             _kingFridayMultiSeriesData = new List<ChartSeries>();
-            
+
             var soulEggData = _metricHistoryData["Soul Eggs"].TakeLast(daysToShow).ToArray();
             _kingFridayMultiSeriesData.Add(new ChartSeries
             {
                 Name = "Soul Eggs",
                 Data = soulEggData
             });
-            
+
             // Update the labels
             _kingFridayMultiSeriesLabels = labels;
         }
@@ -671,36 +715,12 @@ public partial class Dashboard
             InitializeTestData();
         }
     }
-    
+
     // Handle the slider value change
     private async void OnDaysSliderChanged(int value)
     {
         _selectedDaysToDisplay = value;
         await UpdateMultiSeriesChart();
         StateHasChanged();
-    }
-
-    // Helper method to parse earnings bonus percentage
-    private double ParseEarningsBonus(string? earningsBonus)
-    {
-        if (string.IsNullOrEmpty(earningsBonus))
-            return 0;
-        
-        // Remove the '%' character if present
-        earningsBonus = earningsBonus.TrimEnd('%');
-        
-        // Try to parse using the existent number parsing method
-        if (TryParseAnyNumber(earningsBonus, out decimal result))
-        {
-            return (double)result;
-        }
-        
-        // Fallback to simpler parsing if needed
-        if (double.TryParse(earningsBonus, NumberStyles.Any, CultureInfo.InvariantCulture, out double simpleResult))
-        {
-            return simpleResult;
-        }
-        
-        return 0;
     }
 }

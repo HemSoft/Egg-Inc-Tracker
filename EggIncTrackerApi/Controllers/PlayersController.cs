@@ -224,8 +224,8 @@ namespace EggIncTrackerApi.Controllers
                 
                 var titleInfo = new TitleInfoDto
                 {
-                    CurrentTitle = currentTitle,
-                    NextTitle = nextTitle,
+                    CurrentTitle = player.Title,
+                    NextTitle = player.NextTitle,
                     TitleProgress = progress,
                     ProjectedTitleChange = projectedTitleChange.ToString("o")
                 };
@@ -287,8 +287,8 @@ namespace EggIncTrackerApi.Controllers
             {
                 if (earningsBonus < Titles[i].Limit)
                 {
-                    string currentTitle = i == 0 ? "None" : Titles[i - 1].Title;
-                    string nextTitle = Titles[i].Title;
+                    string currentTitle = i == 0 ? "None" : Titles[i].Title;
+                    string nextTitle = Titles[i + 1].Title;
                     BigInteger previousLimit = i == 0 ? BigInteger.Zero : Titles[i - 1].Limit;
                     double progress = (double)(earningsBonus - previousLimit) / (double)(Titles[i].Limit - previousLimit) * 100;
                     return (currentTitle, nextTitle, progress);

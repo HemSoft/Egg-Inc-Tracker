@@ -1,4 +1,6 @@
-﻿namespace HemSoft.EggIncTracker.Data.Dtos;
+﻿using Exception = System.Exception;
+
+namespace HemSoft.EggIncTracker.Data.Dtos;
 
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -59,10 +61,12 @@ public class PlayerDto
             Updated = DateTime.UtcNow,
             TotalCraftsThatCanBeLegendary = GetNumber(apiResponse, @"legendary:\s+(\d+)"),
             ExpectedLegendaryCrafts = GetFloat(apiResponse, @"Expected legendary crafts:\s+(\d+\.\d+)"),
-            ExpectedLegendaryDropsFromShips = GetFloat(apiResponse, @"Expected legendary drops from ships:\s+(\d+\.\d+)"),
+            ExpectedLegendaryDropsFromShips =
+                GetFloat(apiResponse, @"Expected legendary drops from ships:\s+(\d+\.\d+)"),
             ExpectedLegendaries = GetFloat(apiResponse, @"Expected legendaries:\s+(\d+\.\d+)"),
             PlayerLegendaries = GetFloat(apiResponse, @"Your legendaries:\s+(\d+\.\d+)"),
-            PlayerLegendariesExcludingLunarTotem = GetFloat(apiResponse, @"Your legendaries excluding Lunar Totem:\s+(\d+\.\d+)"),
+            PlayerLegendariesExcludingLunarTotem =
+                GetFloat(apiResponse, @"Your legendaries excluding Lunar Totem:\s+(\d+\.\d+)"),
             LLC = GetFloat(apiResponse, @"Your LLC:\s+(-?\d+\.\d+)"),
             ProphecyEggs = GetNumber(apiResponse, @"Prophecy eggs:\s+(\d+)"),
             SoulEggs = Utils.FormatBigInteger(se),
@@ -78,22 +82,33 @@ public class PlayerDto
             HoarderScore = GetFloat(apiResponse, @"Hoarder score:\s+(\d+\.\d+)")
         };
 
-        var root = JsonConvert.DeserializeObject<JsonPlayerRoot>(apiResponse2);
-        if (root == null)
+        try
         {
-            return (player, null);
+            var root = JsonConvert.DeserializeObject<JsonPlayerRoot>(apiResponse2);
+            if (root == null)
+            {
+                return (player, null);
+            }
+
+            var t = ConvertUnixTimestampToCST(root.ApproxTime);
+
+            player.ProphecyEggs = root.Game.EggsOfProphecy;
+            player.SoulEggsFull = ConvertScientificToFullNumber(root.Game.SoulEggsD);
+            player.Prestiges = root.Stats.NumPrestiges;
+            player.PiggyFull = root.Stats.PiggyFull;
+            player.PiggyBreaks = root.Stats.NumPiggyBreaks;
+
+            //player.InventoryScore = (float) root.Artifacts.InventoryScore;
+
+            return (player, root);
         }
-        var t = ConvertUnixTimestampToCST(root.ApproxTime);
-        
-        player.ProphecyEggs = root.Game.EggsOfProphecy;
-        player.SoulEggsFull = ConvertScientificToFullNumber(root.Game.SoulEggsD);
-        player.Prestiges = root.Stats.NumPrestiges;
-        player.PiggyFull = root.Stats.PiggyFull;
-        player.PiggyBreaks = root.Stats.NumPiggyBreaks;
-
-        //player.InventoryScore = (float) root.Artifacts.InventoryScore;
-
-        return (player, root);
+        catch (Exception ex)
+        {
+            Console.WriteLine("\nException Caught!");
+            Console.WriteLine("Message :{0} ", ex.Message);
+            Console.Write(ex.StackTrace);
+            return (null, null);
+        }
     }
 
     public static string ConvertScientificToFullNumber(double scientificNotation)
@@ -709,7 +724,7 @@ public class JsonPlayerContractDefinition
     public int MaxBoosts { get; set; }
 
     [JsonPropertyName("minutesPerToken")]
-    public int MinutesPerToken { get; set; }
+    public float MinutesPerToken { get; set; }
 
     [JsonPropertyName("chickenRunCooldownMinutes")]
     public int ChickenRunCooldownMinutes { get; set; }

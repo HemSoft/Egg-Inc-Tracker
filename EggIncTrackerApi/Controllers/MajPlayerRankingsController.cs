@@ -1,7 +1,9 @@
 using HemSoft.EggIncTracker.Data;
 using HemSoft.EggIncTracker.Data.Dtos;
+using HemSoft.EggIncTracker.Domain;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Numerics;
 
 namespace EggIncTrackerApi.Controllers
 {
@@ -163,5 +165,360 @@ namespace EggIncTrackerApi.Controllers
 
             return Ok(rankings);
         }
+
+        /// <summary>
+        /// Get players surrounding a player based on Soul Eggs
+        /// </summary>
+        [HttpGet("surrounding/se/{playerName}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<SurroundingPlayersDto>> GetSurroundingSEPlayers(string playerName, [FromQuery] string soulEggs)
+        {
+            try
+            {
+                var playerSE = (decimal)HemSoft.EggIncTracker.Domain.BigNumberCalculator.ParseBigNumber(soulEggs);
+
+                // Get latest ranking for each player
+                var latestRankings = await _context.MajPlayerRankings
+                    .GroupBy(r => r.IGN)
+                    .Select(g => g.OrderByDescending(r => r.Updated).First())
+                    .ToListAsync();
+
+                // Order by SE number and find surrounding players
+                var orderedRankings = latestRankings
+                    .OrderByDescending(r => r.SENumber)
+                    .ToList();
+
+                MajPlayerRankingDto lowerPlayer = null;
+                MajPlayerRankingDto upperPlayer = null;
+                int rank = 0;
+
+                foreach (var ranking in orderedRankings)
+                {
+                    rank++;
+                    ranking.Ranking = rank; // Update the ranking
+
+                    if (ranking.SENumber < playerSE && ranking.IGN != playerName)
+                    {
+                        lowerPlayer = ranking;
+                        break;
+                    }
+
+                    if (ranking.SENumber > playerSE && ranking.IGN != playerName)
+                    {
+                        upperPlayer = ranking;
+                    }
+                }
+
+                return Ok(new SurroundingPlayersDto
+                {
+                    LowerPlayer = lowerPlayer,
+                    UpperPlayer = upperPlayer
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error in GetSurroundingSEPlayers for player {playerName} with SE {soulEggs}");
+                return StatusCode(500, "An error occurred while processing your request");
+            }
+        }
+
+        /// <summary>
+        /// Get players surrounding a player based on Earnings Bonus
+        /// </summary>
+        [HttpGet("surrounding/eb/{playerName}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<SurroundingPlayersDto>> GetSurroundingEBPlayers(string playerName, [FromQuery] string earningsBonus)
+        {
+            try
+            {
+                var playerEB = HemSoft.EggIncTracker.Domain.BigNumberCalculator.ParseBigNumber(earningsBonus);
+
+                // Get latest ranking for each player
+                var latestRankings = await _context.MajPlayerRankings
+                    .GroupBy(r => r.IGN)
+                    .Select(g => g.OrderByDescending(r => r.Updated).First())
+                    .ToListAsync();
+
+                // Transform to include parsed EB for sorting
+                var rankingsWithEB = latestRankings
+                    .Select(r => new 
+                    {
+                        Ranking = r,
+                        EBValue = HemSoft.EggIncTracker.Domain.BigNumberCalculator.ParseBigNumber(r.EBString.TrimEnd('%'))
+                    })
+                    .OrderByDescending(x => x.EBValue)
+                    .ToList();
+
+                MajPlayerRankingDto lowerPlayer = null;
+                MajPlayerRankingDto upperPlayer = null;
+                int rank = 0;
+
+                foreach (var item in rankingsWithEB)
+                {
+                    rank++;
+                    item.Ranking.Ranking = rank; // Update the ranking
+
+                    if (playerEB > item.EBValue && item.Ranking.IGN != playerName)
+                    {
+                        lowerPlayer = item.Ranking;
+                        break;
+                    }
+                    else if (item.EBValue >= playerEB && item.Ranking.IGN != playerName)
+                    {
+                        upperPlayer = item.Ranking;
+                    }
+                }
+
+                return Ok(new SurroundingPlayersDto
+                {
+                    LowerPlayer = lowerPlayer,
+                    UpperPlayer = upperPlayer
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error in GetSurroundingEBPlayers for player {playerName} with EB {earningsBonus}");
+                return StatusCode(500, "An error occurred while processing your request");
+            }
+        }
+
+        /// <summary>
+        /// Get players surrounding a player based on MER
+        /// </summary>
+        [HttpGet("surrounding/mer/{playerName}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<SurroundingPlayersDto>> GetSurroundingMERPlayers(string playerName, [FromQuery] decimal mer)
+        {
+            try
+            {
+                // Get latest ranking for each player
+                var latestRankings = await _context.MajPlayerRankings
+                    .GroupBy(r => r.IGN)
+                    .Select(g => g.OrderByDescending(r => r.Updated).First())
+                    .ToListAsync();
+
+                // Order by MER
+                var orderedRankings = latestRankings
+                    .OrderByDescending(r => r.MER)
+                    .ToList();
+
+                MajPlayerRankingDto lowerPlayer = null;
+                MajPlayerRankingDto upperPlayer = null;
+                int rank = 0;
+
+                foreach (var ranking in orderedRankings)
+                {
+                    rank++;
+                    ranking.Ranking = rank; // Update the ranking
+
+                    if (mer > ranking.MER && ranking.IGN != playerName)
+                    {
+                        lowerPlayer = ranking;
+                        break;
+                    }
+                    else if (ranking.MER >= mer && ranking.IGN != playerName)
+                    {
+                        upperPlayer = ranking;
+                    }
+                }
+
+                return Ok(new SurroundingPlayersDto
+                {
+                    LowerPlayer = lowerPlayer,
+                    UpperPlayer = upperPlayer
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error in GetSurroundingMERPlayers for player {playerName} with MER {mer}");
+                return StatusCode(500, "An error occurred while processing your request");
+            }
+        }
+
+        /// <summary>
+        /// Get players surrounding a player based on JER
+        /// </summary>
+        [HttpGet("surrounding/jer/{playerName}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<SurroundingPlayersDto>> GetSurroundingJERPlayers(string playerName, [FromQuery] decimal jer)
+        {
+            try
+            {
+                // Get latest ranking for each player
+                var latestRankings = await _context.MajPlayerRankings
+                    .GroupBy(r => r.IGN)
+                    .Select(g => g.OrderByDescending(r => r.Updated).First())
+                    .ToListAsync();
+
+                // Order by JER
+                var orderedRankings = latestRankings
+                    .OrderByDescending(r => r.JER)
+                    .ToList();
+
+                MajPlayerRankingDto lowerPlayer = null;
+                MajPlayerRankingDto upperPlayer = null;
+                int rank = 0;
+
+                foreach (var ranking in orderedRankings)
+                {
+                    rank++;
+                    ranking.Ranking = rank; // Update the ranking
+
+                    if (jer > ranking.JER && ranking.IGN != playerName)
+                    {
+                        lowerPlayer = ranking;
+                        break;
+                    }
+                    else if (ranking.JER >= jer && ranking.IGN != playerName)
+                    {
+                        upperPlayer = ranking;
+                    }
+                }
+
+                return Ok(new SurroundingPlayersDto
+                {
+                    LowerPlayer = lowerPlayer,
+                    UpperPlayer = upperPlayer
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error in GetSurroundingJERPlayers for player {playerName} with JER {jer}");
+                return StatusCode(500, "An error occurred while processing your request");
+            }
+        }
+
+        /// <summary>
+        /// Get latest major player rankings
+        /// </summary>
+        [HttpGet("latest-all")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<MajPlayerRankingDto>>> GetLatestMajPlayerRankings([FromQuery] int limit = 30)
+        {
+            try
+            {
+                var rankings = await _context.Set<MajPlayerRankingDto>()
+                    .FromSqlRaw("EXEC GetLatestMajPlayerRankingsByIGN")
+                    .ToListAsync();
+
+                return Ok(rankings.Take(limit).ToList());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting latest maj player rankings");
+                return StatusCode(500, "An error occurred while processing your request");
+            }
+        }
+
+        /// <summary>
+        /// Save a major player ranking
+        /// </summary>
+        [HttpPost]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<SaveRankingResponseDto>> SaveMajPlayerRanking([FromBody] MajPlayerRankingDto majPlayerRanking)
+        {
+            try
+            {
+                if (majPlayerRanking == null)
+                {
+                    return BadRequest("MajPlayerRanking data is required");
+                }
+
+                var getLatestEntry = await _context.MajPlayerRankings
+                    .Where(x => x.IGN == majPlayerRanking.IGN && x.DiscordName == majPlayerRanking.DiscordName)
+                    .OrderByDescending(z => z.Updated)
+                    .FirstOrDefaultAsync();
+
+                if (getLatestEntry != null)
+                {
+                    // This check to avoid Mordeekakh having two entries with 28 PE difference.
+                    if (getLatestEntry.PE - majPlayerRanking.PE > 5)
+                    {
+                        return Ok(new SaveRankingResponseDto
+                        {
+                            Success = false,
+                            Message = "PE difference too large"
+                        });
+                    }
+
+                    bool changed = false;
+                    string message = string.Empty;
+
+                    if (getLatestEntry.SEString != majPlayerRanking.SEString)
+                    {
+                        message = $"SE increased for {getLatestEntry.IGN} {getLatestEntry.SEString} to {majPlayerRanking.SEString}";
+                        changed = true;
+                    }
+                    else if (getLatestEntry.PE != majPlayerRanking.PE)
+                    {
+                        message = $"PE increased for {getLatestEntry.IGN} {getLatestEntry.PE} to {majPlayerRanking.PE}";
+                        changed = true;
+                    }
+                    else if (getLatestEntry.EBString != majPlayerRanking.EBString)
+                    {
+                        message = $"EB increased for {getLatestEntry.IGN} {getLatestEntry.EBString} to {majPlayerRanking.EBString}";
+                        changed = true;
+                    }
+
+                    if (changed)
+                    {
+                        _context.MajPlayerRankings.Add(majPlayerRanking);
+                        await _context.SaveChangesAsync();
+                        
+                        return Ok(new SaveRankingResponseDto
+                        {
+                            Success = true,
+                            Message = message,
+                            PreviousRanking = getLatestEntry
+                        });
+                    }
+
+                    return Ok(new SaveRankingResponseDto
+                    {
+                        Success = false,
+                        Message = "No changes detected"
+                    });
+                }
+
+                // First entry for this player
+                _context.MajPlayerRankings.Add(majPlayerRanking);
+                await _context.SaveChangesAsync();
+                
+                return Ok(new SaveRankingResponseDto
+                {
+                    Success = true,
+                    Message = $"Saved first entry for {majPlayerRanking.IGN}"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving maj player ranking");
+                return StatusCode(500, "An error occurred while processing your request");
+            }
+        }
+    }
+
+    /// <summary>
+    /// DTO for surrounding players response
+    /// </summary>
+    public class SurroundingPlayersDto
+    {
+        public MajPlayerRankingDto LowerPlayer { get; set; }
+        public MajPlayerRankingDto UpperPlayer { get; set; }
+    }
+
+    /// <summary>
+    /// DTO for save ranking response
+    /// </summary>
+    public class SaveRankingResponseDto
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; }
+        public MajPlayerRankingDto PreviousRanking { get; set; }
     }
 } 

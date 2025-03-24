@@ -5,6 +5,45 @@
 		}
 	],
 	"settings": {
-		"debug.internalConsoleOptions": "neverOpen"
+		"debug.internalConsoleOptions": "neverOpen",
+		"dotnetAcquisitionExtension.enableTelemetry": false,
+		"omnisharp.enableRoslynAnalyzers": true,
+		"omnisharp.enableEditorConfigSupport": true,
+		"explorer.fileNesting.enabled": true,
+		"explorer.fileNesting.patterns": {
+			"*.cs": "${capture}.designer.cs, ${capture}.razor.cs",
+			"*.razor": "${capture}.razor.cs"
+		},
+		"files.exclude": {
+			"**/bin": true,
+			"**/obj": true
+		},
+		"dotnet.codeLens.enableReferencesCodeLens": true
+	},
+	"extensions": {
+		"recommendations": [
+			"ms-dotnettools.csharp",
+			"ms-dotnettools.vscode-dotnet-runtime",
+			"ms-azuretools.vscode-azurefunctions",
+			"ms-azuretools.vscode-cosmosdb",
+			"ms-vsliveshare.vsliveshare",
+			"ms-vscode.azure-account",
+			"formulahendry.dotnet-test-explorer"
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [],
+		"compounds": [
+			{
+				"name": "Debug All Projects",
+				"configurations": [
+					"Launch EggIncTrackerApi", 
+					"Launch EggDash", 
+					"Debug UpdatePlayerFunction"
+				],
+				"stopAll": true
+			}
+		]
 	}
 }

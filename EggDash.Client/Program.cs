@@ -1,6 +1,8 @@
 using EggDash.Client.Services;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
+using HemSoft.EggIncTracker.Domain;
+using Microsoft.Extensions.Logging;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -20,4 +22,15 @@ builder.Services.AddScoped<ApiService>();
 
 builder.Services.AddMudServices();
 
-await builder.Build().RunAsync();
+var app = builder.Build();
+
+// Register ApiService with ServiceLocator
+var apiService = app.Services.GetRequiredService<ApiService>();
+ServiceLocator.RegisterService<IApiService>(apiService);
+
+// Register Logger with ServiceLocator
+var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+var logger = loggerFactory.CreateLogger("GlobalLogger");
+ServiceLocator.RegisterService<ILogger>(logger);
+
+await app.RunAsync();

@@ -49,7 +49,7 @@ public partial class MajPlayerUpdates
             totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
 
             // Get page of player updates
-            playerUpdates = MajPlayerRankingManager.GetMajPlayerRankings();
+            playerUpdates = await MajPlayerRankingManager.GetMajPlayerRankings();
         }
         catch (Exception ex)
         {

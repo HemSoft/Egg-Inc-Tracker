@@ -13,11 +13,14 @@ using Microsoft.Extensions.Logging;
 
 using Newtonsoft.Json;
 
-public class UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory)
+public class UpdatePlayerTimerTrigger
 {
-    private readonly ILogger _logger = loggerFactory.CreateLogger<UpdatePlayerTimerTrigger>();
+    private readonly ILogger _logger;
     private readonly HttpClient _httpClient = new();
-    private const string DiscordWebhookUrl = "https://discord.com/api/webhooks/1257956380875161680/1RuZ7b8i2JzpW_E4NUkWLgSF2t_JBjgfqar5h7kLmJavZ6tXH_VT8PIUr8R6zcGlAlRP";
+    //private const string DiscordWebhookUrl = "https://discord.com/api/webhooks/1257956380875161680/1RuZ7b8i2JzpW_E4NUkWLgSF2t_JBjgfqar5h7kLmJavZ6tXH_VT8PIUr8R6zcGlAlRP";
+
+    private const string DiscordWebhookUrl =
+        "https://discord.com/api/webhooks/1350331849074937856/v7_DxPkI-aWYqwBASUqqtn9R66QIA_uAAZqSQsIfgBxMMyzW8t4Q86riBlR7pAMBn_9p";
     private const string KingFridayEid = "EI6335140328505344";
     private const string KingFridayPlayerName = "King Friday!";
     private const string KingSaturdayEid = "EI5435770400276480";
@@ -26,6 +29,22 @@ public class UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory)
     private const string KingSundayPlayerName = "King Sunday!";
     private const string KingMondayEid = "EI6725967592947712";
     private const string KingMondayPlayerName = "King Monday!";
+
+    public UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory)
+    {
+        _logger = loggerFactory.CreateLogger<UpdatePlayerTimerTrigger>();
+
+        // Explicitly configure the HttpClient with the correct base address
+        _httpClient.BaseAddress = new Uri("https://localhost:5000/");
+        _logger.LogInformation($"Setting HttpClient base address to: {_httpClient.BaseAddress}");
+
+        // Create and register API service 
+        var apiService = new FunctionApiService(_httpClient, _logger);
+        ServiceLocator.RegisterService<IApiService>(apiService);
+
+        // Register logger
+        ServiceLocator.RegisterService<ILogger>(_logger);
+    }
 
     [Function("UpdateMain")]
     public async Task UpdateMain([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer)
@@ -46,7 +65,7 @@ public class UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory)
 
             await ProcessPlayer(KingSundayEid, KingSundayPlayerName);
             await CheckPlayerContracts(KingSundayEid, KingSundayPlayerName);
-            
+
             await ProcessPlayer(KingMondayEid, KingMondayPlayerName);
             await CheckPlayerContracts(KingMondayEid, KingMondayPlayerName);
         }
@@ -155,7 +174,7 @@ public class UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory)
             }
         }
     }
-   
+
     [Function("CheckMajSEPlayerRankings")]
     //public async Task CheckMajSEPlayerRankings([TimerTrigger("0 0 * * * *")] TimerInfo myTimer)
     public async Task CheckMajSEPlayerRankings([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer)
@@ -191,7 +210,7 @@ public class UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory)
         var playerMajSERankings = await Api.CallMajSEPlayerRankingsApi();
         foreach (var p in playerMajSERankings)
         {
-            var result = MajPlayerRankingManager.SaveMajPlayerRanking(p, _logger);
+            var result = await MajPlayerRankingManager.SaveMajPlayerRanking(p, _logger);
         }
     }
 
@@ -273,7 +292,7 @@ public class UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory)
                     var goalValueString = goalValue.ToString(CultureInfo.InvariantCulture);
                     var formattedGoalValue = Utils.FormatBigInteger(goalValueString, false, true);
 
-                    var percentComplete = (totalAmount / (decimal) goalValue) * 100;
+                    var percentComplete = (totalAmount / (decimal)goalValue) * 100;
                     var myContribution = contractDetails.ContributorsList.OrderByDescending(x => x.ContributionAmount).First(y => y.UserName == player.PlayerName);
                     var orderedContributionList =
                         contractDetails.ContributorsList.OrderByDescending(x => x.ContributionAmount).ToList();
@@ -309,13 +328,13 @@ public class UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory)
             x++;
             if (f > 0)
             {
-                message += $"`{x}={Utils.FormatBigInteger(f.ToString(CultureInfo.InvariantCulture), true)}/{Utils.FormatBigInteger((fullPlayerInfo.Artifacts.TankLimitsList[x-1] * 500000000000000).ToString(CultureInfo.InvariantCulture), true)}` ";
+                message += $"`{x}={Utils.FormatBigInteger(f.ToString(CultureInfo.InvariantCulture), true)}/{Utils.FormatBigInteger((fullPlayerInfo.Artifacts.TankLimitsList[x - 1] * 500000000000000).ToString(CultureInfo.InvariantCulture), true)}` ";
             }
         }
 
         // Mission Status:
         var approxTime = Utils.ConvertUnixTimestampToCST(fullPlayerInfo.ApproxTime);
-        
+
         //fullPlayerInfo.Game.
         message += "\n_**Henliner Mission return times**_: ";
         var timeLeft = Utils.DoubleToReadableTime(fullPlayerInfo.ArtifactsDb.MissionInfosList[0].SecondsRemaining);
@@ -334,14 +353,11 @@ public class UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory)
         }
         message += "\n===================================================================================\n";
 
-        // Prepare the Discord webhook URL  
-        const string discordWebhookUrl = "https://discord.com/api/webhooks/1257956380875161680/1RuZ7b8i2JzpW_E4NUkWLgSF2t_JBjgfqar5h7kLmJavZ6tXH_VT8PIUr8R6zcGlAlRP";
-
         // Prepare the message content
         var content = new StringContent(JsonConvert.SerializeObject(new { content = message }), Encoding.UTF8, "application/json");
 
         // Make the API call
-        var response = await _httpClient.PostAsync(discordWebhookUrl, content);
+        var response = await _httpClient.PostAsync(DiscordWebhookUrl, content);
     }
 
     private async Task SendDiscordMessage(string message)
