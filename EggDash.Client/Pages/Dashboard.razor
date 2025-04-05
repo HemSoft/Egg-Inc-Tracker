@@ -1,4 +1,6 @@
-﻿@page "/dashboard"
+﻿@page "/"
+@page "/dashboard"
+@using Microsoft.AspNetCore.Components
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -9,7 +11,8 @@
         <!-- King Monday -->
         <!----------------->
         <MudItem xs="3">
-            <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+            <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%; cursor: pointer;"
+                @onclick="() => NavigateToPlayerDetail(_kingMonday?.EID)">
                 <div class="mb-4 text-center">
                     <MudText Typo="Typo.h4" Align="Align.Center">King Monday</MudText>
                     <MudText Typo="Typo.h6" Align="Align.Center">(@_kingMonday?.Title)</MudText>
@@ -31,18 +34,18 @@
                         </span>
                     </MudText>
                 </div>
-                <div class="donut-chart-container">
+                <div class="d-flex flex-column align-center">
                     <MudChart ChartType="ChartType.Donut" Width="300px" Height="300px"
                         InputData="@_kingMondayTitleProgressData" InputLabels="@_kingMondayTitleProgressLabels"
                         ChartOptions="@_options">
+                        <CustomGraphics>
+                            <text text-anchor="middle" dominant-baseline="middle" font-size="24" font-weight="bold"
+                                fill="White">
+                                @_kingMonday?.TitleProgress.ToString("F2")%
+                            </text>
+                        </CustomGraphics>
                     </MudChart>
-                    <div class="donut-overlay">
-                        <div class="d-flex flex-column align-center">
-                            <span class="donut-inner-text">@_kingMonday?.TitleProgress.ToString("F0")%</span>
-                            <span class="donut-subtitle">@(_kingMondayTitleProgressLabels?.Length > 0 ?
-                                                                _kingMondayTitleProgressLabels[0] : "")</span>
-                        </div>
-                    </div>
+
                 </div>
             </MudPaper>
         </MudItem>
@@ -50,7 +53,8 @@
         <!-- King Sunday -->
         <!----------------->
         <MudItem xs="3">
-            <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+            <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%; cursor: pointer;"
+                @onclick="() => NavigateToPlayerDetail(_kingSunday?.EID)">
                 <div class="mb-4 text-center">
                     <MudText Typo="Typo.h4" Align="Align.Center">King Sunday</MudText>
                     <MudText Typo="Typo.h6" Align="Align.Center">(@_kingSunday?.Title)</MudText>
@@ -72,18 +76,18 @@
                         </span>
                     </MudText>
                 </div>
-                <div class="donut-chart-container">
+                <div class="d-flex flex-column align-center">
                     <MudChart ChartType="ChartType.Donut" Width="300px" Height="300px"
                         InputData="@_kingSundayTitleProgressData" InputLabels="@_kingSundayTitleProgressLabels"
                         ChartOptions="@_options">
+                        <CustomGraphics>
+                            <text text-anchor="middle" dominant-baseline="middle" font-size="24" font-weight="bold"
+                                fill="White">
+                                @_kingSunday?.TitleProgress.ToString("F2")%
+                            </text>
+                        </CustomGraphics>
                     </MudChart>
-                    <div class="donut-overlay">
-                        <div class="d-flex flex-column align-center">
-                            <span class="donut-inner-text">@_kingSunday?.TitleProgress.ToString("F0")%</span>
-                            <span class="donut-subtitle">@(_kingSundayTitleProgressLabels?.Length > 0 ?
-                                                                _kingSundayTitleProgressLabels[0] : "")</span>
-                        </div>
-                    </div>
+
                 </div>
             </MudPaper>
         </MudItem>
@@ -91,7 +95,8 @@
         <!-- King Saturday -->
         <!------------------->
         <MudItem xs="3">
-            <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+            <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%; cursor: pointer;"
+                @onclick="() => NavigateToPlayerDetail(_kingSaturday?.EID)">
                 <div class="mb-4 text-center">
                     <MudText Typo="Typo.h4" Align="Align.Center">King Saturday</MudText>
                     <MudText Typo="Typo.h6" Align="Align.Center">(@_kingSaturday?.Title)</MudText>
@@ -113,18 +118,18 @@
                         </span>
                     </MudText>
                 </div>
-                <div class="donut-chart-container">
+                <div class="d-flex flex-column align-center">
                     <MudChart ChartType="ChartType.Donut" Width="300px" Height="300px"
                         InputData="@_kingSaturdayTitleProgressData" InputLabels="@_kingSaturdayTitleProgressLabels"
                         ChartOptions="@_options">
+                        <CustomGraphics>
+                            <text text-anchor="middle" dominant-baseline="middle" font-size="24" font-weight="bold"
+                                fill="White">
+                                @_kingSaturday?.TitleProgress.ToString("F2")%
+                            </text>
+                        </CustomGraphics>
                     </MudChart>
-                    <div class="donut-overlay">
-                        <div class="d-flex flex-column align-center">
-                            <span class="donut-inner-text">@_kingSaturday?.TitleProgress.ToString("F0")%</span>
-                            <span class="donut-subtitle">@(_kingSaturdayTitleProgressLabels?.Length > 0 ?
-                                                                _kingSaturdayTitleProgressLabels[0] : "")</span>
-                        </div>
-                    </div>
+
                 </div>
             </MudPaper>
         </MudItem>
@@ -132,7 +137,8 @@
         <!-- King Friday -->
         <!----------------->
         <MudItem xs="3">
-            <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+            <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%; cursor: pointer;"
+                @onclick="() => NavigateToPlayerDetail(_kingFriday?.EID)">
                 <div class="mb-4 text-center">
                     <MudText Typo="Typo.h4" Align="Align.Center">King Friday</MudText>
                     <MudText Typo="Typo.body1" Align="Align.Center">
@@ -171,22 +177,25 @@
                             SE/Week: (@_kingFridayStats?.SEPerWeek)
                         </span>
                         <span class="d-inline-flex align-center mr-2">
+                            SE This Week: @_kingFridaySEThisWeek
+                        </span>
+                        <span class="d-inline-flex align-center mr-2">
                             Stiges Today/Week: @_kingFriday?.PrestigesToday / @_kingFriday?.PrestigesThisWeek
                         </span>
                     </MudText>
                 </div>
-                <div class="donut-chart-container king-friday-donut mb-2">
+                <div class="mb-2 d-flex flex-column align-center">
                     <MudChart ChartType="ChartType.Donut" Width="300px" Height="300px"
                         InputData="@_kingFridayTitleProgressData" InputLabels="@_kingFridayTitleProgressLabels"
                         ChartOptions="@_options">
+                        <CustomGraphics>
+                            <text text-anchor="middle" dominant-baseline="middle" font-size="24" font-weight="bold"
+                                fill="White">
+                                @_kingFriday?.TitleProgress.ToString("F2")%
+                            </text>
+                        </CustomGraphics>
                     </MudChart>
-                    <div class="donut-overlay">
-                        <div class="d-flex flex-column align-center">
-                            <span class="donut-inner-text">@_kingFriday?.TitleProgress.ToString("F0")%</span>
-                            <span class="donut-subtitle">@(_kingFridayTitleProgressLabels?.Length > 0 ?
-                                                                _kingFridayTitleProgressLabels[0] : "")</span>
-                        </div>
-                    </div>
+
                 </div>
                 <!---------------------->
                 <!-- SE Progress Bar: -->
@@ -337,45 +346,3 @@
         </MudItem>
     </MudGrid>
 </div>
-
-<style>
-    .dashboard-container {
-        position: relative;
-        min-height: calc(100vh - 70px);
-    }
-
-    .dashboard-tile {
-        padding: 16px;
-        border-radius: 8px;
-        height: 100%;
-    }
-
-    .donut-inner-text {
-        font-size: 24px !important;
-        font-weight: bold;
-    }
-
-    .dashboard-footer {
-        position: absolute;
-        bottom: 16px;
-        right: 16px;
-    }
-
-    .fill-grid {
-        min-height: 90%;
-    }
-
-    /* Progress bars container styling */
-    .progress-bars-container {
-        margin-top: 1rem;
-    }
-
-    /* Individual progress bar spacing */
-    .mt-2.px-4 {
-        margin-top: 0.3rem !important;
-    }
-
-    .mt-n2.px-4 {
-        margin-top: 0.3rem !important;
-    }
-</style>

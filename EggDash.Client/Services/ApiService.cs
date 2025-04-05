@@ -48,6 +48,33 @@ namespace EggDash.Client.Services
             }
         }
 
+        public async Task<PlayerDto?> GetPlayerByEIDAsync(string eid)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(eid))
+                {
+                    _logger.LogWarning("EID is null or empty");
+                    return null;
+                }
+
+                var response = await _httpClient.GetAsync($"api/v1/players/eid/{eid}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<PlayerDto>();
+                }
+
+                _logger.LogError($"Error fetching player data by EID: {response.StatusCode}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetPlayerByEIDAsync");
+                return null;
+            }
+        }
+
 
         public async Task<PlayerStatsDto?> GetPlayerStatsAsync(string playerName, int recordLimit = 1, int sampleDaysBack = 30)
         {

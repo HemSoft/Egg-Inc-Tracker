@@ -29,6 +29,9 @@ public partial class Dashboard
     [Inject]
     private EggDash.Client.Services.ApiService ApiService { get; set; } = default!;
 
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+
     private const int NameCutOff = 12;
 
     private ST.Timer? _timer;
@@ -57,6 +60,7 @@ public partial class Dashboard
     private MajPlayerRankingDto _MERGoalEnd;
     private MajPlayerRankingDto _JERGoalBegin;
     private MajPlayerRankingDto _JERGoalEnd;
+    private string _kingFridaySEThisWeek = string.Empty;
 
     private PlayerDto? _kingSaturday;
     private PlayerStatsDto? _kingSaturdayStats;
@@ -101,16 +105,6 @@ public partial class Dashboard
     {
         // Register ApiService and Logger if they weren't registered globally
         // This ensures backward compatibility if the global registration fails
-        if (ServiceLocator.GetService<IApiService>() == null)
-        {
-            ServiceLocator.RegisterService<IApiService>(ApiService);
-        }
-
-        if (ServiceLocator.GetService<ILogger>() == null)
-        {
-            ServiceLocator.RegisterService<ILogger>(Logger);
-        }
-
         await RefreshData();
 
         _timer = new ST.Timer(30000); // 30 seconds
@@ -163,43 +157,25 @@ public partial class Dashboard
 
     private async Task UpdateKingFriday()
     {
-        // Get the UTC date boundaries that correspond to "today" and "start of week" in CST
-        TimeZoneInfo cstZone;
-        try
-        {
-            cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            cstZone = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
-        }
-        catch (InvalidTimeZoneException)
-        {
-            cstZone = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
-        }
+        // Get the current time in UTC
+        var utcNow = DateTime.UtcNow;
+        var utcToday = new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0, DateTimeKind.Utc);
+        var todayUtcStart = utcToday;
 
-        // Get current date in CST
-        var cstDateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cstZone);
-        var cstToday = cstDateTime.Date;
-
-        // Convert CST today back to UTC for database comparison
-        var todayUtcStart = TimeZoneInfo.ConvertTimeToUtc(cstToday, cstZone);
-
-        // Calculate start of week in CST, then convert to UTC
-        var cstStartOfWeek = cstToday.AddDays(-(int)cstToday.DayOfWeek + (int)DayOfWeek.Monday);
-        if (cstToday.DayOfWeek == DayOfWeek.Sunday) // If today is Sunday, use last Monday
-        {
-            cstStartOfWeek = cstToday.AddDays(-6); // Go back 6 days to previous Monday
-        }
-        var startOfWeekUtc = TimeZoneInfo.ConvertTimeToUtc(cstStartOfWeek, cstZone);
+        // Calculate the start of the week (Monday) in UTC
+        // Get the days since last Monday (DayOfWeek.Monday = 1)
+        int daysSinceMonday = ((int)utcToday.DayOfWeek - 1 + 7) % 7; // Ensure positive result
+        var startOfWeekUtc = utcToday.AddDays(-daysSinceMonday);
 
         // Log for debugging purposes
-        Logger.LogInformation($"Today (CST): {cstToday}, Start of Week (CST): {cstStartOfWeek}");
-        Logger.LogInformation($"Today (UTC): {todayUtcStart}, Start of Week (UTC): {startOfWeekUtc}");
+        Logger.LogInformation($"Today (UTC): {utcToday}, Start of Week (Monday) (UTC): {startOfWeekUtc}");
+        Logger.LogInformation($"Days since Monday: {daysSinceMonday}");
 
         _kingFriday = await ApiService.GetLatestPlayerAsync("King Friday!");
         // Replace direct call to PlayerManager with API service call
         _kingFridayStats = await ApiService.GetRankedPlayerAsync("King Friday!", 1, 30);
+
+        Logger.LogInformation($"Loaded King Friday with EID: {_kingFriday?.EID}");
 
         if (_kingFriday != null)
         {
@@ -227,6 +203,40 @@ public partial class Dashboard
 
             var firstToday = playerHistoryToday?.OrderBy(x => x.Updated).FirstOrDefault();
             var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
+
+            // Log the data we're working with
+            Logger.LogInformation($"Player history today count: {playerHistoryToday?.Count() ?? 0}");
+            Logger.LogInformation($"Player history week count: {playerHistoryWeek?.Count() ?? 0}");
+            Logger.LogInformation($"First today: {firstToday?.Updated}, SE: {firstToday?.SoulEggs}");
+            Logger.LogInformation($"First this week: {firstThisWeek?.Updated}, SE: {firstThisWeek?.SoulEggs}");
+            Logger.LogInformation($"Current SE: {_kingFriday.SoulEggs}, Full: {_kingFriday.SoulEggsFull}");
+
+            // Calculate SE gain this week
+            if (playerHistoryWeek != null && playerHistoryWeek.Any())
+            {
+                var latestSE = _kingFriday.SoulEggsFull;
+                var earliestSE = firstThisWeek?.SoulEggsFull ?? latestSE;
+
+                Logger.LogInformation($"Using latest SE: {latestSE}");
+                Logger.LogInformation($"Using earliest SE: {earliestSE}");
+
+                try
+                {
+                    // Use BigNumberCalculator to calculate the difference
+                    _kingFridaySEThisWeek = HemSoft.EggIncTracker.Domain.BigNumberCalculator.CalculateDifference(earliestSE, latestSE);
+                    Logger.LogInformation($"Calculated SE gain this week: {_kingFridaySEThisWeek}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error calculating SE gain this week");
+                    _kingFridaySEThisWeek = "0";
+                }
+            }
+            else
+            {
+                Logger.LogWarning("No player history for this week, setting SE gain to 0");
+                _kingFridaySEThisWeek = "0";
+            }
 
             // Log the data we're working with
             Logger.LogInformation($"Current prestiges: {_kingFriday.Prestiges}");
@@ -287,6 +297,8 @@ public partial class Dashboard
         // Replace direct call to PlayerManager with API service call
         _kingSaturdayStats = await ApiService.GetRankedPlayerAsync("King Saturday!", 1, 30);
 
+        Logger.LogInformation($"Loaded King Saturday with EID: {_kingSaturday?.EID}");
+
         if (_kingSaturday != null)
         {
             // Get title information from the API
@@ -319,6 +331,8 @@ public partial class Dashboard
         // Replace direct call to PlayerManager with API service call
         _kingSundayStats = await ApiService.GetRankedPlayerAsync("King Sunday!", 1, 30);
 
+        Logger.LogInformation($"Loaded King Sunday with EID: {_kingSunday?.EID}");
+
         if (_kingSunday != null)
         {
             // Get title information from the API
@@ -350,6 +364,8 @@ public partial class Dashboard
         _kingMonday = await ApiService.GetLatestPlayerAsync("King Monday!");
         // Replace direct call to PlayerManager with API service call
         _kingMondayStats = await ApiService.GetRankedPlayerAsync("King Monday!", 1, 30);
+
+        Logger.LogInformation($"Loaded King Monday with EID: {_kingMonday?.EID}");
 
         if (_kingMonday != null)
         {
@@ -553,12 +569,14 @@ public partial class Dashboard
 
         try
         {
-            if (string.IsNullOrEmpty(input)) return false;
+            if (string.IsNullOrEmpty(input))
+                return false;
 
             // Split number and exponent
             string[] parts = input.Split(new[] { 'e' }, StringSplitOptions.RemoveEmptyEntries);
 
-            if (parts.Length != 2) return false;
+            if (parts.Length != 2)
+                return false;
 
             decimal baseNumber = decimal.Parse(parts[0], CultureInfo.InvariantCulture);
             int exponent = int.Parse(parts[1]);
@@ -722,5 +740,18 @@ public partial class Dashboard
         _selectedDaysToDisplay = value;
         await UpdateMultiSeriesChart();
         StateHasChanged();
+    }
+
+    private void NavigateToPlayerDetail(string? eid)
+    {
+        if (!string.IsNullOrEmpty(eid))
+        {
+            Logger.LogInformation($"Navigating to player detail for EID: {eid}");
+            NavigationManager.NavigateTo($"/player/{eid}");
+        }
+        else
+        {
+            Logger.LogWarning("Cannot navigate to player detail: EID is null or empty");
+        }
     }
 }

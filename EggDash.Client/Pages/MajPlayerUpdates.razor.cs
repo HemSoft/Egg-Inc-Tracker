@@ -4,12 +4,10 @@ using System.Globalization;
 
 using EggDash.Client.Services;
 
-using HemSoft.EggIncTracker.Data;
 using HemSoft.EggIncTracker.Data.Dtos;
 using HemSoft.EggIncTracker.Domain;
 
 using Microsoft.AspNetCore.Components;
-using Microsoft.EntityFrameworkCore;
 
 using MudBlazor;
 
@@ -18,7 +16,10 @@ using ST = System.Timers;
 public partial class MajPlayerUpdates
 {
     [Inject]
-    private EggIncContext DbContext { get; set; } = default!;
+    private ApiService ApiService { get; set; } = default!;
+
+    [Inject]
+    private ILogger<MajPlayerUpdates> Logger { get; set; } = default!;
 
     private List<MajPlayerRankingDto> playerUpdates = new();
     private bool isLoading = true;
@@ -44,16 +45,24 @@ public partial class MajPlayerUpdates
 
         try
         {
-            // Get total count for pagination
-            var totalRecords = await DbContext.MajPlayerRankings.CountAsync();
-            totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
-
-            // Get page of player updates
-            playerUpdates = await MajPlayerRankingManager.GetMajPlayerRankings();
+            // Get player updates from API
+            var rankings = await ApiService.GetLatestMajPlayerRankingsAsync(30);
+            if (rankings != null)
+            {
+                playerUpdates = rankings;
+                totalPages = (int)Math.Ceiling(playerUpdates.Count / (double)pageSize);
+            }
+            else
+            {
+                playerUpdates = new List<MajPlayerRankingDto>();
+                totalPages = 1;
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading player updates: {ex.Message}");
+            Logger.LogError(ex, "Error loading player updates");
+            playerUpdates = new List<MajPlayerRankingDto>();
+            totalPages = 1;
         }
         finally
         {

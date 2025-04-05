@@ -71,7 +71,7 @@ namespace EggIncTrackerApi.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<List<PlayerDto>>> GetPlayerHistory(
-            string name, 
+            string name,
             [FromQuery] DateTime? from = null,
             [FromQuery] DateTime? to = null,
             [FromQuery] int? limit = null)
@@ -160,6 +160,27 @@ namespace EggIncTrackerApi.Controllers
         }
 
         /// <summary>
+        /// Get player by EID
+        /// </summary>
+        [HttpGet("eid/{eid}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<PlayerDto>> GetPlayerByEID(string eid)
+        {
+            var player = await context.Players
+                .Where(p => p.EID == eid)
+                .OrderByDescending(p => p.Updated)
+                .FirstOrDefaultAsync();
+
+            if (player == null)
+            {
+                return NotFound($"Player with EID {eid} not found");
+            }
+
+            return Ok(player);
+        }
+
+        /// <summary>
         /// Get ranked player records
         /// </summary>
         [HttpGet("{name}/ranked")]
@@ -192,7 +213,7 @@ namespace EggIncTrackerApi.Controllers
                 return StatusCode(500, "An error occurred while retrieving player rankings");
             }
         }
-        
+
         /// <summary>
         /// Calculate title progress and next title information
         /// </summary>
@@ -215,13 +236,13 @@ namespace EggIncTrackerApi.Controllers
 
                 // Get current earnings bonus as BigInteger
                 BigInteger earningsBonus = CalculateEarningsBonusPercentageNumber(player);
-                
+
                 // Calculate title progress
                 var (currentTitle, nextTitle, progress) = GetTitleWithProgress(earningsBonus);
-                
+
                 // Calculate projected title change
                 var projectedTitleChange = CalculateProjectedTitleChange(player);
-                
+
                 var titleInfo = new TitleInfoDto
                 {
                     CurrentTitle = player.Title,
@@ -238,7 +259,7 @@ namespace EggIncTrackerApi.Controllers
                 return StatusCode(500, "An error occurred while calculating title info");
             }
         }
-        
+
         #region Title calculation methods
         private static readonly List<(BigInteger Limit, string Title)> Titles =
         [
@@ -298,21 +319,21 @@ namespace EggIncTrackerApi.Controllers
             // If it exceeds all predefined titles
             return (Titles[^1].Title, "Uada+", 100);
         }
-        
+
         private BigInteger CalculateEarningsBonusPercentageNumber(PlayerDto player)
         {
             var sefull = BigInteger.Parse(player.SoulEggsFull);
             var eb = sefull * new BigInteger(150 * Math.Pow(1.1, player.ProphecyEggs));
             return eb;
         }
-        
+
         private DateTime CalculateProjectedTitleChange(PlayerDto player)
         {
             // For now, returning a simplified implementation
             // In a real implementation, you would need to port the full logic from PlayerManager
             var ebNeeded = CalculateEBNeededForNextTitle(player.PlayerName);
             var ebProgressPerHour = CalculateEBProgressPerHour(player.PlayerName, 30);
-            
+
             if (ebNeeded <= 0 || ebProgressPerHour <= 0)
             {
                 return DateTime.MaxValue; // No projection available
@@ -321,7 +342,7 @@ namespace EggIncTrackerApi.Controllers
             var hoursNeeded = BigInteger.Divide(ebNeeded, ebProgressPerHour);
             return DateTime.Now.AddHours((double)hoursNeeded);
         }
-        
+
         private BigInteger CalculateEBNeededForNextTitle(string playerName)
         {
             var playerRecord = context.Players
@@ -345,7 +366,7 @@ namespace EggIncTrackerApi.Controllers
 
             return BigInteger.Zero;
         }
-        
+
         private BigInteger CalculateEBProgressPerHour(string playerName, int daysToLookBack)
         {
             var playerRecords = context.Players
@@ -377,7 +398,7 @@ namespace EggIncTrackerApi.Controllers
         }
         #endregion
     }
-    
+
     // DTO for title information
     public class TitleInfoDto
     {
@@ -386,4 +407,4 @@ namespace EggIncTrackerApi.Controllers
         public double TitleProgress { get; set; }
         public string ProjectedTitleChange { get; set; } = string.Empty;
     }
-} 
+}
