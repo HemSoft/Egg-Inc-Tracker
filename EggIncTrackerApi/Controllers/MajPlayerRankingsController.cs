@@ -142,7 +142,7 @@ namespace EggIncTrackerApi.Controllers
         [HttpGet("position/{ranking:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<MajPlayerRankingDto>>> GetRankHistory(
-            int ranking, 
+            int ranking,
             [FromQuery] DateTime? from = null,
             [FromQuery] DateTime? to = null)
         {
@@ -243,7 +243,7 @@ namespace EggIncTrackerApi.Controllers
 
                 // Transform to include parsed EB for sorting
                 var rankingsWithEB = latestRankings
-                    .Select(r => new 
+                    .Select(r => new
                     {
                         Ranking = r,
                         EBValue = HemSoft.EggIncTracker.Domain.BigNumberCalculator.ParseBigNumber(r.EBString.TrimEnd('%'))
@@ -401,9 +401,51 @@ namespace EggIncTrackerApi.Controllers
         {
             try
             {
-                var rankings = await _context.Set<MajPlayerRankingDto>()
-                    .FromSqlRaw("EXEC GetLatestMajPlayerRankingsByIGN")
-                    .ToListAsync();
+                // Use a direct SQL query to get the data from the stored procedure
+                var rankings = new List<MajPlayerRankingDto>();
+
+                // Create a SQL connection
+                using (var connection = _context.Database.GetDbConnection())
+                {
+                    await connection.OpenAsync();
+
+                    // Create a command to execute the stored procedure
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = "EXEC GetLatestMajPlayerRankingsByIGN @ShowSENumber = 1, @RowCount = @Limit";
+                        var parameter = command.CreateParameter();
+                        parameter.ParameterName = "@Limit";
+                        parameter.Value = limit * 2;
+                        command.Parameters.Add(parameter);
+
+                        // Execute the command and read the results
+                        using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                var dto = new MajPlayerRankingDto
+                                {
+                                    Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                    Ranking = reader.GetInt32(reader.GetOrdinal("Ranking")),
+                                    IGN = reader.GetString(reader.GetOrdinal("IGN")),
+                                    DiscordName = reader.GetString(reader.GetOrdinal("DiscordName")),
+                                    EBString = reader.GetString(reader.GetOrdinal("EBString")),
+                                    Role = reader.GetString(reader.GetOrdinal("Role")),
+                                    SENumber = reader.GetDecimal(reader.GetOrdinal("SENumber")),
+                                    SEString = reader.GetString(reader.GetOrdinal("SEString")),
+                                    SEGains = reader.IsDBNull(reader.GetOrdinal("SEGains")) ? null : reader.GetString(reader.GetOrdinal("SEGains")),
+                                    PE = reader.GetInt32(reader.GetOrdinal("PE")),
+                                    Prestiges = reader.IsDBNull(reader.GetOrdinal("Prestiges")) ? null : reader.GetString(reader.GetOrdinal("Prestiges")),
+                                    MER = reader.GetDecimal(reader.GetOrdinal("MER")),
+                                    JER = reader.GetDecimal(reader.GetOrdinal("JER")),
+                                    Updated = reader.GetDateTime(reader.GetOrdinal("Updated"))
+                                };
+
+                                rankings.Add(dto);
+                            }
+                        }
+                    }
+                }
 
                 return Ok(rankings.Take(limit).ToList());
             }
@@ -469,7 +511,7 @@ namespace EggIncTrackerApi.Controllers
                     {
                         _context.MajPlayerRankings.Add(majPlayerRanking);
                         await _context.SaveChangesAsync();
-                        
+
                         return Ok(new SaveRankingResponseDto
                         {
                             Success = true,
@@ -488,7 +530,7 @@ namespace EggIncTrackerApi.Controllers
                 // First entry for this player
                 _context.MajPlayerRankings.Add(majPlayerRanking);
                 await _context.SaveChangesAsync();
-                
+
                 return Ok(new SaveRankingResponseDto
                 {
                     Success = true,
@@ -521,4 +563,4 @@ namespace EggIncTrackerApi.Controllers
         public string Message { get; set; }
         public MajPlayerRankingDto PreviousRanking { get; set; }
     }
-} 
+}

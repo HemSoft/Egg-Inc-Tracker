@@ -20,16 +20,32 @@
             else if (playerUpdates.Any())
             {
                 <MudTable Items="@playerUpdates" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@isLoading"
-                    LoadingProgressColor="Color.Primary" T="MajPlayerRankingDto">
+                    LoadingProgressColor="Color.Primary" T="MajPlayerRankingDto" HeaderClass="table-header">
                     <HeaderContent>
-                        <MudTh>Date/Time</MudTh>
-                        <MudTh>Player</MudTh>
-                        <MudTh>PE</MudTh>
-                        <MudTh>Soul Eggs</MudTh>
-                        <MudTh>SE Gained</MudTh>
-                        <MudTh>EB</MudTh>
-                        <MudTh>MER</MudTh>
-                        <MudTh>JER</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            Date/Time</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            Player</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            PE</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            Soul Eggs</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            SE Gained</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            EB</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            MER</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            JER</MudTh>
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="Date/Time">
@@ -47,7 +63,7 @@
                         </MudTd>
                         <MudTd DataLabel="SE Gained">
                             <MudText Typo="Typo.body2"
-                                Color="@(context.SEGains != null && !context.SEGains.Contains("-") ? Color.Success : Color.Default)">
+                                Color="@(context.SEGains != null && !context.SEGains.Contains("-") && context.SEGains != "N/A" ? Color.Success : Color.Default)">
                                 <b>@(context.SEGains ?? "N/A")</b>
                             </MudText>
                         </MudTd>
