@@ -23,18 +23,9 @@ public partial class MajPlayerUpdates
 
     private List<MajPlayerRankingDto> playerUpdates = new();
     private bool isLoading = true;
-    private int currentPage = 1;
-    private int pageSize = 10;
-    private int totalPages = 1;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadPlayerUpdates();
-    }
-
-    private async Task OnPageChanged(int page)
-    {
-        currentPage = page;
         await LoadPlayerUpdates();
     }
 
@@ -46,23 +37,20 @@ public partial class MajPlayerUpdates
         try
         {
             // Get player updates from API
-            var rankings = await ApiService.GetLatestMajPlayerRankingsAsync(30);
+            var rankings = await ApiService.GetLatestMajPlayerRankingsAsync(100); // Increased limit to show more data
             if (rankings != null)
             {
                 playerUpdates = rankings;
-                totalPages = (int)Math.Ceiling(playerUpdates.Count / (double)pageSize);
             }
             else
             {
                 playerUpdates = new List<MajPlayerRankingDto>();
-                totalPages = 1;
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading player updates");
             playerUpdates = new List<MajPlayerRankingDto>();
-            totalPages = 1;
         }
         finally
         {
