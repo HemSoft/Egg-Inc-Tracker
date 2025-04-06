@@ -4,7 +4,20 @@
 <PageTitle>Player Details - @(_player?.PlayerName ?? "Loading...")</PageTitle>
 
 <div class="dashboard-container mt-4 px-3">
-    <MudButton Class="mb-4" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="NavigateBack">Back to Dashboard</MudButton>
+    <div class="d-flex justify-space-between mb-4">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="NavigateBack">Back to Dashboard</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@(isLoading ? Icons.Material.Filled.HourglassTop : Icons.Material.Filled.Refresh)" OnClick="ManualRefresh" Disabled="isLoading">
+            @if (isLoading)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <span class="ms-2">Loading...</span>
+            }
+            else
+            {
+                <span>Refresh Data</span>
+            }
+        </MudButton>
+    </div>
     <MudGrid Spacing="2" Class="fill-grid">
         @if (isLoading)
         {

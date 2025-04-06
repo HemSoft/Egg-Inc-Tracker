@@ -41,6 +41,25 @@ public partial class PlayerDetail
 
     protected override async Task OnInitializedAsync()
     {
+        try
+        {
+            // Initial load with a delay to ensure all dependencies are initialized
+            await Task.Delay(300); // Longer delay to allow for initialization
+            Logger.LogInformation("Starting initial player data load");
+            await LoadPlayerData();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during player detail initialization");
+            // We'll show the error state in the UI
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ManualRefresh()
+    {
+        Logger.LogInformation("Manual refresh requested");
         await LoadPlayerData();
     }
 
@@ -52,14 +71,15 @@ public partial class PlayerDetail
         }
     }
 
-    private async Task LoadPlayerData()
+    private async Task LoadPlayerData(int retryCount = 0)
     {
+        const int maxRetries = 2; // Maximum number of retries
         isLoading = true;
         StateHasChanged();
 
         try
         {
-            Logger.LogInformation($"Loading player data for EID: {EID}");
+            Logger.LogInformation($"Loading player data for EID: {EID} (Attempt {retryCount + 1})");
 
             // Get player by EID
             _player = await ApiService.GetPlayerByEIDAsync(EID);
@@ -67,6 +87,18 @@ public partial class PlayerDetail
             if (_player == null)
             {
                 Logger.LogWarning($"Player with EID {EID} not found");
+
+                // Retry logic for player data
+                if (retryCount < maxRetries)
+                {
+                    Logger.LogInformation($"Retrying player data load (Attempt {retryCount + 2})");
+                    isLoading = false;
+                    StateHasChanged();
+                    await Task.Delay(500); // Wait before retry
+                    await LoadPlayerData(retryCount + 1);
+                    return;
+                }
+
                 isLoading = false;
                 StateHasChanged();
                 return;
@@ -77,18 +109,45 @@ public partial class PlayerDetail
             // Get player stats
             _playerStats = await ApiService.GetRankedPlayerAsync(_player.PlayerName, 1, 30);
 
+            if (_playerStats == null && retryCount < maxRetries)
+            {
+                Logger.LogWarning("Player stats not found, retrying...");
+                await Task.Delay(500); // Wait before retry
+                await LoadPlayerData(retryCount + 1);
+                return;
+            }
+
             // Calculate SE This Week
             await CalculateSEThisWeek();
 
             // Update goal data from MajPlayerRankingManager
-            (_SEGoalBegin, _SEGoalEnd) = await MajPlayerRankingManager.GetSurroundingSEPlayers(_player.PlayerName, _player.SoulEggs);
-            (_EBGoalBegin, _EBGoalEnd) = await MajPlayerRankingManager.GetSurroundingEBPlayers(_player.PlayerName, _player.EarningsBonusPercentage);
-            (_MERGoalBegin, _MERGoalEnd) = await MajPlayerRankingManager.GetSurroundingMERPlayers(_player.PlayerName, (decimal)_player.MER);
-            (_JERGoalBegin, _JERGoalEnd) = await MajPlayerRankingManager.GetSurroundingJERPlayers(_player.PlayerName, (decimal)_player.JER);
+            try
+            {
+                (_SEGoalBegin, _SEGoalEnd) = await MajPlayerRankingManager.GetSurroundingSEPlayers(_player.PlayerName, _player.SoulEggs);
+                (_EBGoalBegin, _EBGoalEnd) = await MajPlayerRankingManager.GetSurroundingEBPlayers(_player.PlayerName, _player.EarningsBonusPercentage);
+                (_MERGoalBegin, _MERGoalEnd) = await MajPlayerRankingManager.GetSurroundingMERPlayers(_player.PlayerName, (decimal)_player.MER);
+                (_JERGoalBegin, _JERGoalEnd) = await MajPlayerRankingManager.GetSurroundingJERPlayers(_player.PlayerName, (decimal)_player.JER);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error getting surrounding players data");
+                // Continue even if this fails - it's not critical
+            }
+
+            Logger.LogInformation("Player data loaded successfully");
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, $"Error loading player data for EID {EID}");
+
+            // Retry on exception
+            if (retryCount < maxRetries)
+            {
+                Logger.LogInformation($"Retrying after error (Attempt {retryCount + 2})");
+                await Task.Delay(1000); // Longer wait after error
+                await LoadPlayerData(retryCount + 1);
+                return;
+            }
         }
         finally
         {

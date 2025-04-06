@@ -8,6 +8,8 @@ namespace EggDash.Client.Services
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<ApiService> _logger;
+        private const int MaxRetries = 3;
+        private const int InitialRetryDelayMs = 300;
 
         public ApiService(HttpClient httpClient, ILogger<ApiService> logger)
         {
@@ -23,11 +25,54 @@ namespace EggDash.Client.Services
                 _httpClient.BaseAddress = new Uri(_httpClient.BaseAddress.ToString() + "/");
             }
             _logger = logger;
+
+            // Set a reasonable timeout for the HttpClient
+            _httpClient.Timeout = TimeSpan.FromSeconds(30);
+        }
+
+        /// <summary>
+        /// Helper method to execute an API call with retry logic
+        /// </summary>
+        private async Task<T?> ExecuteWithRetryAsync<T>(Func<Task<T?>> apiCall, string methodName)
+        {
+            Exception? lastException = null;
+
+            for (int attempt = 0; attempt < MaxRetries; attempt++)
+            {
+                try
+                {
+                    // If this is a retry, log it
+                    if (attempt > 0)
+                    {
+                        _logger.LogInformation($"{methodName} - Retry attempt {attempt} of {MaxRetries}");
+                    }
+
+                    // Execute the API call
+                    return await apiCall();
+                }
+                catch (Exception ex)
+                {
+                    lastException = ex;
+                    _logger.LogError(ex, $"{methodName} - Error on attempt {attempt + 1} of {MaxRetries}");
+
+                    // If this is not the last attempt, wait before retrying with exponential backoff
+                    if (attempt < MaxRetries - 1)
+                    {
+                        int delayMs = InitialRetryDelayMs * (int)Math.Pow(2, attempt);
+                        _logger.LogInformation($"{methodName} - Waiting {delayMs}ms before retry");
+                        await Task.Delay(delayMs);
+                    }
+                }
+            }
+
+            // If we get here, all retries failed
+            _logger.LogError(lastException, $"{methodName} - All {MaxRetries} attempts failed");
+            return default;
         }
 
         public async Task<PlayerDto?> GetLatestPlayerAsync(string playerName)
         {
-            try
+            return await ExecuteWithRetryAsync<PlayerDto>(async () =>
             {
                 // URL encode the playerName to handle spaces and special characters
                 var encodedPlayerName = Uri.EscapeDataString(playerName);
@@ -40,24 +85,19 @@ namespace EggDash.Client.Services
 
                 _logger.LogError($"Error fetching player data: {response.StatusCode}");
                 return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetLatestPlayerAsync");
-                return null;
-            }
+            }, nameof(GetLatestPlayerAsync));
         }
 
         public async Task<PlayerDto?> GetPlayerByEIDAsync(string eid)
         {
-            try
+            if (string.IsNullOrEmpty(eid))
             {
-                if (string.IsNullOrEmpty(eid))
-                {
-                    _logger.LogWarning("EID is null or empty");
-                    return null;
-                }
+                _logger.LogWarning("EID is null or empty");
+                return null;
+            }
 
+            return await ExecuteWithRetryAsync<PlayerDto>(async () =>
+            {
                 var response = await _httpClient.GetAsync($"api/v1/players/eid/{eid}");
 
                 if (response.IsSuccessStatusCode)
@@ -67,12 +107,7 @@ namespace EggDash.Client.Services
 
                 _logger.LogError($"Error fetching player data by EID: {response.StatusCode}");
                 return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetPlayerByEIDAsync");
-                return null;
-            }
+            }, nameof(GetPlayerByEIDAsync));
         }
 
 
@@ -103,7 +138,7 @@ namespace EggDash.Client.Services
             DateTime? to = null,
             int? limit = null)
         {
-            try
+            return await ExecuteWithRetryAsync<List<PlayerDto>>(async () =>
             {
                 // Build the query string with optional parameters
                 var queryParams = new List<string>();
@@ -127,7 +162,9 @@ namespace EggDash.Client.Services
                     ? $"?{string.Join("&", queryParams)}"
                     : string.Empty;
 
-                var response = await _httpClient.GetAsync($"api/v1/players/{playerName}/history{queryString}");
+                // URL encode the playerName to handle spaces and special characters
+                var encodedPlayerName = Uri.EscapeDataString(playerName);
+                var response = await _httpClient.GetAsync($"api/v1/players/{encodedPlayerName}/history{queryString}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -136,17 +173,12 @@ namespace EggDash.Client.Services
 
                 _logger.LogError($"Error fetching player history: {response.StatusCode}");
                 return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetPlayerHistoryAsync");
-                return null;
-            }
+            }, nameof(GetPlayerHistoryAsync));
         }
 
         public async Task<PlayerStatsDto?> GetRankedPlayerAsync(string playerName, int recordLimit = 1, int sampleDaysBack = 30)
         {
-            try
+            return await ExecuteWithRetryAsync<PlayerStatsDto>(async () =>
             {
                 // URL encode the playerName to handle spaces and special characters
                 var encodedPlayerName = Uri.EscapeDataString(playerName);
@@ -159,17 +191,12 @@ namespace EggDash.Client.Services
 
                 _logger.LogError($"Error fetching ranked player data: {response.StatusCode}");
                 return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetRankedPlayerAsync");
-                return null;
-            }
+            }, nameof(GetRankedPlayerAsync));
         }
 
         public async Task<TitleInfoDto?> GetTitleInfoAsync(string playerName)
         {
-            try
+            return await ExecuteWithRetryAsync<TitleInfoDto>(async () =>
             {
                 // URL encode the playerName to handle spaces and special characters
                 var encodedPlayerName = Uri.EscapeDataString(playerName);
@@ -182,12 +209,7 @@ namespace EggDash.Client.Services
 
                 _logger.LogError($"Error fetching title info: {response.StatusCode}");
                 return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in GetTitleInfoAsync");
-                return null;
-            }
+            }, nameof(GetTitleInfoAsync));
         }
 
         // New methods for MajPlayerRankings endpoints

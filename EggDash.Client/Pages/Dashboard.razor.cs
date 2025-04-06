@@ -18,7 +18,7 @@ using MudBlazor;
 
 using ST = System.Timers;
 
-public partial class Dashboard
+public partial class Dashboard : IDisposable, IAsyncDisposable
 {
     [Inject]
     private ILogger<Dashboard> Logger { get; set; } = default!;
@@ -35,6 +35,7 @@ public partial class Dashboard
     private const int NameCutOff = 12;
 
     private ST.Timer? _timer;
+    private ST.Timer? _updateTimer; // Timer for updating the "Last updated" text
     private DateTime _lastUpdated;
     private string _timeSinceLastUpdate = "Never";
 
@@ -52,15 +53,21 @@ public partial class Dashboard
 
     private PlayerDto? _kingFriday;
     private PlayerStatsDto? _kingFridayStats;
-    private MajPlayerRankingDto _SEGoalBegin;
-    private MajPlayerRankingDto _SEGoalEnd;
-    private MajPlayerRankingDto _EBGoalBegin;
-    private MajPlayerRankingDto _EBGoalEnd;
-    private MajPlayerRankingDto _MERGoalBegin;
-    private MajPlayerRankingDto _MERGoalEnd;
-    private MajPlayerRankingDto _JERGoalBegin;
-    private MajPlayerRankingDto _JERGoalEnd;
+    private MajPlayerRankingDto? _SEGoalBegin;
+    private MajPlayerRankingDto? _SEGoalEnd;
+    private MajPlayerRankingDto? _EBGoalBegin;
+    private MajPlayerRankingDto? _EBGoalEnd;
+    private MajPlayerRankingDto? _MERGoalBegin;
+    private MajPlayerRankingDto? _MERGoalEnd;
+    private MajPlayerRankingDto? _JERGoalBegin;
+    private MajPlayerRankingDto? _JERGoalEnd;
     private string _kingFridaySEThisWeek = string.Empty;
+
+    // Progress bar percentages
+    private double _kingFridaySEGoalPercentage = 0;
+    private double _kingFridayEBGoalPercentage = 0;
+    private double _kingFridayMERGoalPercentage = 0;
+    private double _kingFridayJERGoalPercentage = 0;
 
     private PlayerDto? _kingSaturday;
     private PlayerStatsDto? _kingSaturdayStats;
@@ -73,7 +80,11 @@ public partial class Dashboard
 
     private readonly ChartOptions _options = new()
     {
-        ChartPalette = new[] { "#4CAF50", "#666666" }
+        ChartPalette = new[] { "#4CAF50", "#666666" },
+        // Disable all interactive features to prevent JS interop issues
+        ShowLegend = false,
+        ShowToolTips = false,
+        ShowLabels = false
     };
 
     private List<ChartSeries> _kingFridaySEHistorySeries = new List<ChartSeries>(Array.Empty<ChartSeries>());
@@ -95,80 +106,364 @@ public partial class Dashboard
         XAxisLines = true, // Show X-axis grid lines
         YAxisLines = true, // Show Y-axis grid lines
         YAxisTicks = 1, // Increase number of ticks on Y-axis to show more granular values
-        ShowLabels = true,
-        ShowLegend = true,
-        ShowLegendLabels = true,
-        ShowToolTips = true
+        // Disable all interactive features to prevent JS interop issues
+        ShowLabels = false,
+        ShowLegend = false,
+        ShowLegendLabels = false,
+        ShowToolTips = false
     };
 
     protected override async Task OnInitializedAsync()
     {
-        // Register ApiService and Logger if they weren't registered globally
-        // This ensures backward compatibility if the global registration fails
-        await RefreshData();
-
-        _timer = new ST.Timer(30000); // 30 seconds
-        _timer.Elapsed += async (sender, e) =>
+        try
         {
+            // First attempt to load data with a small delay to ensure all services are initialized
+            await Task.Delay(300); // Short delay before initial load
+
+            // Initial data load - use a longer timeout for the first load
+            Logger.LogInformation("Starting initial data load");
+            await InitialDataLoad();
+
+            // Set up timer for automatic refreshes (30 seconds)
+            SetupAutoRefreshTimer();
+            Logger.LogInformation("Automatic refresh timer started");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during initialization");
+            // Even if initialization fails, try to load some data
+            await RefreshData();
+
+            // Still try to set up the timer even if initial load fails
+            SetupAutoRefreshTimer();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            // Dispose of the component
+            Dispose();
+
+            // Wait for any pending JS interop calls to complete
+            await Task.Delay(100);
+
+            // Force garbage collection again after the delay
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
+            Logger.LogInformation("Dashboard component async disposal completed");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during async disposal of Dashboard component");
+        }
+    }
+
+
+
+    private void SetupAutoRefreshTimer()
+    {
+        try
+        {
+            // Dispose of any existing timers
+            if (_timer != null)
+            {
+                _timer.Elapsed -= OnTimerElapsed;
+                _timer.Stop();
+                _timer.Dispose();
+                _timer = null;
+            }
+
+            if (_updateTimer != null)
+            {
+                _updateTimer.Elapsed -= OnUpdateTimerElapsed;
+                _updateTimer.Stop();
+                _updateTimer.Dispose();
+                _updateTimer = null;
+            }
+
+            // Create a new timer that refreshes every 30 seconds
+            _timer = new ST.Timer(30000);
+            _timer.Elapsed += OnTimerElapsed;
+            _timer.AutoReset = true;
+            _timer.Start();
+            Logger.LogInformation("Main refresh timer started (30 second interval)");
+
+            // Create a timer to update the "Last updated" text every second
+            _updateTimer = new ST.Timer(1000);
+            _updateTimer.Elapsed += OnUpdateTimerElapsed;
+            _updateTimer.AutoReset = true;
+            _updateTimer.Start();
+            Logger.LogInformation("Update timer started (1 second interval)");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error setting up timers");
+        }
+    }
+
+    private async void OnUpdateTimerElapsed(object? sender, ST.ElapsedEventArgs e)
+    {
+        try
+        {
+            // Only update if we have a valid last updated time and we're not in the middle of a refresh
+            if (_lastUpdated != default)
+            {
+                try
+                {
+                    await InvokeAsync(() =>
+                    {
+                        try
+                        {
+                            // Update the time since last update
+                            _timeSinceLastUpdate = GetTimeSinceLastUpdate();
+                            StateHasChanged();
+                        }
+                        catch (Exception innerEx)
+                        {
+                            // Log but don't rethrow to prevent timer from stopping
+                            Logger.LogError(innerEx, "Error in UI update");
+                        }
+                    });
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Component might have been disposed, stop the timer
+                    _updateTimer?.Stop();
+                    Logger.LogInformation("Update timer stopped due to component disposal");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating time display");
+            // Don't rethrow to prevent timer from stopping
+        }
+    }
+
+    private async void OnTimerElapsed(object? sender, ST.ElapsedEventArgs e)
+    {
+        try
+        {
+            // Skip if already refreshing
+            if (_isRefreshing)
+            {
+                Logger.LogInformation("Skipping timer refresh as a refresh is already in progress");
+                return;
+            }
+
             try
             {
                 // Ensure we're on the UI thread
                 await InvokeAsync(async () =>
                 {
-                    await RefreshData();
+                    try
+                    {
+                        // Only refresh if not already refreshing (double-check)
+                        if (!_isRefreshing)
+                        {
+                            await RefreshData();
+                        }
+                    }
+                    catch (Exception innerEx)
+                    {
+                        Logger.LogError(innerEx, "Error during refresh in timer");
+                    }
                 });
+            }
+            catch (ObjectDisposedException)
+            {
+                // Component might have been disposed, stop the timer
+                _timer?.Stop();
+                Logger.LogInformation("Refresh timer stopped due to component disposal");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Timer refresh error");
+            // Don't rethrow to prevent timer from stopping
+        }
+    }
+
+    private async Task InitialDataLoad()
+    {
+        // Special method for initial data load with multiple retries
+        const int maxRetries = 3;
+        Exception? lastException = null;
+
+        for (int attempt = 0; attempt < maxRetries; attempt++)
+        {
+            try
+            {
+                Logger.LogInformation($"Initial data load attempt {attempt + 1} of {maxRetries}");
+                _isRefreshing = true;
+                StateHasChanged();
+
+                // Load data for all kings in parallel to speed up initial load
+                var tasks = new List<Task>
+                {
+                    UpdateKingFriday(),
+                    UpdateKingSaturday(),
+                    UpdateKingSunday(),
+                    UpdateKingMonday(),
+                    LoadKingFridaySEHistory()
+                };
+
+                await Task.WhenAll(tasks);
+
+                // Update chart after all data is loaded
+                await UpdateMultiSeriesChart();
+
+                _lastUpdated = DateTime.Now;
+                _timeSinceLastUpdate = GetTimeSinceLastUpdate();
+                DashboardState.SetLastUpdated(DateTime.Now);
+
+                // Ensure UI is updated after initial data load
+                _isRefreshing = false;
+                StateHasChanged();
+
+                Logger.LogInformation("Initial data load completed successfully");
+                return; // Success - exit the retry loop
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Timer refresh error");
+                lastException = ex;
+                Logger.LogError(ex, $"Error during initial data load (attempt {attempt + 1})");
+
+                if (attempt < maxRetries - 1)
+                {
+                    // Wait before retry with exponential backoff
+                    int delayMs = 500 * (int)Math.Pow(2, attempt);
+                    Logger.LogInformation($"Retrying in {delayMs}ms...");
+                    await Task.Delay(delayMs);
+                }
             }
-        };
-        _timer.AutoReset = true;
-        _timer.Enabled = true;
+        }
+
+        // If we get here, all retries failed
+        Logger.LogError(lastException, "All initial data load attempts failed");
+        _isRefreshing = false;
+        StateHasChanged();
     }
+
+    private bool _isRefreshing = false;
 
     private async Task RefreshData()
     {
+        if (_isRefreshing)
+        {
+            Logger.LogInformation("Refresh already in progress, skipping");
+            return;
+        }
+
+        // Only show the full-screen loading indicator on initial load
+        // For subsequent refreshes, we'll use a more subtle indicator
+        bool isInitialLoad = _lastUpdated == default;
+        _isRefreshing = true;
+
+        // Only trigger a full UI update if this is not the initial load
+        if (!isInitialLoad)
+        {
+            StateHasChanged(); // Update UI to show the subtle loading indicator
+        }
+
         try
         {
-            // Fetch new data
-            await UpdateKingFriday();
-            await UpdateKingSaturday();
-            await UpdateKingSunday();
-            await UpdateKingMonday();
-            await LoadKingFridaySEHistory();
+            Logger.LogInformation("Starting data refresh");
 
-            // Call the chart update method which now handles the API call directly
-            await UpdateMultiSeriesChart();
+            // Use a CancellationTokenSource with timeout to prevent hanging tasks
+            using var cts = new CancellationTokenSource();
+            cts.CancelAfter(TimeSpan.FromSeconds(20)); // 20 second timeout
 
+            try
+            {
+                // Create tasks for parallel execution to speed up the refresh
+                var tasks = new List<Task>
+                {
+                    UpdateKingFriday(),
+                    UpdateKingSaturday(),
+                    UpdateKingSunday(),
+                    UpdateKingMonday(),
+                    LoadKingFridaySEHistory()
+                };
+
+                // Create a task that will complete when the timeout occurs
+                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(20), cts.Token);
+
+                // Wait for either all tasks to complete or timeout to occur
+                var allTasks = Task.WhenAll(tasks);
+                var completedTask = await Task.WhenAny(allTasks, timeoutTask);
+
+                if (completedTask == timeoutTask)
+                {
+                    // Timeout occurred
+                    Logger.LogWarning("Data refresh timed out after 20 seconds");
+                    // Cancel the remaining tasks
+                    cts.Cancel();
+                }
+                else
+                {
+                    // All tasks completed successfully
+                    Logger.LogInformation("All data loaded successfully");
+                    // Update chart after all data is loaded
+                    await UpdateMultiSeriesChart();
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                Logger.LogWarning("Data refresh timed out after 20 seconds");
+            }
+            catch (OperationCanceledException)
+            {
+                Logger.LogWarning("Data refresh was canceled");
+            }
+
+            // Update timestamps regardless of timeout
             _lastUpdated = DateTime.Now;
             _timeSinceLastUpdate = GetTimeSinceLastUpdate();
             // Update the shared state instead of local _lastUpdated
             DashboardState.SetLastUpdated(DateTime.Now);
 
-            // StateHasChanged is now called on the UI thread
-            StateHasChanged();
+            // Log progress bar values for debugging
+            Logger.LogInformation($"Progress bar values after refresh: SE={_kingFridaySEGoalPercentage:F1}%, EB={_kingFridayEBGoalPercentage:F1}%, MER={_kingFridayMERGoalPercentage:F1}%, JER={_kingFridayJERGoalPercentage:F1}%");
+
+            Logger.LogInformation("Data refresh completed");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error refreshing data");
+            Logger.LogError(ex, "Error refreshing data: {Message}", ex.Message);
+            // Log inner exception if available for more detailed diagnostics
+            if (ex.InnerException != null)
+            {
+                Logger.LogError("Inner exception: {Message}", ex.InnerException.Message);
+            }
+        }
+        finally
+        {
+            _isRefreshing = false;
+            // Always update the UI after refresh completes
+            StateHasChanged();
         }
     }
 
     private async Task UpdateKingFriday()
     {
-        // Get the current time in UTC
-        var utcNow = DateTime.UtcNow;
-        var utcToday = new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0, DateTimeKind.Utc);
-        var todayUtcStart = utcToday;
+        // Get the current time in local time instead of UTC to match the user's day
+        var localNow = DateTime.Now;
+        var localToday = new DateTime(localNow.Year, localNow.Month, localNow.Day, 0, 0, 0, DateTimeKind.Local);
+        var todayUtcStart = localToday.ToUniversalTime(); // Convert to UTC for API calls
 
-        // Calculate the start of the week (Monday) in UTC
+        // Calculate the start of the week (Monday) in local time, then convert to UTC
         // Get the days since last Monday (DayOfWeek.Monday = 1)
-        int daysSinceMonday = ((int)utcToday.DayOfWeek - 1 + 7) % 7; // Ensure positive result
-        var startOfWeekUtc = utcToday.AddDays(-daysSinceMonday);
+        int daysSinceMonday = ((int)localToday.DayOfWeek - 1 + 7) % 7; // Ensure positive result
+        var startOfWeekLocal = localToday.AddDays(-daysSinceMonday);
+        var startOfWeekUtc = startOfWeekLocal.ToUniversalTime();
 
         // Log for debugging purposes
-        Logger.LogInformation($"Today (UTC): {utcToday}, Start of Week (Monday) (UTC): {startOfWeekUtc}");
+        Logger.LogInformation($"Today (Local): {localToday}, Today (UTC): {todayUtcStart}");
+        Logger.LogInformation($"Start of Week (Monday) (Local): {startOfWeekLocal}, (UTC): {startOfWeekUtc}");
         Logger.LogInformation($"Days since Monday: {daysSinceMonday}");
 
         _kingFriday = await ApiService.GetLatestPlayerAsync("King Friday!");
@@ -283,11 +578,38 @@ public partial class Dashboard
                 };
             }
 
-            // Update goal data from MajPlayerRankingManager
-            (_SEGoalBegin, _SEGoalEnd) = await MajPlayerRankingManager.GetSurroundingSEPlayers("King Friday!", _kingFriday.SoulEggs);
-            (_EBGoalBegin, _EBGoalEnd) = await MajPlayerRankingManager.GetSurroundingEBPlayers("King Friday!", _kingFriday.EarningsBonusPercentage);
-            (_MERGoalBegin, _MERGoalEnd) = await MajPlayerRankingManager.GetSurroundingMERPlayers("King Friday!", (decimal)_kingFriday.MER);
-            (_JERGoalBegin, _JERGoalEnd) = await MajPlayerRankingManager.GetSurroundingJERPlayers("King Friday!", (decimal)_kingFriday.JER);
+            // Update goal data using ApiService directly instead of MajPlayerRankingManager
+            var sePlayers = await ApiService.GetSurroundingSEPlayersAsync("King Friday!", _kingFriday.SoulEggs);
+            var ebPlayers = await ApiService.GetSurroundingEBPlayersAsync("King Friday!", _kingFriday.EarningsBonusPercentage);
+            var merPlayers = await ApiService.GetSurroundingMERPlayersAsync("King Friday!", (decimal)_kingFriday.MER);
+            var jerPlayers = await ApiService.GetSurroundingJERPlayersAsync("King Friday!", (decimal)_kingFriday.JER);
+
+            // Set the goal data from the API responses
+            _SEGoalBegin = sePlayers?.LowerPlayer;
+            _SEGoalEnd = sePlayers?.UpperPlayer;
+            _EBGoalBegin = ebPlayers?.LowerPlayer;
+            _EBGoalEnd = ebPlayers?.UpperPlayer;
+            _MERGoalBegin = merPlayers?.LowerPlayer;
+            _MERGoalEnd = merPlayers?.UpperPlayer;
+            _JERGoalBegin = jerPlayers?.LowerPlayer;
+            _JERGoalEnd = jerPlayers?.UpperPlayer;
+
+            // Calculate progress bar percentages
+            var sePercentage = CalculateProgressPercentage(_kingFridayStats?.SE, _SEGoalEnd?.SEString, _SEGoalBegin?.SEString);
+            var ebPercentage = CalculateProgressPercentage(_kingFridayStats?.EB, _EBGoalEnd?.EBString, _EBGoalBegin?.EBString);
+            var merPercentage = CalculateProgressPercentage(_kingFridayStats?.MER.ToString(), _MERGoalEnd?.MER.ToString(), _MERGoalBegin?.MER.ToString());
+            var jerPercentage = CalculateProgressPercentage(_kingFridayStats?.JER.ToString(), _JERGoalEnd?.JER.ToString(), _JERGoalBegin?.JER.ToString());
+
+            // Ensure we have valid percentages (not zero)
+            _kingFridaySEGoalPercentage = sePercentage > 0 ? sePercentage : 50; // Default to 50% if calculation fails
+            _kingFridayEBGoalPercentage = ebPercentage > 0 ? ebPercentage : 50;
+            _kingFridayMERGoalPercentage = merPercentage > 0 ? merPercentage : 50;
+            _kingFridayJERGoalPercentage = jerPercentage > 0 ? jerPercentage : 50;
+
+            Logger.LogInformation($"Progress bar percentages calculated: SE={_kingFridaySEGoalPercentage:F1}%, EB={_kingFridayEBGoalPercentage:F1}%, MER={_kingFridayMERGoalPercentage:F1}%, JER={_kingFridayJERGoalPercentage:F1}%");
+
+            // Force UI update after calculating progress bar percentages
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -466,24 +788,30 @@ public partial class Dashboard
 
     private string GetTimeSinceLastUpdate()
     {
+        // If _lastUpdated is default, return "Never"
+        if (_lastUpdated == default)
+        {
+            return "Never";
+        }
+
         var timeSince = DateTime.Now - _lastUpdated;
 
         if (timeSince.TotalSeconds < 60)
         {
-            return $"{timeSince.Seconds:D} seconds ago";
+            return $"{(int)timeSince.TotalSeconds} seconds ago";
         }
 
         if (timeSince.TotalMinutes < 60)
         {
-            return $"{timeSince.Minutes:D} minutes, {timeSince.Seconds:D} seconds ago";
+            return $"{(int)timeSince.TotalMinutes} minutes, {timeSince.Seconds:D} seconds ago";
         }
 
         if (timeSince.TotalHours < 24)
         {
-            return $"{timeSince.Hours:D} hours, {timeSince.Minutes:D} minutes, {timeSince.Seconds:D} seconds ago";
+            return $"{(int)timeSince.TotalHours} hours, {timeSince.Minutes:D} minutes ago";
         }
 
-        return $"{timeSince.Days:D} days, {timeSince.Hours:D} hours, {timeSince.Minutes:D} minutes ago";
+        return $"{timeSince.Days:D} days, {timeSince.Hours:D} hours ago";
     }
 
     private string FormatTitleChangeLabel(DateTime projectedDate)
@@ -752,6 +1080,84 @@ public partial class Dashboard
         else
         {
             Logger.LogWarning("Cannot navigate to player detail: EID is null or empty");
+        }
+    }
+
+    // Manual refresh removed as per user request
+
+    public void Dispose()
+    {
+        // Clean up the timers when the component is disposed
+        try
+        {
+            // Dispose main refresh timer
+            if (_timer != null)
+            {
+                _timer.Stop();
+                _timer.Elapsed -= OnTimerElapsed; // Remove the event handler
+                _timer.Dispose();
+                _timer = null;
+            }
+
+            // Dispose update timer
+            if (_updateTimer != null)
+            {
+                _updateTimer.Stop();
+                _updateTimer.Elapsed -= OnUpdateTimerElapsed; // Remove the event handler
+                _updateTimer.Dispose();
+                _updateTimer = null;
+            }
+
+            // Remove any event handlers from shared state
+            DashboardState.OnChange -= StateHasChanged;
+
+            // Clear any references that might be holding DotNetObjectReference instances
+            _kingFridayTitleProgressData = new double[] { 0, 100 };
+            _kingFridayTitleProgressLabels = new string[] { "", "" };
+            _kingSaturdayTitleProgressData = new double[] { 0, 100 };
+            _kingSaturdayTitleProgressLabels = new string[] { "", "" };
+            _kingSundayTitleProgressData = new double[] { 0, 100 };
+            _kingSundayTitleProgressLabels = new string[] { "", "" };
+            _kingMondayTitleProgressData = new double[] { 0, 100 };
+            _kingMondayTitleProgressLabels = new string[] { "", "" };
+            _kingFridaySEHistorySeries = new List<ChartSeries>();
+            _kingFridaySEHistoryLabels = Array.Empty<string>();
+            _kingFridaySEHistoryData = Array.Empty<double>();
+            _kingFridayMultiSeriesData = new List<ChartSeries>();
+            _kingFridayMultiSeriesLabels = Array.Empty<string>();
+            _metricHistoryData = new Dictionary<string, List<double>>();
+
+            // Clear other references
+            _kingFriday = null;
+            _kingFridayStats = null;
+            _kingSaturday = null;
+            _kingSaturdayStats = null;
+            _kingSunday = null;
+            _kingSundayStats = null;
+            _kingMonday = null;
+            _kingMondayStats = null;
+            _SEGoalBegin = null;
+            _SEGoalEnd = null;
+            _EBGoalBegin = null;
+            _EBGoalEnd = null;
+            _MERGoalBegin = null;
+            _MERGoalEnd = null;
+            _JERGoalBegin = null;
+            _JERGoalEnd = null;
+
+            // Force garbage collection to clean up any lingering references
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
+            // Second garbage collection pass to ensure all references are cleaned up
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
+            Logger.LogInformation("Dashboard component disposed, timers and event handlers cleaned up");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error disposing Dashboard component");
         }
     }
 }
