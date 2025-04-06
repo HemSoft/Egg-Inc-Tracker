@@ -411,24 +411,31 @@ public class MajPlayerRankingsController : ControllerBase
         // Create a dictionary to store the weekly gains for each player
         var weeklyGainsByPlayer = new Dictionary<string, string>();
 
-        // Process each player individually to ensure we get the correct data
-        foreach (var player in rankings.GroupBy(r => r.IGN).Select(g => g.First()))
+        // Get unique player names from the rankings
+        var uniquePlayerNames = rankings.Select(r => r.IGN).Distinct().ToList();
+        _logger.LogInformation($"Processing weekly gains for {uniquePlayerNames.Count} unique players");
+
+        // Get all records for all players in a single query to reduce database calls
+        var allPlayerRecords = await _context.MajPlayerRankings
+            .Where(r => uniquePlayerNames.Contains(r.IGN) && r.Updated >= weekStartDate.AddDays(-7))
+            .OrderBy(r => r.IGN)
+            .ThenBy(r => r.Updated)
+            .ToListAsync();
+
+        _logger.LogInformation($"Retrieved {allPlayerRecords.Count} total records for all players");
+
+        // Group records by player name
+        var recordsByPlayer = allPlayerRecords.GroupBy(r => r.IGN).ToDictionary(g => g.Key, g => g.ToList());
+
+        // Process each player
+        foreach (var playerName in uniquePlayerNames)
         {
             try
             {
-                var ign = player.IGN;
-
-                // Get all records for this player directly from the database
-                var playerRecords = await _context.MajPlayerRankings
-                    .Where(r => r.IGN == ign)
-                    .OrderBy(r => r.Updated)
-                    .ToListAsync();
-
-                _logger.LogInformation($"Player {ign}: Found {playerRecords.Count} records");
-
-                if (playerRecords.Count == 0)
+                // Skip processing if we don't have records for this player
+                if (!recordsByPlayer.TryGetValue(playerName, out var playerRecords) || !playerRecords.Any())
                 {
-                    weeklyGainsByPlayer[ign] = "N/A";
+                    weeklyGainsByPlayer[playerName] = "N/A";
                     continue;
                 }
 
@@ -446,9 +453,6 @@ public class MajPlayerRankingsController : ControllerBase
 
                 if (baselineRecord != null)
                 {
-                    _logger.LogInformation($"Player {ign}: Baseline: {baselineRecord.Updated}, SE: {baselineRecord.SEString}");
-                    _logger.LogInformation($"Player {ign}: Latest: {latestRecord.Updated}, SE: {latestRecord.SEString}");
-
                     // Calculate the weekly gain
                     if (latestRecord.SEString.EndsWith('s') && baselineRecord.SEString.EndsWith('s'))
                     {
@@ -457,17 +461,13 @@ public class MajPlayerRankingsController : ControllerBase
                         var baselineValue = decimal.Parse(baselineRecord.SEString.TrimEnd('s'));
                         var diff = latestValue - baselineValue;
 
-                        _logger.LogInformation($"Player {ign}: Calculation: {latestValue} - {baselineValue} = {diff}");
-
                         if (diff > 0)
                         {
-                            weeklyGainsByPlayer[ign] = $"{diff:0.00}s";
-                            _logger.LogInformation($"Player {ign}: Weekly gain (scientific): {weeklyGainsByPlayer[ign]}");
+                            weeklyGainsByPlayer[playerName] = $"{diff:0.00}s";
                         }
                         else
                         {
-                            weeklyGainsByPlayer[ign] = "0";
-                            _logger.LogInformation($"Player {ign}: No weekly gain (scientific)");
+                            weeklyGainsByPlayer[playerName] = "0";
                         }
                     }
                     else
@@ -477,26 +477,23 @@ public class MajPlayerRankingsController : ControllerBase
 
                         if (weeklyGain > 0)
                         {
-                            weeklyGainsByPlayer[ign] = FormatSEGain(weeklyGain);
-                            _logger.LogInformation($"Player {ign}: Weekly gain: {weeklyGainsByPlayer[ign]}");
+                            weeklyGainsByPlayer[playerName] = FormatSEGain(weeklyGain);
                         }
                         else
                         {
-                            weeklyGainsByPlayer[ign] = "0";
-                            _logger.LogInformation($"Player {ign}: No weekly gain");
+                            weeklyGainsByPlayer[playerName] = "0";
                         }
                     }
                 }
                 else
                 {
-                    weeklyGainsByPlayer[ign] = "N/A";
-                    _logger.LogInformation($"Player {ign}: No suitable baseline record found");
+                    weeklyGainsByPlayer[playerName] = "N/A";
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error calculating weekly gains for player {player.IGN}");
-                weeklyGainsByPlayer[player.IGN] = "Error";
+                _logger.LogError(ex, $"Error calculating weekly gains for player {playerName}");
+                weeklyGainsByPlayer[playerName] = "Error";
             }
         }
 
@@ -506,14 +503,15 @@ public class MajPlayerRankingsController : ControllerBase
             if (weeklyGainsByPlayer.TryGetValue(record.IGN, out var weeklyGain))
             {
                 record.SEGainsWeek = weeklyGain;
-                _logger.LogInformation($"Setting SEGainsWeek for {record.IGN} to {weeklyGain}");
             }
             else
             {
                 record.SEGainsWeek = "N/A";
-                _logger.LogInformation($"No weekly gain found for {record.IGN}, setting to N/A");
             }
         }
+
+        // Log a summary of the results
+        _logger.LogInformation($"Weekly gains calculated for {weeklyGainsByPlayer.Count} players");
     }
 
     /// <summary>
@@ -686,17 +684,14 @@ public class MajPlayerRankingsController : ControllerBase
                 }
             }
 
-            // After debugging King Friday, calculate weekly gains for all players
+            // Calculate weekly gains for all players in a single batch
             await CalculateWeeklyGains(rankings);
 
-            // Debug: Check if weekly gains were calculated correctly
-            foreach (var group in playerGroups)
+            // Debug: Log a sample of the weekly gains (just a few players)
+            var samplePlayers = rankings.GroupBy(r => r.IGN).Select(g => g.First()).Take(3).ToList();
+            foreach (var player in samplePlayers)
             {
-                var latestRecord = group.Value.FirstOrDefault();
-                if (latestRecord != null)
-                {
-                    _logger.LogInformation($"Final weekly gain for {latestRecord.IGN}: {latestRecord.SEGainsWeek}");
-                }
+                _logger.LogInformation($"Sample weekly gain for {player.IGN}: {player.SEGainsWeek}");
             }
 
             // Return all rankings but ensure we have a reasonable number of records

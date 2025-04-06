@@ -8,7 +8,12 @@
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     <MudCard>
         <MudCardHeader>
-            <MudText Typo="Typo.h5">Recent Player Updates</MudText>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h5">Recent Player Updates</MudText>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudText Typo="Typo.body2">Last updated: @_timeSinceLastUpdate</MudText>
+            </CardHeaderActions>
         </MudCardHeader>
         <MudCardActions>
             <MudTextField @bind-Value="searchString" Placeholder="Search by player name" Adornment="Adornment.Start"
