@@ -320,14 +320,38 @@ namespace EggDash.Client.Services
         {
             try
             {
+                _logger.LogInformation($"Calling API: api/v1/majplayerrankings/latest-all?limit={limit}");
                 var response = await _httpClient.GetAsync($"api/v1/majplayerrankings/latest-all?limit={limit}");
 
                 if (response.IsSuccessStatusCode)
                 {
-                    return await response.Content.ReadFromJsonAsync<List<MajPlayerRankingDto>>();
+                    _logger.LogInformation("API call successful, deserializing response");
+                    var content = await response.Content.ReadAsStringAsync();
+                    _logger.LogInformation($"Response content length: {content.Length} characters");
+
+                    if (string.IsNullOrEmpty(content) || content == "null")
+                    {
+                        _logger.LogWarning("API returned empty or null content");
+                        return new List<MajPlayerRankingDto>();
+                    }
+
+                    try
+                    {
+                        var result = await response.Content.ReadFromJsonAsync<List<MajPlayerRankingDto>>();
+                        _logger.LogInformation($"Successfully deserialized {result?.Count ?? 0} player rankings");
+                        return result;
+                    }
+                    catch (Exception jsonEx)
+                    {
+                        _logger.LogError(jsonEx, "Error deserializing JSON response");
+                        _logger.LogError($"First 500 chars of response: {content.Substring(0, Math.Min(500, content.Length))}");
+                        return null;
+                    }
                 }
 
                 _logger.LogError($"Error fetching latest major player rankings: {response.StatusCode}");
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError($"Error response: {errorContent}");
                 return null;
             }
             catch (Exception ex)

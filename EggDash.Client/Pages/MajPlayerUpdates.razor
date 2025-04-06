@@ -10,6 +10,12 @@
         <MudCardHeader>
             <MudText Typo="Typo.h5">Recent Player Updates</MudText>
         </MudCardHeader>
+        <MudCardActions>
+            <MudTextField @bind-Value="searchString" Placeholder="Search by player name" Adornment="Adornment.Start"
+                AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0 mb-3 ml-3"
+                Style="width: 300px;" Immediate="true" DebounceInterval="300">
+            </MudTextField>
+        </MudCardActions>
         <MudCardContent>
             @if (isLoading)
             {
@@ -20,7 +26,8 @@
             else if (playerUpdates.Any())
             {
                 <MudTable Items="@playerUpdates" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@isLoading"
-                    LoadingProgressColor="Color.Primary" T="MajPlayerRankingDto" HeaderClass="table-header">
+                    LoadingProgressColor="Color.Primary" T="MajPlayerRankingDto" HeaderClass="table-header"
+                    Filter="FilterFunc">
                     <HeaderContent>
                         <MudTh
                             Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
@@ -39,6 +46,9 @@
                             SE Gained</MudTh>
                         <MudTh
                             Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            SE This Week</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
                             EB</MudTh>
                         <MudTh
                             Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
@@ -49,7 +59,8 @@
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="Date/Time">
-                            <MudText Typo="Typo.body2">@context.Updated.ToString("yyyy-MM-dd hh:mm tt")</MudText>
+                            <MudText Typo="Typo.body2">@context.Updated.ToLocalTime().ToString("yyyy-MM-dd hh:mm tt")
+                            </MudText>
                         </MudTd>
                         <MudTd DataLabel="Player">
                             <MudText Typo="Typo.body1"><b>@context.IGN</b></MudText>
@@ -65,6 +76,12 @@
                             <MudText Typo="Typo.body2"
                                 Color="@(context.SEGains != null && !context.SEGains.Contains("-") && context.SEGains != "N/A" ? Color.Success : Color.Default)">
                                 <b>@(context.SEGains ?? "N/A")</b>
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="SE This Week">
+                            <MudText Typo="Typo.body2"
+                                Color="@(context.SEGainsWeek != null && !context.SEGainsWeek.Contains("-") && context.SEGainsWeek != "N/A" ? Color.Success : Color.Default)">
+                                <b>@(context.SEGainsWeek ?? "N/A")</b>
                             </MudText>
                         </MudTd>
                         <MudTd DataLabel="EB">

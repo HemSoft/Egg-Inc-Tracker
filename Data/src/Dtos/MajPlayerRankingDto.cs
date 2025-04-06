@@ -48,6 +48,9 @@ public class MajPlayerRankingDto
     [NotMapped] // This property is not stored in the database but calculated by the stored procedure
     public string? SEGains { get; set; }
 
+    [NotMapped] // This property is not stored in the database but calculated by the stored procedure
+    public string? SEGainsWeek { get; set; }
+
     public DateTime Updated { get; set; } = DateTime.UtcNow;
 
     public static List<MajPlayerRankingDto> ApiToMajPlayerRankings(string apiResponse)

@@ -17,6 +17,7 @@ public class MajPlayerRankingResult
     public decimal SENumber { get; set; }
     public string SEString { get; set; }
     public string SEGains { get; set; }
+    public string SEGainsWeek { get; set; }
     public int PE { get; set; }
     public string Prestiges { get; set; }
     public int PrestigeGains { get; set; }
@@ -40,6 +41,7 @@ public class MajPlayerRankingResult
             SENumber = SENumber,
             SEString = SEString,
             SEGains = SEGains,
+            SEGainsWeek = SEGainsWeek,
             PE = PE,
             Prestiges = Prestiges,
             MER = MER,
