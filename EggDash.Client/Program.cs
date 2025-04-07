@@ -20,6 +20,9 @@ builder.Services.AddHttpClient<ApiService>(client =>
 // Register ApiService
 builder.Services.AddScoped<ApiService>();
 
+// Register the new PlayerDataService
+builder.Services.AddScoped<PlayerDataService>();
+
 builder.Services.AddMudServices();
 
 var app = builder.Build();

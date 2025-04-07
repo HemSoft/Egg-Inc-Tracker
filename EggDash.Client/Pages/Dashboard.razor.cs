@@ -32,6 +32,9 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
     [Inject]
     private NavigationManager NavigationManager { get; set; } = default!;
 
+    [Inject]
+    private PlayerDataService PlayerDataService { get; set; } = default!; // Inject the new service
+
     private const int NameCutOff = 12;
 
     private ST.Timer? _timer;
@@ -555,55 +558,13 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
             Logger.LogInformation($"First this week: {firstThisWeek?.Updated}, SE: {firstThisWeek?.SoulEggs}");
             Logger.LogInformation($"Current SE: {_kingFriday.SoulEggs}, Full: {_kingFriday.SoulEggsFull}");
 
-            // Calculate SE gain this week
-            if (playerHistoryWeek != null && playerHistoryWeek.Any())
-            {
-                var latestSE = _kingFriday.SoulEggsFull;
-                var earliestSE = firstThisWeek?.SoulEggsFull ?? latestSE;
+            // Calculate SE This Week using the service
+            _kingFridaySEThisWeek = await PlayerDataService.CalculateSEThisWeekAsync(_kingFriday);
 
-                Logger.LogInformation($"Using latest SE: {latestSE}");
-                Logger.LogInformation($"Using earliest SE: {earliestSE}");
-
-                try
-                {
-                    // Use BigNumberCalculator to calculate the difference
-                    _kingFridaySEThisWeek = HemSoft.EggIncTracker.Domain.BigNumberCalculator.CalculateDifference(earliestSE, latestSE);
-                    Logger.LogInformation($"Calculated SE gain this week: {_kingFridaySEThisWeek}");
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Error calculating SE gain this week");
-                    _kingFridaySEThisWeek = "0";
-                }
-            }
-            else
-            {
-                Logger.LogWarning("No player history for this week, setting SE gain to 0");
-                _kingFridaySEThisWeek = "0";
-            }
-
-            // Log the data we're working with
-            Logger.LogInformation($"Current prestiges: {_kingFriday.Prestiges}");
-            Logger.LogInformation($"First today prestiges: {firstToday?.Prestiges}, timestamp: {firstToday?.Updated}");
-            Logger.LogInformation($"First this week prestiges: {firstThisWeek?.Prestiges}, timestamp: {firstThisWeek?.Updated}");
-
-            _kingFriday.PrestigesToday = _kingFriday.Prestiges - (firstToday?.Prestiges ?? _kingFriday.Prestiges);
-            _kingFriday.PrestigesThisWeek = _kingFriday.Prestiges - (firstThisWeek?.Prestiges ?? _kingFriday.Prestiges);
-
-            // Log calculated values
-            Logger.LogInformation($"Calculated prestiges today: {_kingFriday.PrestigesToday}");
-            Logger.LogInformation($"Calculated prestiges this week: {_kingFriday.PrestigesThisWeek}");
-
-            // Ensure PrestigesThisWeek is at least equal to PrestigesToday and handle null values
-            if (_kingFriday.PrestigesToday.HasValue)
-            {
-                // If PrestigesThisWeek is null or less than PrestigesToday, set it to PrestigesToday
-                if (!_kingFriday.PrestigesThisWeek.HasValue || _kingFriday.PrestigesThisWeek.Value < _kingFriday.PrestigesToday.Value)
-                {
-                    _kingFriday.PrestigesThisWeek = _kingFriday.PrestigesToday;
-                    Logger.LogInformation($"Applied fix for weekly prestiges: updated to {_kingFriday.PrestigesThisWeek}");
-                }
-            }
+            // Calculate Prestiges Today/Week using the service
+            var (prestigesToday, prestigesThisWeek) = await PlayerDataService.CalculatePrestigesAsync(_kingFriday);
+            _kingFriday.PrestigesToday = prestigesToday;
+            _kingFriday.PrestigesThisWeek = prestigesThisWeek;
 
             // Get title information from the API
             var titleInfo = await ApiService.GetTitleInfoAsync("King Friday!");
@@ -647,11 +608,11 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
             _JERGoalBegin = jerPlayers?.LowerPlayer;
             _JERGoalEnd = jerPlayers?.UpperPlayer;
 
-            // Calculate progress bar percentages
-            var sePercentage = CalculateProgressPercentage(_kingFridayStats?.SE, _SEGoalEnd?.SEString, _SEGoalBegin?.SEString);
-            var ebPercentage = CalculateProgressPercentage(_kingFridayStats?.EB, _EBGoalEnd?.EBString, _EBGoalBegin?.EBString);
-            var merPercentage = CalculateProgressPercentage(_kingFridayStats?.MER.ToString(), _MERGoalEnd?.MER.ToString(), _MERGoalBegin?.MER.ToString());
-            var jerPercentage = CalculateProgressPercentage(_kingFridayStats?.JER.ToString(), _JERGoalEnd?.JER.ToString(), _JERGoalBegin?.JER.ToString());
+            // Calculate progress bar percentages using the service
+            var sePercentage = PlayerDataService.CalculateProgressPercentage(_kingFridayStats?.SE, _SEGoalEnd?.SEString, _SEGoalBegin?.SEString);
+            var ebPercentage = PlayerDataService.CalculateProgressPercentage(_kingFridayStats?.EB, _EBGoalEnd?.EBString, _EBGoalBegin?.EBString);
+            var merPercentage = PlayerDataService.CalculateProgressPercentage(_kingFridayStats?.MER.ToString(), _MERGoalEnd?.MER.ToString(), _MERGoalBegin?.MER.ToString());
+            var jerPercentage = PlayerDataService.CalculateProgressPercentage(_kingFridayStats?.JER.ToString(), _JERGoalEnd?.JER.ToString(), _JERGoalBegin?.JER.ToString());
 
             // Ensure we have valid percentages (not zero)
             _kingFridaySEGoalPercentage = sePercentage > 0 ? sePercentage : 50; // Default to 50% if calculation fails
@@ -732,46 +693,13 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
             var firstToday = playerHistoryToday?.OrderBy(x => x.Updated).FirstOrDefault();
             var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
 
-            // Calculate prestige counts
-            if (_kingSaturday.Prestiges.HasValue)
-            {
-                _kingSaturday.PrestigesToday = _kingSaturday.Prestiges - (firstToday?.Prestiges ?? _kingSaturday.Prestiges);
-                _kingSaturday.PrestigesThisWeek = _kingSaturday.Prestiges - (firstThisWeek?.Prestiges ?? _kingSaturday.Prestiges);
+            // Calculate Prestiges Today/Week using the service
+            var (prestigesTodaySat, prestigesThisWeekSat) = await PlayerDataService.CalculatePrestigesAsync(_kingSaturday);
+            _kingSaturday.PrestigesToday = prestigesTodaySat;
+            _kingSaturday.PrestigesThisWeek = prestigesThisWeekSat;
 
-                // Ensure PrestigesThisWeek is at least equal to PrestigesToday
-                if (_kingSaturday.PrestigesToday.HasValue &&
-                    (!_kingSaturday.PrestigesThisWeek.HasValue || _kingSaturday.PrestigesThisWeek.Value < _kingSaturday.PrestigesToday.Value))
-                {
-                    _kingSaturday.PrestigesThisWeek = _kingSaturday.PrestigesToday;
-                }
-            }
-
-            // Calculate SE gain this week
-            if (playerHistoryWeek != null && playerHistoryWeek.Any())
-            {
-                var latestSE = _kingSaturday.SoulEggsFull;
-                var earliestSE = firstThisWeek?.SoulEggsFull ?? latestSE;
-
-                Logger.LogInformation($"King Saturday - Using latest SE: {latestSE}");
-                Logger.LogInformation($"King Saturday - Using earliest SE: {earliestSE}");
-
-                try
-                {
-                    // Use BigNumberCalculator to calculate the difference
-                    _kingSaturdaySEThisWeek = HemSoft.EggIncTracker.Domain.BigNumberCalculator.CalculateDifference(earliestSE, latestSE);
-                    Logger.LogInformation($"King Saturday - Calculated SE gain this week: {_kingSaturdaySEThisWeek}");
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Error calculating SE gain this week for King Saturday");
-                    _kingSaturdaySEThisWeek = "0";
-                }
-            }
-            else
-            {
-                Logger.LogWarning("No player history for King Saturday this week, setting SE gain to 0");
-                _kingSaturdaySEThisWeek = "0";
-            }
+            // Calculate SE This Week using the service
+            _kingSaturdaySEThisWeek = await PlayerDataService.CalculateSEThisWeekAsync(_kingSaturday);
 
             // Update goal data using ApiService directly
             var sePlayers = await ApiService.GetSurroundingSEPlayersAsync("King Saturday!", _kingSaturday.SoulEggs);
@@ -804,11 +732,11 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
                 _kingSaturdayJERGoalEnd = jerPlayers.UpperPlayer;
             }
 
-            // Calculate progress bar percentages
-            var sePercentage = CalculateProgressPercentage(_kingSaturdayStats?.SE, _kingSaturdaySEGoalEnd?.SEString, _kingSaturdaySEGoalBegin?.SEString);
-            var ebPercentage = CalculateProgressPercentage(_kingSaturdayStats?.EB, _kingSaturdayEBGoalEnd?.EBString, _kingSaturdayEBGoalBegin?.EBString);
-            var merPercentage = CalculateProgressPercentage(_kingSaturdayStats?.MER.ToString(), _kingSaturdayMERGoalEnd?.MER.ToString(), _kingSaturdayMERGoalBegin?.MER.ToString());
-            var jerPercentage = CalculateProgressPercentage(_kingSaturdayStats?.JER.ToString(), _kingSaturdayJERGoalEnd?.JER.ToString(), _kingSaturdayJERGoalBegin?.JER.ToString());
+            // Calculate progress bar percentages using the service
+            var sePercentage = PlayerDataService.CalculateProgressPercentage(_kingSaturdayStats?.SE, _kingSaturdaySEGoalEnd?.SEString, _kingSaturdaySEGoalBegin?.SEString);
+            var ebPercentage = PlayerDataService.CalculateProgressPercentage(_kingSaturdayStats?.EB, _kingSaturdayEBGoalEnd?.EBString, _kingSaturdayEBGoalBegin?.EBString);
+            var merPercentage = PlayerDataService.CalculateProgressPercentage(_kingSaturdayStats?.MER.ToString(), _kingSaturdayMERGoalEnd?.MER.ToString(), _kingSaturdayMERGoalBegin?.MER.ToString());
+            var jerPercentage = PlayerDataService.CalculateProgressPercentage(_kingSaturdayStats?.JER.ToString(), _kingSaturdayJERGoalEnd?.JER.ToString(), _kingSaturdayJERGoalBegin?.JER.ToString());
 
             // Ensure we have valid percentages (not zero)
             _kingSaturdaySEGoalPercentage = sePercentage > 0 ? sePercentage : 50; // Default to 50% if calculation fails
@@ -892,46 +820,13 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
             var firstToday = playerHistoryToday?.OrderBy(x => x.Updated).FirstOrDefault();
             var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
 
-            // Calculate prestige counts
-            if (_kingSunday.Prestiges.HasValue)
-            {
-                _kingSunday.PrestigesToday = _kingSunday.Prestiges - (firstToday?.Prestiges ?? _kingSunday.Prestiges);
-                _kingSunday.PrestigesThisWeek = _kingSunday.Prestiges - (firstThisWeek?.Prestiges ?? _kingSunday.Prestiges);
+            // Calculate Prestiges Today/Week using the service
+            var (prestigesTodaySun, prestigesThisWeekSun) = await PlayerDataService.CalculatePrestigesAsync(_kingSunday);
+            _kingSunday.PrestigesToday = prestigesTodaySun;
+            _kingSunday.PrestigesThisWeek = prestigesThisWeekSun;
 
-                // Ensure PrestigesThisWeek is at least equal to PrestigesToday
-                if (_kingSunday.PrestigesToday.HasValue &&
-                    (!_kingSunday.PrestigesThisWeek.HasValue || _kingSunday.PrestigesThisWeek.Value < _kingSunday.PrestigesToday.Value))
-                {
-                    _kingSunday.PrestigesThisWeek = _kingSunday.PrestigesToday;
-                }
-            }
-
-            // Calculate SE gain this week
-            if (playerHistoryWeek != null && playerHistoryWeek.Any())
-            {
-                var latestSE = _kingSunday.SoulEggsFull;
-                var earliestSE = firstThisWeek?.SoulEggsFull ?? latestSE;
-
-                Logger.LogInformation($"King Sunday - Using latest SE: {latestSE}");
-                Logger.LogInformation($"King Sunday - Using earliest SE: {earliestSE}");
-
-                try
-                {
-                    // Use BigNumberCalculator to calculate the difference
-                    _kingSundaySEThisWeek = HemSoft.EggIncTracker.Domain.BigNumberCalculator.CalculateDifference(earliestSE, latestSE);
-                    Logger.LogInformation($"King Sunday - Calculated SE gain this week: {_kingSundaySEThisWeek}");
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Error calculating SE gain this week for King Sunday");
-                    _kingSundaySEThisWeek = "0";
-                }
-            }
-            else
-            {
-                Logger.LogWarning("No player history for King Sunday this week, setting SE gain to 0");
-                _kingSundaySEThisWeek = "0";
-            }
+            // Calculate SE This Week using the service
+            _kingSundaySEThisWeek = await PlayerDataService.CalculateSEThisWeekAsync(_kingSunday);
 
             // Update goal data using ApiService directly
             var sePlayers = await ApiService.GetSurroundingSEPlayersAsync("King Sunday!", _kingSunday.SoulEggs);
@@ -964,11 +859,11 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
                 _kingSundayJERGoalEnd = jerPlayers.UpperPlayer;
             }
 
-            // Calculate progress bar percentages
-            var sePercentage = CalculateProgressPercentage(_kingSundayStats?.SE, _kingSundaySEGoalEnd?.SEString, _kingSundaySEGoalBegin?.SEString);
-            var ebPercentage = CalculateProgressPercentage(_kingSundayStats?.EB, _kingSundayEBGoalEnd?.EBString, _kingSundayEBGoalBegin?.EBString);
-            var merPercentage = CalculateProgressPercentage(_kingSundayStats?.MER.ToString(), _kingSundayMERGoalEnd?.MER.ToString(), _kingSundayMERGoalBegin?.MER.ToString());
-            var jerPercentage = CalculateProgressPercentage(_kingSundayStats?.JER.ToString(), _kingSundayJERGoalEnd?.JER.ToString(), _kingSundayJERGoalBegin?.JER.ToString());
+            // Calculate progress bar percentages using the service
+            var sePercentage = PlayerDataService.CalculateProgressPercentage(_kingSundayStats?.SE, _kingSundaySEGoalEnd?.SEString, _kingSundaySEGoalBegin?.SEString);
+            var ebPercentage = PlayerDataService.CalculateProgressPercentage(_kingSundayStats?.EB, _kingSundayEBGoalEnd?.EBString, _kingSundayEBGoalBegin?.EBString);
+            var merPercentage = PlayerDataService.CalculateProgressPercentage(_kingSundayStats?.MER.ToString(), _kingSundayMERGoalEnd?.MER.ToString(), _kingSundayMERGoalBegin?.MER.ToString());
+            var jerPercentage = PlayerDataService.CalculateProgressPercentage(_kingSundayStats?.JER.ToString(), _kingSundayJERGoalEnd?.JER.ToString(), _kingSundayJERGoalBegin?.JER.ToString());
 
             // Ensure we have valid percentages (not zero)
             _kingSundaySEGoalPercentage = sePercentage > 0 ? sePercentage : 50; // Default to 50% if calculation fails
@@ -1052,46 +947,13 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
             var firstToday = playerHistoryToday?.OrderBy(x => x.Updated).FirstOrDefault();
             var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
 
-            // Calculate prestige counts
-            if (_kingMonday.Prestiges.HasValue)
-            {
-                _kingMonday.PrestigesToday = _kingMonday.Prestiges - (firstToday?.Prestiges ?? _kingMonday.Prestiges);
-                _kingMonday.PrestigesThisWeek = _kingMonday.Prestiges - (firstThisWeek?.Prestiges ?? _kingMonday.Prestiges);
+            // Calculate Prestiges Today/Week using the service
+            var (prestigesTodayMon, prestigesThisWeekMon) = await PlayerDataService.CalculatePrestigesAsync(_kingMonday);
+            _kingMonday.PrestigesToday = prestigesTodayMon;
+            _kingMonday.PrestigesThisWeek = prestigesThisWeekMon;
 
-                // Ensure PrestigesThisWeek is at least equal to PrestigesToday
-                if (_kingMonday.PrestigesToday.HasValue &&
-                    (!_kingMonday.PrestigesThisWeek.HasValue || _kingMonday.PrestigesThisWeek.Value < _kingMonday.PrestigesToday.Value))
-                {
-                    _kingMonday.PrestigesThisWeek = _kingMonday.PrestigesToday;
-                }
-            }
-
-            // Calculate SE gain this week
-            if (playerHistoryWeek != null && playerHistoryWeek.Any())
-            {
-                var latestSE = _kingMonday.SoulEggsFull;
-                var earliestSE = firstThisWeek?.SoulEggsFull ?? latestSE;
-
-                Logger.LogInformation($"King Monday - Using latest SE: {latestSE}");
-                Logger.LogInformation($"King Monday - Using earliest SE: {earliestSE}");
-
-                try
-                {
-                    // Use BigNumberCalculator to calculate the difference
-                    _kingMondaySEThisWeek = HemSoft.EggIncTracker.Domain.BigNumberCalculator.CalculateDifference(earliestSE, latestSE);
-                    Logger.LogInformation($"King Monday - Calculated SE gain this week: {_kingMondaySEThisWeek}");
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Error calculating SE gain this week for King Monday");
-                    _kingMondaySEThisWeek = "0";
-                }
-            }
-            else
-            {
-                Logger.LogWarning("No player history for King Monday this week, setting SE gain to 0");
-                _kingMondaySEThisWeek = "0";
-            }
+            // Calculate SE This Week using the service
+            _kingMondaySEThisWeek = await PlayerDataService.CalculateSEThisWeekAsync(_kingMonday);
 
             // Update goal data using ApiService directly
             var sePlayers = await ApiService.GetSurroundingSEPlayersAsync("King Monday!", _kingMonday.SoulEggs);
@@ -1124,11 +986,11 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
                 _kingMondayJERGoalEnd = jerPlayers.UpperPlayer;
             }
 
-            // Calculate progress bar percentages
-            var sePercentage = CalculateProgressPercentage(_kingMondayStats?.SE, _kingMondaySEGoalEnd?.SEString, _kingMondaySEGoalBegin?.SEString);
-            var ebPercentage = CalculateProgressPercentage(_kingMondayStats?.EB, _kingMondayEBGoalEnd?.EBString, _kingMondayEBGoalBegin?.EBString);
-            var merPercentage = CalculateProgressPercentage(_kingMondayStats?.MER.ToString(), _kingMondayMERGoalEnd?.MER.ToString(), _kingMondayMERGoalBegin?.MER.ToString());
-            var jerPercentage = CalculateProgressPercentage(_kingMondayStats?.JER.ToString(), _kingMondayJERGoalEnd?.JER.ToString(), _kingMondayJERGoalBegin?.JER.ToString());
+            // Calculate progress bar percentages using the service
+            var sePercentage = PlayerDataService.CalculateProgressPercentage(_kingMondayStats?.SE, _kingMondaySEGoalEnd?.SEString, _kingMondaySEGoalBegin?.SEString);
+            var ebPercentage = PlayerDataService.CalculateProgressPercentage(_kingMondayStats?.EB, _kingMondayEBGoalEnd?.EBString, _kingMondayEBGoalBegin?.EBString);
+            var merPercentage = PlayerDataService.CalculateProgressPercentage(_kingMondayStats?.MER.ToString(), _kingMondayMERGoalEnd?.MER.ToString(), _kingMondayMERGoalBegin?.MER.ToString());
+            var jerPercentage = PlayerDataService.CalculateProgressPercentage(_kingMondayStats?.JER.ToString(), _kingMondayJERGoalEnd?.JER.ToString(), _kingMondayJERGoalBegin?.JER.ToString());
 
             // Ensure we have valid percentages (not zero)
             _kingMondaySEGoalPercentage = sePercentage > 0 ? sePercentage : 50; // Default to 50% if calculation fails
@@ -1167,9 +1029,9 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
                     .Select(p => p.Updated.ToString("MM/dd"))
                     .ToArray();
 
-                // Convert SE values to numeric values for the chart
+                // Convert SE values to numeric values for the chart using the service's parser
                 _kingFridaySEHistoryData = historicalData
-                    .Select(p => ParseSoulEggs(p.SoulEggs))
+                    .Select(p => PlayerDataService.CalculateProgressPercentage(p.SoulEggs, null, null)) // Re-use parser logic via CalculateProgressPercentage
                     .ToArray();
 
                 // Create the chart series
@@ -1189,33 +1051,7 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
         }
     }
 
-    private double ParseSoulEggs(string? soulEggs)
-    {
-        if (string.IsNullOrEmpty(soulEggs))
-            return 0;
-
-        // Remove any suffix like 'Q' for quintillion, etc.
-        var cleanedValue = soulEggs;
-        var suffixes = new[] { 'Q', 'q', 's', 'S', 'T', 't', 'B', 'b', 'M', 'm' };
-        foreach (var suffix in suffixes)
-        {
-            cleanedValue = cleanedValue.TrimEnd(suffix);
-        }
-
-        // Try to parse using the existing number parsing method
-        if (TryParseAnyNumber(cleanedValue, out decimal result))
-        {
-            return (double)result;
-        }
-
-        // Fallback to simpler parsing
-        if (double.TryParse(cleanedValue, NumberStyles.Any, CultureInfo.InvariantCulture, out double simpleResult))
-        {
-            return simpleResult;
-        }
-
-        return 0;
-    }
+    // ParseSoulEggs removed, logic is now in PlayerDataService.ParseBigNumber
 
     private string GetTimeSinceLastUpdate()
     {
@@ -1261,94 +1097,9 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
         return $"Next title in {timeSpan.Days} days";
     }
 
-    private double CalculateProgressPercentage(string? current, string? goal, string? baseline = null)
-    {
-        try
-        {
-            // Handle null or empty inputs
-            if (string.IsNullOrEmpty(current) || string.IsNullOrEmpty(goal))
-            {
-                return 0;
-            }
-
-            // Remove the 's' suffix, '%' character, and trim whitespace
-            current = current.TrimEnd('d', 's', '%').Trim();
-            goal = goal.TrimEnd('d', 's', '%').Trim();
-            baseline = baseline?.TrimEnd('d', 's', '%').Trim();
-
-            decimal currentValue, goalValue, baselineValue = 0;
-
-            // Parse all values
-            if (!TryParseAnyNumber(current, out currentValue) ||
-                !TryParseAnyNumber(goal, out goalValue))
-            {
-                return 0;
-            }
-
-            // If baseline is provided, use it to adjust the calculation
-            if (!string.IsNullOrEmpty(baseline) && TryParseAnyNumber(baseline, out baselineValue))
-            {
-                // Adjust current and goal values relative to baseline
-                currentValue = Math.Max(0, currentValue - baselineValue);
-                goalValue = Math.Max(0, goalValue - baselineValue);
-            }
-
-            // Avoid division by zero
-            if (goalValue == 0)
-            {
-                return 0;
-            }
-
-            // Calculate percentage and ensure it doesn't exceed 100
-            return Math.Min(100, (double)((currentValue / goalValue) * 100));
-        }
-        catch (Exception)
-        {
-            return 0;
-        }
-    }
-
-    private bool TryParseAnyNumber(string input, out decimal result)
-    {
-        result = 0;
-
-        // Try parsing as regular decimal first
-        if (decimal.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out result))
-        {
-            return true;
-        }
-
-        // If that fails, try scientific notation
-        return TryParseScientificNotation(input, out result);
-    }
-
-    private bool TryParseScientificNotation(string input, out decimal result)
-    {
-        result = 0;
-
-        try
-        {
-            if (string.IsNullOrEmpty(input))
-                return false;
-
-            // Split number and exponent
-            string[] parts = input.Split(new[] { 'e' }, StringSplitOptions.RemoveEmptyEntries);
-
-            if (parts.Length != 2)
-                return false;
-
-            decimal baseNumber = decimal.Parse(parts[0], CultureInfo.InvariantCulture);
-            int exponent = int.Parse(parts[1]);
-
-            // Calculate the result using power of 10
-            result = baseNumber * (decimal)Math.Pow(10, exponent);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
+    // CalculateProgressPercentage removed, now in PlayerDataService
+    // TryParseAnyNumber removed, now in PlayerDataService
+    // TryParseScientificNotation removed, now in PlayerDataService
 
     private string GetLocalTimeString(DateTime utcTime)
     {
@@ -1401,23 +1152,10 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
     /// <param name="actual">The actual value</param>
     /// <param name="goal">The goal value</param>
     /// <returns>A CSS color string</returns>
+    // Keep method signature, call service for implementation
     private string GetProgressColorStyle(int? actual, int goal)
     {
-        if (actual == null || goal <= 0)
-            return "color: white";
-
-        double percentage = (double)actual.Value / goal * 100;
-
-        if (percentage >= 100)
-            return "color: #33CC33"; // Green
-        else if (percentage >= 75)
-            return "color: #3399FF"; // Blue
-        else if (percentage >= 50)
-            return "color: #FFCC00"; // Yellow
-        else if (percentage >= 25)
-            return "color: #FF6666"; // Red
-        else
-            return "color: #FF0000"; // Dark red
+        return PlayerDataService.GetProgressColorStyle(actual, goal);
     }
 
     // Generate test data for the chart - only used as a fallback when real data isn't available
@@ -1493,13 +1231,10 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
                     .Select(p => p.Updated.ToString("MM/dd"))
                     .ToArray();
 
-                // Process Soul Eggs data
-                var soulEggsValues = new List<double>();
-
-                foreach (var dataPoint in groupedByDay)
-                {
-                    soulEggsValues.Add(ParseSoulEggs(dataPoint.SoulEggs));
-                }
+                // Process Soul Eggs data using the service's parser
+                var soulEggsValues = groupedByDay
+                    .Select(p => PlayerDataService.CalculateProgressPercentage(p.SoulEggs, null, null)) // Re-use parser logic
+                    .ToList();
 
                 // Update the metrics dictionary with Soul Eggs data only
                 _metricHistoryData = new Dictionary<string, List<double>>

@@ -2,7 +2,7 @@ using EggDash.Client.Services;
 using MudBlazor.Services;
 using EggDash.Components;
 using HemSoft.EggIncTracker.Data;
-using Microsoft.AspNetCore.Components.Server;
+using Microsoft.AspNetCore.Components.Server; // Keep this using statement
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +28,9 @@ builder.Services.AddHttpClient<ApiService>(client =>
 // Register ApiService
 builder.Services.AddScoped<ApiService>();
 
+// Register the new PlayerDataService for server-side rendering
+builder.Services.AddScoped<PlayerDataService>();
+
 // Configure CircuitOptions
 builder.Services.Configure<CircuitOptions>(options =>
 {
@@ -50,9 +53,9 @@ else
 
 app.UseHttpsRedirection();
 
+app.UseStaticFiles(); // Ensure static files middleware is present
 app.UseAntiforgery();
 
-app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()

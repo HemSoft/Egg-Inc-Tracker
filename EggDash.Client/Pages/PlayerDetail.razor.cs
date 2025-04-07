@@ -20,6 +20,9 @@ public partial class PlayerDetail
     private ApiService ApiService { get; set; } = default!;
 
     [Inject]
+    private PlayerDataService PlayerDataService { get; set; } = default!; // Inject the new service
+
+    [Inject]
     private ILogger<PlayerDetail> Logger { get; set; } = default!;
 
     [Inject]
@@ -35,7 +38,9 @@ public partial class PlayerDetail
     private MajPlayerRankingDto _MERGoalEnd = new();
     private MajPlayerRankingDto _JERGoalBegin = new();
     private MajPlayerRankingDto _JERGoalEnd = new();
+    private PlayerGoalDto? _playerGoals; // Added field for player goals
     private string _playerSEThisWeek = string.Empty;
+    private int _daysToNextTitle = 0;
     private bool isLoading = true;
     private const int NameCutOff = 10;
 
@@ -120,13 +125,50 @@ public partial class PlayerDetail
             // Calculate SE This Week
             await CalculateSEThisWeek();
 
-            // Update goal data from MajPlayerRankingManager
+            // Calculate Prestiges Today/Week using the service
+            if (_player != null)
+            {
+                var (prestigesToday, prestigesThisWeek) = await PlayerDataService.CalculatePrestigesAsync(_player);
+                _player.PrestigesToday = prestigesToday;
+                _player.PrestigesThisWeek = prestigesThisWeek;
+            }
+
+
+            // Calculate days to next title
+            CalculateDaysToNextTitle();
+
+            // Get player goals
             try
             {
-                (_SEGoalBegin, _SEGoalEnd) = await MajPlayerRankingManager.GetSurroundingSEPlayers(_player.PlayerName, _player.SoulEggs);
-                (_EBGoalBegin, _EBGoalEnd) = await MajPlayerRankingManager.GetSurroundingEBPlayers(_player.PlayerName, _player.EarningsBonusPercentage);
-                (_MERGoalBegin, _MERGoalEnd) = await MajPlayerRankingManager.GetSurroundingMERPlayers(_player.PlayerName, (decimal)_player.MER);
-                (_JERGoalBegin, _JERGoalEnd) = await MajPlayerRankingManager.GetSurroundingJERPlayers(_player.PlayerName, (decimal)_player.JER);
+                _playerGoals = await ApiService.GetPlayerGoalsAsync(_player.PlayerName);
+                Logger.LogInformation($"Retrieved goals for {_player.PlayerName}: DailyPrestigeGoal={_playerGoals?.DailyPrestigeGoal}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, $"Error getting goals for player {_player.PlayerName}");
+                _playerGoals = null; // Ensure it's null if fetching fails
+            }
+
+            // Update goal data using ApiService
+            try
+            {
+                 Logger.LogInformation("Fetching surrounding player data for {PlayerName}", _player.PlayerName);
+                var sePlayers = await ApiService.GetSurroundingSEPlayersAsync(_player.PlayerName, _player.SoulEggs);
+                var ebPlayers = await ApiService.GetSurroundingEBPlayersAsync(_player.PlayerName, _player.EarningsBonusPercentage);
+                var merPlayers = await ApiService.GetSurroundingMERPlayersAsync(_player.PlayerName, (decimal)_player.MER);
+                var jerPlayers = await ApiService.GetSurroundingJERPlayersAsync(_player.PlayerName, (decimal)_player.JER);
+
+                // Set the goal data from the API responses
+                _SEGoalBegin = sePlayers?.LowerPlayer ?? new MajPlayerRankingDto(); // Use empty DTO as fallback
+                _SEGoalEnd = sePlayers?.UpperPlayer ?? new MajPlayerRankingDto();
+                _EBGoalBegin = ebPlayers?.LowerPlayer ?? new MajPlayerRankingDto();
+                _EBGoalEnd = ebPlayers?.UpperPlayer ?? new MajPlayerRankingDto();
+                _MERGoalBegin = merPlayers?.LowerPlayer ?? new MajPlayerRankingDto();
+                _MERGoalEnd = merPlayers?.UpperPlayer ?? new MajPlayerRankingDto();
+                _JERGoalBegin = jerPlayers?.LowerPlayer ?? new MajPlayerRankingDto();
+                _JERGoalEnd = jerPlayers?.UpperPlayer ?? new MajPlayerRankingDto();
+                 Logger.LogInformation("Surrounding player data fetched. SE: {SEBegin} -> {SEEnd}, EB: {EBBegin} -> {EBEnd}",
+                    _SEGoalBegin.IGN, _SEGoalEnd.IGN, _EBGoalBegin.IGN, _EBGoalEnd.IGN);
             }
             catch (Exception ex)
             {
@@ -158,170 +200,72 @@ public partial class PlayerDetail
 
     private async Task CalculateSEThisWeek()
     {
-        try
+        // Calculate SE This Week using the service
+        if (_player != null)
         {
-            // Get the current time in UTC
-            var utcNow = DateTime.UtcNow;
-            var utcToday = new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0, DateTimeKind.Utc);
-            var todayUtcStart = utcToday;
-
-            // Calculate the start of the week (Monday) in UTC
-            // Get the days since last Monday (DayOfWeek.Monday = 1)
-            int daysSinceMonday = ((int)utcToday.DayOfWeek - 1 + 7) % 7; // Ensure positive result
-            var startOfWeekUtc = utcToday.AddDays(-daysSinceMonday);
-
-            Logger.LogInformation($"Today (UTC): {utcToday}, Start of Week (Monday) (UTC): {startOfWeekUtc}");
-            Logger.LogInformation($"Days since Monday: {daysSinceMonday}");
-
-            // Get player history for this week
-            var playerHistoryWeek = await ApiService.GetPlayerHistoryAsync(
-                _player!.PlayerName,
-                startOfWeekUtc,
-                DateTime.UtcNow);
-
-            // Get player history for today
-            var playerHistoryToday = await ApiService.GetPlayerHistoryAsync(
-                _player.PlayerName,
-                todayUtcStart,
-                DateTime.UtcNow);
-
-            // If weekly data is empty or null but we have daily data, use daily data for weekly calculation
-            if ((playerHistoryWeek == null || !playerHistoryWeek.Any()) && playerHistoryToday != null && playerHistoryToday.Any())
-            {
-                Logger.LogInformation("No weekly history found, using daily history for weekly calculation");
-                playerHistoryWeek = playerHistoryToday;
-            }
-
-            var firstToday = playerHistoryToday?.OrderBy(x => x.Updated).FirstOrDefault();
-            var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
-
-            // Log the data we're working with
-            Logger.LogInformation($"Player history today count: {playerHistoryToday?.Count() ?? 0}");
-            Logger.LogInformation($"Player history week count: {playerHistoryWeek?.Count() ?? 0}");
-            Logger.LogInformation($"First today: {firstToday?.Updated}, SE: {firstToday?.SoulEggs}");
-            Logger.LogInformation($"First this week: {firstThisWeek?.Updated}, SE: {firstThisWeek?.SoulEggs}");
-            Logger.LogInformation($"Current SE: {_player.SoulEggs}, Full: {_player.SoulEggsFull}");
-
-            // Calculate SE gain this week
-            if (playerHistoryWeek != null && playerHistoryWeek.Any())
-            {
-                var latestSE = _player.SoulEggsFull;
-                var earliestSE = firstThisWeek?.SoulEggsFull ?? latestSE;
-
-                Logger.LogInformation($"Using latest SE: {latestSE}");
-                Logger.LogInformation($"Using earliest SE: {earliestSE}");
-
-                try
-                {
-                    // Use BigNumberCalculator to calculate the difference
-                    _playerSEThisWeek = HemSoft.EggIncTracker.Domain.BigNumberCalculator.CalculateDifference(earliestSE, latestSE);
-                    Logger.LogInformation($"Calculated SE gain this week: {_playerSEThisWeek}");
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Error calculating SE gain this week");
-                    _playerSEThisWeek = "0";
-                }
-            }
-            else
-            {
-                Logger.LogWarning("No player history for this week, setting SE gain to 0");
-                _playerSEThisWeek = "0";
-            }
+            _playerSEThisWeek = await PlayerDataService.CalculateSEThisWeekAsync(_player);
         }
-        catch (Exception ex)
+        else
         {
-            Logger.LogError(ex, "Error calculating SE this week");
-            _playerSEThisWeek = "0";
+            _playerSEThisWeek = "0"; // Default if player is null
         }
     }
 
+    // Keep method signature, call service for implementation
     private double CalculateProgressPercentage(string? current, string? target, string? previous)
     {
-        if (string.IsNullOrEmpty(current) || string.IsNullOrEmpty(target) || string.IsNullOrEmpty(previous))
-        {
-            return 0;
-        }
-
-        try
-        {
-            // Parse the values
-            var currentValue = ParseBigNumber(current);
-            var targetValue = ParseBigNumber(target);
-            var previousValue = ParseBigNumber(previous);
-
-            // Calculate the percentage
-            if (targetValue <= previousValue)
-            {
-                return 100; // Already at or beyond the target
-            }
-
-            var range = targetValue - previousValue;
-            var progress = currentValue - previousValue;
-
-            if (range <= 0)
-            {
-                return 100; // Avoid division by zero
-            }
-
-            var percentage = (progress / range) * 100;
-            return Math.Min(Math.Max(percentage, 0), 100); // Clamp between 0 and 100
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, $"Error calculating progress percentage for {current}, {target}, {previous}");
-            return 0;
-        }
+        return PlayerDataService.CalculateProgressPercentage(current, target, previous);
     }
 
-    private double ParseBigNumber(string value)
-    {
-        // Remove any non-numeric characters except for decimal points and scientific notation
-        var cleanValue = value.Trim();
-
-        // Handle scientific notation (e.g., 1.23e45)
-        if (cleanValue.Contains('e') || cleanValue.Contains('E'))
-        {
-            return double.Parse(cleanValue, NumberStyles.Float, CultureInfo.InvariantCulture);
-        }
-
-        // Handle suffixes like Q, q, S, s, etc.
-        var suffixes = new Dictionary<string, double>
-        {
-            {"K", 1e3}, {"M", 1e6}, {"B", 1e9}, {"T", 1e12},
-            {"q", 1e15}, {"Q", 1e18}, {"s", 1e21}, {"S", 1e24},
-            {"O", 1e27}, {"N", 1e30}, {"d", 1e33}, {"U", 1e36},
-            {"D", 1e39}, {"Td", 1e42}, {"Qd", 1e45}, {"sd", 1e48},
-            {"Sd", 1e51}, {"Od", 1e54}, {"Nd", 1e57}, {"V", 1e60},
-            {"uV", 1e63}, {"dV", 1e66}, {"tV", 1e69}, {"qV", 1e72},
-            {"QV", 1e75}, {"sV", 1e78}, {"SV", 1e81}, {"OV", 1e84},
-            {"NV", 1e87}, {"tT", 1e90}
-        };
-
-        foreach (var suffix in suffixes)
-        {
-            if (cleanValue.EndsWith(suffix.Key))
-            {
-                var numericPart = cleanValue.Substring(0, cleanValue.Length - suffix.Key.Length);
-                if (double.TryParse(numericPart, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
-                {
-                    return number * suffix.Value;
-                }
-            }
-        }
-
-        // If no suffix is found, try to parse as a regular number
-        if (double.TryParse(cleanValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var result))
-        {
-            return result;
-        }
-
-        // If all else fails, return 0
-        return 0;
-    }
+    // ParseBigNumber is now internal to PlayerDataService and not needed here
 
     private void NavigateBack()
     {
         NavigationManager.NavigateTo("/");
+    }
+
+    private void CalculateDaysToNextTitle()
+    {
+        try
+        {
+            if (_player != null && _playerStats != null && !string.IsNullOrEmpty(_playerStats.ProjectedTitleChange))
+            {
+                // Parse the projected title change date
+                if (DateTime.TryParse(_playerStats.ProjectedTitleChange, out DateTime projectedDate))
+                {
+                    // Calculate days until that date
+                    var daysUntil = (projectedDate - DateTime.Now).Days;
+                    _daysToNextTitle = Math.Max(0, daysUntil); // Ensure it's not negative
+                    Logger.LogInformation($"Days to next title: {_daysToNextTitle}");
+                }
+                else
+                {
+                    _daysToNextTitle = 0;
+                    Logger.LogWarning($"Could not parse projected title change date: {_playerStats.ProjectedTitleChange}");
+                }
+            }
+            else
+            {
+                _daysToNextTitle = 0;
+                Logger.LogWarning("Missing player data for title projection calculation");
+            }
+        }
+        catch (Exception ex)
+        {
+            _daysToNextTitle = 0;
+            Logger.LogError(ex, "Error calculating days to next title");
+        }
+    }
+
+    /// <summary>
+    /// Get the CSS color string based on the progress percentage
+    /// </summary>
+    /// <param name="actual">The actual value</param>
+    /// <param name="goal">The goal value</param>
+    /// <returns>A CSS color string</returns>
+    // Keep method signature, call service for implementation
+    private string GetProgressColorStyle(int? actual, int goal)
+    {
+        return PlayerDataService.GetProgressColorStyle(actual, goal);
     }
 }
