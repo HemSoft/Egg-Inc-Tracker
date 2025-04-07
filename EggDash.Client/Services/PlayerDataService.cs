@@ -18,7 +18,7 @@ namespace EggDash.Client.Services
         // Lazy initialization for the suffixes dictionary
         private static readonly Lazy<Dictionary<string, double>> SuffixesLazy = new Lazy<Dictionary<string, double>>(() =>
         {
-            var suffixes = new Dictionary<string, double>();
+            var suffixes = new Dictionary<string, double>(); // Removed StringComparer.OrdinalIgnoreCase
             suffixes.Add("K", 1e3);
             suffixes.Add("M", 1e6);
             suffixes.Add("B", 1e9);
@@ -121,15 +121,18 @@ namespace EggDash.Client.Services
         }
 
 
-        // Using the more comprehensive parser from PlayerDetail
-        private double ParseBigNumber(string value)
+        // Make ParseBigNumber public so it can be called from components
+        public double ParseBigNumber(string? value) // Changed to public and nullable string
         {
+            _logger.LogDebug("ParseBigNumber received value: {Value}", value); // Log input
+
             if (string.IsNullOrEmpty(value))
                 return 0;
 
             // Remove any non-numeric characters except for decimal points and scientific notation
             // Also remove trailing '%' specifically for EB values
             var cleanValue = value.Trim().TrimEnd('%');
+            _logger.LogDebug("ParseBigNumber cleanValue: {CleanValue}", cleanValue); // Log cleaned value
 
             // Handle scientific notation (e.g., 1.23e45)
             if (cleanValue.Contains('e', StringComparison.OrdinalIgnoreCase))
@@ -144,17 +147,15 @@ namespace EggDash.Client.Services
 
             // Use the lazily initialized static Suffixes dictionary
             // Check for longest matching suffix first (e.g., "Qd" before "d")
-            var orderedSuffixes = Suffixes.OrderByDescending(kv => kv.Key.Length);
-
-            foreach (var suffixPair in orderedSuffixes)
+            // No need to order by length if dictionary uses OrdinalIgnoreCase
+            foreach (var suffixPair in Suffixes)
             {
-                // Use case-INSENSITIVE EndsWith now to match suffixes like 'o' or 'O'
-                if (cleanValue.EndsWith(suffixPair.Key, StringComparison.OrdinalIgnoreCase))
+                if (cleanValue.EndsWith(suffixPair.Key, StringComparison.OrdinalIgnoreCase)) // Keep OrdinalIgnoreCase check
                 {
                     var numericPart = cleanValue.Substring(0, cleanValue.Length - suffixPair.Key.Length);
                     if (double.TryParse(numericPart, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
                     {
-                        return number * suffixPair.Value;
+                         return number * suffixPair.Value;
                     }
                     else
                     {
@@ -165,14 +166,25 @@ namespace EggDash.Client.Services
             }
 
             // If no suffix is found, try to parse as a regular number
-            if (double.TryParse(cleanValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var result))
+            double result = 0;
+            try
             {
-                return result;
+                if (double.TryParse(cleanValue, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out result)) // Added AllowThousands
+                {
+                     _logger.LogDebug("ParseBigNumber parsed as plain number: {Result}", result); // Log result
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                 _logger.LogError(ex, "Error parsing plain number: {CleanValue}", cleanValue);
+                 result = 0; // Ensure result is 0 on error
             }
 
-            _logger.LogWarning("Failed to parse big number: {Value}", value);
+
+            _logger.LogWarning("Failed to parse big number: {Value}. Returning 0.", value);
             // If all else fails, return 0
-            return 0;
+            return result; // Return result (which will be 0 if parsing failed)
         }
 
 

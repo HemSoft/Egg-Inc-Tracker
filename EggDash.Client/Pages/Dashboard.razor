@@ -1,7 +1,7 @@
 ﻿@page "/"
 @page "/dashboard"
 @using Microsoft.AspNetCore.Components
-@using EggDash.Client.Components // Added using statement
+@using EggDash.Client.Components
 @implements IDisposable
 @implements IAsyncDisposable
 
@@ -47,8 +47,9 @@ else
                             MERGoalEnd="_kingMondayMERGoalEnd"
                             JERGoalBegin="_kingMondayJERGoalBegin"
                             JERGoalEnd="_kingMondayJERGoalEnd"
-                            PlayerSEThisWeek="_kingMondaySEThisWeek"
-                            DaysToNextTitle="_kingMondayDaysToNextTitle" />
+                            PlayerSEThisWeek="@_kingMondaySEThisWeek"
+                            DaysToNextTitle="_kingMondayDaysToNextTitle"
+                            LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Monday!")' />
             </MudItem>
             <!----------------->
             <!-- King Sunday -->
@@ -65,8 +66,9 @@ else
                             MERGoalEnd="_kingSundayMERGoalEnd"
                             JERGoalBegin="_kingSundayJERGoalBegin"
                             JERGoalEnd="_kingSundayJERGoalEnd"
-                            PlayerSEThisWeek="_kingSundaySEThisWeek"
-                            DaysToNextTitle="_kingSundayDaysToNextTitle" />
+                            PlayerSEThisWeek="@_kingSundaySEThisWeek"
+                            DaysToNextTitle="_kingSundayDaysToNextTitle"
+                            LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Sunday!")' />
             </MudItem>
             <!------------------->
             <!-- King Saturday -->
@@ -83,8 +85,9 @@ else
                             MERGoalEnd="_kingSaturdayMERGoalEnd"
                             JERGoalBegin="_kingSaturdayJERGoalBegin"
                             JERGoalEnd="_kingSaturdayJERGoalEnd"
-                            PlayerSEThisWeek="_kingSaturdaySEThisWeek"
-                            DaysToNextTitle="_kingSaturdayDaysToNextTitle" />
+                            PlayerSEThisWeek="@_kingSaturdaySEThisWeek"
+                            DaysToNextTitle="_kingSaturdayDaysToNextTitle"
+                            LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Saturday!")' />
             </MudItem>
             <!----------------->
             <!-- King Friday -->
@@ -101,8 +104,9 @@ else
                             MERGoalEnd="_MERGoalEnd"
                             JERGoalBegin="_JERGoalBegin"
                             JERGoalEnd="_JERGoalEnd"
-                            PlayerSEThisWeek="_kingFridaySEThisWeek"
-                            DaysToNextTitle="_kingFridayDaysToNextTitle" />
+                            PlayerSEThisWeek="@_kingFridaySEThisWeek"
+                            DaysToNextTitle="_kingFridayDaysToNextTitle"
+                            LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Friday!")' />
             </MudItem>
 
         </MudGrid>

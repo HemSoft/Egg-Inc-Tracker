@@ -3,7 +3,7 @@ namespace EggDash.Client.Pages;
 using System.Globalization;
 
 using EggDash.Client.Services;
-
+// using HemSoft.EggIncTracker.Data; // Removed Utils using
 using HemSoft.EggIncTracker.Data.Dtos;
 using HemSoft.EggIncTracker.Domain;
 
@@ -52,14 +52,14 @@ public partial class PlayerDetail
     {
         ChartPalette = new[] { "#4CAF50" }, // Green color for Soul Eggs
         InterpolationOption = InterpolationOption.Straight,
-        YAxisFormat = "0.##",
+        YAxisFormat = "E", // Revert to Scientific Notation
         XAxisLines = true,
         YAxisLines = true,
-        YAxisTicks = 1,
-        ShowLabels = false,
+        YAxisTicks = 7, // Try 7 ticks
+        ShowLabels = true, // Keep labels enabled
         ShowLegend = false,
         ShowLegendLabels = false,
-        ShowToolTips = false
+        ShowToolTips = false // Disabled tooltips again
     };
     private int _selectedHistoryDays = 14; // Default days for history chart
 
@@ -327,14 +327,18 @@ public partial class PlayerDetail
                     .Select(p => p.Updated.ToString("MM/dd"))
                     .ToArray();
 
-                // Use PlayerDataService's parser for consistency
-                _playerHistoryData = groupedByDay
-                    .Select(p => PlayerDataService.CalculateProgressPercentage(p.SoulEggs, null, null)) // Re-use parser logic
+                // Use PlayerDataService's ParseBigNumber with the full SE string for chart data
+                 var parsedData = groupedByDay
+                    .Select(p => PlayerDataService.ParseBigNumber(p.SoulEggsFull)) // Changed to use SoulEggsFull
                     .ToArray();
+
+                // --- Reverted Log10 calculation ---
+                _playerHistoryData = parsedData;
+                // --- End Revert ---
 
                 _playerHistorySeries = new List<ChartSeries>
                 {
-                    new ChartSeries { Name = "Soul Eggs", Data = _playerHistoryData }
+                    new ChartSeries { Name = "Soul Eggs", Data = _playerHistoryData } // Reverted series name
                 };
                  Logger.LogInformation("Loaded {Count} historical data points for chart", _playerHistoryData.Length);
             }

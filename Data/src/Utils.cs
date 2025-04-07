@@ -169,4 +169,6 @@ public static class Utils
 
         return $"{formattedString}{suffixes[suffixIndex]}";
     }
+
+    // Removed FormatDoubleWithSuffix as it wasn't effective for the chart
 }

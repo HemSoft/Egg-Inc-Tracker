@@ -1,17 +1,18 @@
 @using HemSoft.EggIncTracker.Data.Dtos
-@using HemSoft.EggIncTracker.Domain
-@using EggDash.Client.Services // Added for PlayerGoalDto
-@using MudBlazor
-@using System.Globalization
+@using EggDash.Client.Services
 
 @if (Player != null && PlayerStats != null)
 {
     <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
         <div class="mb-4 text-center">
-            <MudText Typo="Typo.h4" Align="Align.Center">@Player.PlayerName!</MudText>
+            <MudText Typo="Typo.h4" Align="Align.Center">@Player.PlayerName</MudText> @* Removed exclamation mark for consistency *@
             <MudText Typo="Typo.body1" Align="Align.Center">
                 <MudText Inline="true" Class="ml-2 align-bottom">
-                    (@Player?.Title)
+                    (@Player?.Title
+                    @if (LastUpdatedTimestamp.HasValue && LastUpdatedTimestamp.Value != DateTime.MinValue)
+                    {
+                        <span> -- Last Updated: @GetLocalTimeString(LastUpdatedTimestamp)</span>
+                    })
                 </MudText>
             </MudText>
             <MudText Typo="Typo.body1" Align="Align.Center">
@@ -40,7 +41,7 @@
                 </span>
                 <span class="d-inline-flex align-center mr-2">
                     Prestiges Today/Week:
-                    @if (PlayerGoals != null && PlayerGoals.DailyPrestigeGoal > 0)
+                    @if (PlayerGoals is { DailyPrestigeGoal: > 0 })
                     {
                         <span style="@GetProgressColorStyle(Player?.PrestigesToday, PlayerGoals.DailyPrestigeGoal)">
                             @Player?.PrestigesToday
@@ -196,7 +197,7 @@ else
 @code {
     [Parameter] public PlayerDto? Player { get; set; }
     [Parameter] public PlayerStatsDto? PlayerStats { get; set; }
-    [Parameter] public PlayerGoalDto? PlayerGoals { get; set; } // Changed type to PlayerGoalDto
+    [Parameter] public PlayerGoalDto? PlayerGoals { get; set; }
     [Parameter] public MajPlayerRankingDto? SEGoalBegin { get; set; }
     [Parameter] public MajPlayerRankingDto? SEGoalEnd { get; set; }
     [Parameter] public MajPlayerRankingDto? EBGoalBegin { get; set; }
@@ -207,149 +208,50 @@ else
     [Parameter] public MajPlayerRankingDto? JERGoalEnd { get; set; }
     [Parameter] public string? PlayerSEThisWeek { get; set; }
     [Parameter] public int DaysToNextTitle { get; set; }
+    [Parameter] public DateTime? LastUpdatedTimestamp { get; set; }
 
     private const int NameCutOff = 10; // Or get from config/parameter if needed
 
-    // --- Copied from PlayerDataService ---
+    // Inject PlayerDataService to use its methods
+    [Inject] private PlayerDataService PlayerDataService { get; set; } = default!;
 
-    // Lazy initialization for the suffixes dictionary
-    private static readonly Lazy<Dictionary<string, double>> SuffixesLazy = new Lazy<Dictionary<string, double>>(() =>
-    {
-        var suffixes = new Dictionary<string, double>();
-        suffixes.Add("K", 1e3);
-        suffixes.Add("M", 1e6);
-        suffixes.Add("B", 1e9);
-        suffixes.Add("T", 1e12);
-        suffixes.Add("q", 1e15);
-        suffixes.Add("Q", 1e18);
-        suffixes.Add("s", 1e21);
-        suffixes.Add("S", 1e24);
-        suffixes.Add("O", 1e27);
-        suffixes.Add("N", 1e30);
-        suffixes.Add("d", 1e33);
-        suffixes.Add("U", 1e36);
-        suffixes.Add("D", 1e39);
-        suffixes.Add("Td", 1e42);
-        suffixes.Add("Qd", 1e45);
-        suffixes.Add("sd", 1e48);
-        suffixes.Add("Sd", 1e51);
-        suffixes.Add("Od", 1e54);
-        suffixes.Add("Nd", 1e57);
-        suffixes.Add("V", 1e60);
-        suffixes.Add("uV", 1e63);
-        suffixes.Add("dV", 1e66);
-        suffixes.Add("tV", 1e69);
-        suffixes.Add("qV", 1e72);
-        suffixes.Add("QV", 1e75);
-        suffixes.Add("sV", 1e78);
-        suffixes.Add("SV", 1e81);
-        suffixes.Add("OV", 1e84);
-        suffixes.Add("NV", 1e87);
-        suffixes.Add("tT", 1e90);
-        return suffixes;
-    });
-
-    // Access the dictionary via the Value property
-    private static Dictionary<string, double> Suffixes => SuffixesLazy.Value;
+    // Removed duplicated SuffixesLazy and ParseBigNumber
 
     private double CalculateProgressPercentage(string? current, string? target, string? previous)
     {
-        if (string.IsNullOrEmpty(current) || string.IsNullOrEmpty(target) || string.IsNullOrEmpty(previous))
-        {
-            return 0;
-        }
-
-        try
-        {
-            // Simplify to use only double for calculations
-            double currentValue = ParseBigNumber(current);
-            double targetValue = ParseBigNumber(target);
-            double previousValue = ParseBigNumber(previous);
-
-            // --- Double Calculation ---
-            if (targetValue <= previousValue)
-            {
-                return currentValue >= targetValue ? 100.0 : 0.0;
-            }
-
-            double range = targetValue - previousValue;
-            if (range <= 0)
-            {
-                 return currentValue >= targetValue ? 100.0 : 0.0;
-            }
-
-            double progress = currentValue - previousValue;
-            progress = Math.Max(0.0, Math.Min(progress, range));
-            double percentage = (progress / range) * 100.0;
-            var finalPercentage = Math.Min(Math.Max(percentage, 0.0), 100.0);
-            return finalPercentage;
-        }
-        catch (Exception ex)
-        {
-            // Consider logging the error if a logger is available/injected
-            Console.WriteLine($"Error calculating progress percentage: {ex.Message}"); // Basic logging
-            return 0; // Return 0 on error
-        }
+        // Use the injected service's method
+        return PlayerDataService.CalculateProgressPercentage(current, target, previous);
     }
 
-    private double ParseBigNumber(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return 0;
-
-        var cleanValue = value.Trim().TrimEnd('%');
-
-        if (cleanValue.Contains('e', StringComparison.OrdinalIgnoreCase))
-        {
-            if (double.TryParse(cleanValue, NumberStyles.Float, CultureInfo.InvariantCulture, out double sciResult))
-            {
-                return sciResult;
-            }
-            return 0;
-        }
-
-        var orderedSuffixes = Suffixes.OrderByDescending(kv => kv.Key.Length);
-
-        foreach (var suffixPair in orderedSuffixes)
-        {
-            if (cleanValue.EndsWith(suffixPair.Key, StringComparison.OrdinalIgnoreCase))
-            {
-                var numericPart = cleanValue.Substring(0, cleanValue.Length - suffixPair.Key.Length);
-                if (double.TryParse(numericPart, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
-                {
-                    return number * suffixPair.Value;
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-
-        if (double.TryParse(cleanValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var result))
-        {
-            return result;
-        }
-
-        return 0;
-    }
-
+    // Calculates a gradient color from red (0%) to green (100%)
     private string GetProgressColorStyle(int? actual, int goal)
     {
         if (actual == null || goal <= 0)
-            return "color: white"; // Default color
+            return "color: rgb(255, 0, 0)"; // Default to red if no goal or actual value
 
-        double percentage = (double)actual.Value / goal * 100;
+        // Calculate percentage, clamping between 0 and 100
+        double percentage = Math.Clamp((double)actual.Value / goal * 100, 0, 100);
 
-        if (percentage >= 100)
-            return "color: #33CC33"; // Green
-        else if (percentage >= 75)
-            return "color: #3399FF"; // Blue
-        else if (percentage >= 50)
-            return "color: #FFCC00"; // Yellow
-        else if (percentage >= 25)
-            return "color: #FF6666"; // Red
-        else
-            return "color: #FF0000"; // Dark red
+        // Calculate RGB values for the gradient
+        // Red component decreases from 255 to 0 as percentage increases
+        int red = (int)(255 * (1 - percentage / 100.0));
+        // Green component increases from 0 to 255 as percentage increases
+        int green = (int)(255 * (percentage / 100.0));
+        // Blue component remains 0
+        int blue = 0;
+
+        return $"color: rgb({red}, {green}, {blue})";
+    }
+
+    // Helper to format the timestamp for display
+    private string GetLocalTimeString(DateTime? utcTime)
+    {
+        if (!utcTime.HasValue || utcTime.Value == DateTime.MinValue)
+            return string.Empty; // Don't display if no valid time
+
+        DateTime localTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime.Value, TimeZoneInfo.Local);
+        if (localTime.Date == DateTime.Today) return $"Today {localTime:HH:mm}";
+        if (localTime.Date == DateTime.Today.AddDays(-1)) return $"Yesterday {localTime:HH:mm}";
+        return localTime.ToString("MM/dd HH:mm");
     }
 }
