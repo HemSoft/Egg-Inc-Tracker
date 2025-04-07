@@ -260,6 +260,33 @@ namespace EggIncTrackerApi.Controllers
             }
         }
 
+        /// <summary>
+        /// Get player goals
+        /// </summary>
+        [HttpGet("{name}/goals")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<GoalDto>> GetPlayerGoals(string name)
+        {
+            try
+            {
+                var goal = await context.Goals
+                    .FirstOrDefaultAsync(g => g.PlayerName == name);
+
+                if (goal == null)
+                {
+                    return NotFound($"No goals found for player {name}");
+                }
+
+                return Ok(goal);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error retrieving goals for {PlayerName}", name);
+                return StatusCode(500, "An error occurred while retrieving player goals");
+            }
+        }
+
         #region Title calculation methods
         private static readonly List<(BigInteger Limit, string Title)> Titles =
         [

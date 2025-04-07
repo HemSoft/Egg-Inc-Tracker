@@ -4,7 +4,7 @@ using System.Net.Http.Json;
 
 namespace EggDash.Client.Services
 {
-    public class ApiService : IApiService
+    public class ApiService : IApiService, HemSoft.EggIncTracker.Domain.IApiService
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<ApiService> _logger;
@@ -212,6 +212,24 @@ namespace EggDash.Client.Services
             }, nameof(GetTitleInfoAsync));
         }
 
+        public async Task<PlayerGoalDto?> GetPlayerGoalsAsync(string playerName)
+        {
+            return await ExecuteWithRetryAsync<PlayerGoalDto>(async () =>
+            {
+                // URL encode the playerName to handle spaces and special characters
+                var encodedPlayerName = Uri.EscapeDataString(playerName);
+                var response = await _httpClient.GetAsync($"api/v1/players/{encodedPlayerName}/goals");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<PlayerGoalDto>();
+                }
+
+                _logger.LogError($"Error fetching player goals: {response.StatusCode}");
+                return null;
+            }, nameof(GetPlayerGoalsAsync));
+        }
+
         // New methods for MajPlayerRankings endpoints
 
         public async Task<SurroundingPlayersDto?> GetSurroundingSEPlayersAsync(string playerName, string soulEggs)
@@ -391,5 +409,18 @@ namespace EggDash.Client.Services
         public string NextTitle { get; set; } = string.Empty;
         public double TitleProgress { get; set; }
         public string ProjectedTitleChange { get; set; } = string.Empty;
+    }
+
+    // DTO for player goals to match the API response
+    public class PlayerGoalDto
+    {
+        public int Id { get; set; }
+        public string PlayerName { get; set; } = string.Empty;
+        public string SEGoal { get; set; } = string.Empty;
+        public string EBGoal { get; set; } = string.Empty;
+        public string MERGoal { get; set; } = string.Empty;
+        public string JERGoal { get; set; } = string.Empty;
+        public string WeeklySEGainGoal { get; set; } = string.Empty;
+        public int DailyPrestigeGoal { get; set; }
     }
 }

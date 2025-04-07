@@ -46,4 +46,22 @@ public static class GoalManager
             return false;
         }
     }
+
+    public static async Task<GoalDto?> GetPlayerGoalAsync(string playerName, ILogger? logger)
+    {
+        try
+        {
+            var context = new EggIncContext();
+
+            var goal = await context.Goals
+                .FirstOrDefaultAsync(x => x.PlayerName == playerName);
+
+            return goal;
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, $"Failed to retrieve goal for player {playerName}");
+            return null;
+        }
+    }
 }

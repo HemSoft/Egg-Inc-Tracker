@@ -26,7 +26,7 @@ var app = builder.Build();
 
 // Register ApiService with ServiceLocator
 var apiService = app.Services.GetRequiredService<ApiService>();
-ServiceLocator.RegisterService<IApiService>(apiService);
+ServiceLocator.RegisterService<HemSoft.EggIncTracker.Domain.IApiService>(apiService);
 
 // Register Logger with ServiceLocator
 var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();

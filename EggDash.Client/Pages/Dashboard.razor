@@ -57,6 +57,25 @@ else
                                 @_kingMonday?.EarningsBonusPercentage
                             </span>
                         </MudText>
+                        <MudText Typo="Typo.subtitle2" Align="Align.Center" Class="mb-2">
+                            <span class="d-inline-flex align-center mr-2">
+                                Prestiges Today/Week:
+                                @if (_kingMondayGoals != null && _kingMondayGoals.DailyPrestigeGoal > 0)
+                                {
+                                    <span style="@GetProgressColorStyle(_kingMonday?.PrestigesToday, _kingMondayGoals.DailyPrestigeGoal)">
+                                        @_kingMonday?.PrestigesToday
+                                    </span>
+                                    <span> / </span>
+                                    <span style="@GetProgressColorStyle(_kingMonday?.PrestigesThisWeek, _kingMondayGoals.DailyPrestigeGoal * 7)">
+                                        @_kingMonday?.PrestigesThisWeek
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>@_kingMonday?.PrestigesToday / @_kingMonday?.PrestigesThisWeek</span>
+                                }
+                            </span>
+                        </MudText>
                     </div>
                     <div class="d-flex flex-column align-center">
                         <div class="donut-chart-container" style="position: relative; width: 300px; height: 300px;">
@@ -101,6 +120,25 @@ else
                                 @_kingSunday?.EarningsBonusPercentage
                             </span>
                         </MudText>
+                        <MudText Typo="Typo.subtitle2" Align="Align.Center" Class="mb-2">
+                            <span class="d-inline-flex align-center mr-2">
+                                Prestiges Today/Week:
+                                @if (_kingSundayGoals != null && _kingSundayGoals.DailyPrestigeGoal > 0)
+                                {
+                                    <span style="@GetProgressColorStyle(_kingSunday?.PrestigesToday, _kingSundayGoals.DailyPrestigeGoal)">
+                                        @_kingSunday?.PrestigesToday
+                                    </span>
+                                    <span> / </span>
+                                    <span style="@GetProgressColorStyle(_kingSunday?.PrestigesThisWeek, _kingSundayGoals.DailyPrestigeGoal * 7)">
+                                        @_kingSunday?.PrestigesThisWeek
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>@_kingSunday?.PrestigesToday / @_kingSunday?.PrestigesThisWeek</span>
+                                }
+                            </span>
+                        </MudText>
                     </div>
                     <div class="d-flex flex-column align-center">
                         <div class="donut-chart-container" style="position: relative; width: 300px; height: 300px;">
@@ -143,6 +181,25 @@ else
                                 <MudImage src="/assets/chart.png" Width="24" Height="24" Style="vertical-align: middle;">
                                 </MudImage>
                                 @_kingSaturday?.EarningsBonusPercentage
+                            </span>
+                        </MudText>
+                        <MudText Typo="Typo.subtitle2" Align="Align.Center" Class="mb-2">
+                            <span class="d-inline-flex align-center mr-2">
+                                Prestiges Today/Week:
+                                @if (_kingSaturdayGoals != null && _kingSaturdayGoals.DailyPrestigeGoal > 0)
+                                {
+                                    <span style="@GetProgressColorStyle(_kingSaturday?.PrestigesToday, _kingSaturdayGoals.DailyPrestigeGoal)">
+                                        @_kingSaturday?.PrestigesToday
+                                    </span>
+                                    <span> / </span>
+                                    <span style="@GetProgressColorStyle(_kingSaturday?.PrestigesThisWeek, _kingSaturdayGoals.DailyPrestigeGoal * 7)">
+                                        @_kingSaturday?.PrestigesThisWeek
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>@_kingSaturday?.PrestigesToday / @_kingSaturday?.PrestigesThisWeek</span>
+                                }
                             </span>
                         </MudText>
                     </div>
@@ -210,7 +267,21 @@ else
                                 SE This Week: @_kingFridaySEThisWeek
                             </span>
                             <span class="d-inline-flex align-center mr-2">
-                                Prestiges Today/Week: @_kingFriday?.PrestigesToday / @_kingFriday?.PrestigesThisWeek
+                                Prestiges Today/Week:
+                                @if (_kingFridayGoals != null && _kingFridayGoals.DailyPrestigeGoal > 0)
+                                {
+                                    <span style="@GetProgressColorStyle(_kingFriday?.PrestigesToday, _kingFridayGoals.DailyPrestigeGoal)">
+                                        @_kingFriday?.PrestigesToday
+                                    </span>
+                                    <span> / </span>
+                                    <span style="@GetProgressColorStyle(_kingFriday?.PrestigesThisWeek, _kingFridayGoals.DailyPrestigeGoal * 7)">
+                                        @_kingFriday?.PrestigesThisWeek
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>@_kingFriday?.PrestigesToday / @_kingFriday?.PrestigesThisWeek</span>
+                                }
                             </span>
                         </MudText>
                     </div>

@@ -1,4 +1,4 @@
-﻿using Exception = System.Exception;
+using Exception = System.Exception;
 
 namespace HemSoft.EggIncTracker.Data.Dtos;
 
@@ -97,8 +97,6 @@ public class PlayerDto
             player.Prestiges = root.Stats.NumPrestiges;
             player.PiggyFull = root.Stats.PiggyFull;
             player.PiggyBreaks = root.Stats.NumPiggyBreaks;
-
-            //player.InventoryScore = (float) root.Artifacts.InventoryScore;
 
             return (player, root);
         }

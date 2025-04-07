@@ -14,5 +14,5 @@ public class GoalDto
     public required string MERGoal { get; set; }
     public required string JERGoal { get; set; }
     public required string WeeklySEGainGoal { get; set; }
-
+    public int DailyPrestigeGoal { get; set; }
 }

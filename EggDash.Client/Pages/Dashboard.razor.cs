@@ -53,6 +53,7 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
 
     private PlayerDto? _kingFriday;
     private PlayerStatsDto? _kingFridayStats;
+    private PlayerGoalDto? _kingFridayGoals;
     private MajPlayerRankingDto? _SEGoalBegin;
     private MajPlayerRankingDto? _SEGoalEnd;
     private MajPlayerRankingDto? _EBGoalBegin;
@@ -71,12 +72,15 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
 
     private PlayerDto? _kingSaturday;
     private PlayerStatsDto? _kingSaturdayStats;
+    private PlayerGoalDto? _kingSaturdayGoals;
 
     private PlayerDto? _kingSunday;
     private PlayerStatsDto? _kingSundayStats;
+    private PlayerGoalDto? _kingSundayGoals;
 
     private PlayerDto? _kingMonday;
     private PlayerStatsDto? _kingMondayStats;
+    private PlayerGoalDto? _kingMondayGoals;
 
     private readonly ChartOptions _options = new()
     {
@@ -424,7 +428,7 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
             _lastUpdated = DateTime.Now;
             _timeSinceLastUpdate = GetTimeSinceLastUpdate();
             // Update the shared state instead of local _lastUpdated
-            DashboardState.SetLastUpdated(DateTime.Now);
+            await InvokeAsync(() => DashboardState.SetLastUpdated(DateTime.Now));
 
             // Log progress bar values for debugging
             Logger.LogInformation($"Progress bar values after refresh: SE={_kingFridaySEGoalPercentage:F1}%, EB={_kingFridayEBGoalPercentage:F1}%, MER={_kingFridayMERGoalPercentage:F1}%, JER={_kingFridayJERGoalPercentage:F1}%");
@@ -475,7 +479,7 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
         if (_kingFriday != null)
         {
             // Update the player's last update time in DashboardState
-            DashboardState.SetPlayerLastUpdated(_kingFriday.Updated);
+            await InvokeAsync(() => DashboardState.SetPlayerLastUpdated(_kingFriday.Updated));
 
             // Get player history for today
             var playerHistoryToday = await ApiService.GetPlayerHistoryAsync(
@@ -578,6 +582,10 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
                 };
             }
 
+            // Get player goals
+            _kingFridayGoals = await ApiService.GetPlayerGoalsAsync("King Friday!");
+            Logger.LogInformation($"Retrieved goals for King Friday: DailyPrestigeGoal={_kingFridayGoals?.DailyPrestigeGoal}");
+
             // Update goal data using ApiService directly instead of MajPlayerRankingManager
             var sePlayers = await ApiService.GetSurroundingSEPlayersAsync("King Friday!", _kingFriday.SoulEggs);
             var ebPlayers = await ApiService.GetSurroundingEBPlayersAsync("King Friday!", _kingFriday.EarningsBonusPercentage);
@@ -615,6 +623,16 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
 
     private async Task UpdateKingSaturday()
     {
+        // Get the current time in local time instead of UTC to match the user's day
+        var localNow = DateTime.Now;
+        var localToday = new DateTime(localNow.Year, localNow.Month, localNow.Day, 0, 0, 0, DateTimeKind.Local);
+        var todayUtcStart = localToday.ToUniversalTime(); // Convert to UTC for API calls
+
+        // Calculate the start of the week (Monday) in local time, then convert to UTC
+        int daysSinceMonday = ((int)localToday.DayOfWeek - 1 + 7) % 7; // Ensure positive result
+        var startOfWeekLocal = localToday.AddDays(-daysSinceMonday);
+        var startOfWeekUtc = startOfWeekLocal.ToUniversalTime();
+
         _kingSaturday = await ApiService.GetLatestPlayerAsync("King Saturday!");
         // Replace direct call to PlayerManager with API service call
         _kingSaturdayStats = await ApiService.GetRankedPlayerAsync("King Saturday!", 1, 30);
@@ -644,11 +662,59 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
                     _kingSaturday.NextTitle
                 };
             }
+
+            // Get player goals
+            _kingSaturdayGoals = await ApiService.GetPlayerGoalsAsync("King Saturday!");
+            Logger.LogInformation($"Retrieved goals for King Saturday: DailyPrestigeGoal={_kingSaturdayGoals?.DailyPrestigeGoal}");
+
+            // Get player history for today and this week
+            var playerHistoryToday = await ApiService.GetPlayerHistoryAsync(
+                "King Saturday!",
+                todayUtcStart,
+                DateTime.UtcNow);
+
+            var playerHistoryWeek = await ApiService.GetPlayerHistoryAsync(
+                "King Saturday!",
+                startOfWeekUtc,
+                DateTime.UtcNow);
+
+            // If weekly data is empty or null but we have daily data, use daily data for weekly calculation
+            if ((playerHistoryWeek == null || !playerHistoryWeek.Any()) && playerHistoryToday != null && playerHistoryToday.Any())
+            {
+                playerHistoryWeek = playerHistoryToday;
+            }
+
+            var firstToday = playerHistoryToday?.OrderBy(x => x.Updated).FirstOrDefault();
+            var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
+
+            // Calculate prestige counts
+            if (_kingSaturday.Prestiges.HasValue)
+            {
+                _kingSaturday.PrestigesToday = _kingSaturday.Prestiges - (firstToday?.Prestiges ?? _kingSaturday.Prestiges);
+                _kingSaturday.PrestigesThisWeek = _kingSaturday.Prestiges - (firstThisWeek?.Prestiges ?? _kingSaturday.Prestiges);
+
+                // Ensure PrestigesThisWeek is at least equal to PrestigesToday
+                if (_kingSaturday.PrestigesToday.HasValue &&
+                    (!_kingSaturday.PrestigesThisWeek.HasValue || _kingSaturday.PrestigesThisWeek.Value < _kingSaturday.PrestigesToday.Value))
+                {
+                    _kingSaturday.PrestigesThisWeek = _kingSaturday.PrestigesToday;
+                }
+            }
         }
     }
 
     private async Task UpdateKingSunday()
     {
+        // Get the current time in local time instead of UTC to match the user's day
+        var localNow = DateTime.Now;
+        var localToday = new DateTime(localNow.Year, localNow.Month, localNow.Day, 0, 0, 0, DateTimeKind.Local);
+        var todayUtcStart = localToday.ToUniversalTime(); // Convert to UTC for API calls
+
+        // Calculate the start of the week (Monday) in local time, then convert to UTC
+        int daysSinceMonday = ((int)localToday.DayOfWeek - 1 + 7) % 7; // Ensure positive result
+        var startOfWeekLocal = localToday.AddDays(-daysSinceMonday);
+        var startOfWeekUtc = startOfWeekLocal.ToUniversalTime();
+
         _kingSunday = await ApiService.GetLatestPlayerAsync("King Sunday!");
         // Replace direct call to PlayerManager with API service call
         _kingSundayStats = await ApiService.GetRankedPlayerAsync("King Sunday!", 1, 30);
@@ -678,11 +744,59 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
                     _kingSunday.NextTitle
                 };
             }
+
+            // Get player goals
+            _kingSundayGoals = await ApiService.GetPlayerGoalsAsync("King Sunday!");
+            Logger.LogInformation($"Retrieved goals for King Sunday: DailyPrestigeGoal={_kingSundayGoals?.DailyPrestigeGoal}");
+
+            // Get player history for today and this week
+            var playerHistoryToday = await ApiService.GetPlayerHistoryAsync(
+                "King Sunday!",
+                todayUtcStart,
+                DateTime.UtcNow);
+
+            var playerHistoryWeek = await ApiService.GetPlayerHistoryAsync(
+                "King Sunday!",
+                startOfWeekUtc,
+                DateTime.UtcNow);
+
+            // If weekly data is empty or null but we have daily data, use daily data for weekly calculation
+            if ((playerHistoryWeek == null || !playerHistoryWeek.Any()) && playerHistoryToday != null && playerHistoryToday.Any())
+            {
+                playerHistoryWeek = playerHistoryToday;
+            }
+
+            var firstToday = playerHistoryToday?.OrderBy(x => x.Updated).FirstOrDefault();
+            var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
+
+            // Calculate prestige counts
+            if (_kingSunday.Prestiges.HasValue)
+            {
+                _kingSunday.PrestigesToday = _kingSunday.Prestiges - (firstToday?.Prestiges ?? _kingSunday.Prestiges);
+                _kingSunday.PrestigesThisWeek = _kingSunday.Prestiges - (firstThisWeek?.Prestiges ?? _kingSunday.Prestiges);
+
+                // Ensure PrestigesThisWeek is at least equal to PrestigesToday
+                if (_kingSunday.PrestigesToday.HasValue &&
+                    (!_kingSunday.PrestigesThisWeek.HasValue || _kingSunday.PrestigesThisWeek.Value < _kingSunday.PrestigesToday.Value))
+                {
+                    _kingSunday.PrestigesThisWeek = _kingSunday.PrestigesToday;
+                }
+            }
         }
     }
 
     private async Task UpdateKingMonday()
     {
+        // Get the current time in local time instead of UTC to match the user's day
+        var localNow = DateTime.Now;
+        var localToday = new DateTime(localNow.Year, localNow.Month, localNow.Day, 0, 0, 0, DateTimeKind.Local);
+        var todayUtcStart = localToday.ToUniversalTime(); // Convert to UTC for API calls
+
+        // Calculate the start of the week (Monday) in local time, then convert to UTC
+        int daysSinceMonday = ((int)localToday.DayOfWeek - 1 + 7) % 7; // Ensure positive result
+        var startOfWeekLocal = localToday.AddDays(-daysSinceMonday);
+        var startOfWeekUtc = startOfWeekLocal.ToUniversalTime();
+
         _kingMonday = await ApiService.GetLatestPlayerAsync("King Monday!");
         // Replace direct call to PlayerManager with API service call
         _kingMondayStats = await ApiService.GetRankedPlayerAsync("King Monday!", 1, 30);
@@ -711,6 +825,44 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
                     FormatTitleChangeLabel(DateTime.Parse(_kingMondayStats?.ProjectedTitleChange)),
                     _kingMonday.NextTitle
                 };
+            }
+
+            // Get player goals
+            _kingMondayGoals = await ApiService.GetPlayerGoalsAsync("King Monday!");
+            Logger.LogInformation($"Retrieved goals for King Monday: DailyPrestigeGoal={_kingMondayGoals?.DailyPrestigeGoal}");
+
+            // Get player history for today and this week
+            var playerHistoryToday = await ApiService.GetPlayerHistoryAsync(
+                "King Monday!",
+                todayUtcStart,
+                DateTime.UtcNow);
+
+            var playerHistoryWeek = await ApiService.GetPlayerHistoryAsync(
+                "King Monday!",
+                startOfWeekUtc,
+                DateTime.UtcNow);
+
+            // If weekly data is empty or null but we have daily data, use daily data for weekly calculation
+            if ((playerHistoryWeek == null || !playerHistoryWeek.Any()) && playerHistoryToday != null && playerHistoryToday.Any())
+            {
+                playerHistoryWeek = playerHistoryToday;
+            }
+
+            var firstToday = playerHistoryToday?.OrderBy(x => x.Updated).FirstOrDefault();
+            var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
+
+            // Calculate prestige counts
+            if (_kingMonday.Prestiges.HasValue)
+            {
+                _kingMonday.PrestigesToday = _kingMonday.Prestiges - (firstToday?.Prestiges ?? _kingMonday.Prestiges);
+                _kingMonday.PrestigesThisWeek = _kingMonday.Prestiges - (firstThisWeek?.Prestiges ?? _kingMonday.Prestiges);
+
+                // Ensure PrestigesThisWeek is at least equal to PrestigesToday
+                if (_kingMonday.PrestigesToday.HasValue &&
+                    (!_kingMonday.PrestigesThisWeek.HasValue || _kingMonday.PrestigesThisWeek.Value < _kingMonday.PrestigesToday.Value))
+                {
+                    _kingMonday.PrestigesThisWeek = _kingMonday.PrestigesToday;
+                }
             }
         }
     }
@@ -939,6 +1091,56 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Calculate the color based on the progress percentage
+    /// </summary>
+    /// <param name="actual">The actual value</param>
+    /// <param name="goal">The goal value</param>
+    /// <returns>A MudBlazor Color enum value</returns>
+    private MudBlazor.Color CalculateProgressColor(int? actual, int goal)
+    {
+        if (actual == null || goal <= 0)
+            return MudBlazor.Color.Default;
+
+        double percentage = (double)actual.Value / goal * 100;
+
+        if (percentage >= 100)
+            return MudBlazor.Color.Success; // Green for meeting or exceeding goal
+        else if (percentage >= 75)
+            return MudBlazor.Color.Info;    // Blue for 75-99%
+        else if (percentage >= 50)
+            return MudBlazor.Color.Warning; // Yellow/Orange for 50-74%
+        else if (percentage >= 25)
+            return MudBlazor.Color.Error;   // Red for 25-49%
+        else
+            return MudBlazor.Color.Dark;    // Dark red for < 25%
+    }
+
+    /// <summary>
+    /// Get the CSS color string based on the progress percentage
+    /// </summary>
+    /// <param name="actual">The actual value</param>
+    /// <param name="goal">The goal value</param>
+    /// <returns>A CSS color string</returns>
+    private string GetProgressColorStyle(int? actual, int goal)
+    {
+        if (actual == null || goal <= 0)
+            return "color: white";
+
+        double percentage = (double)actual.Value / goal * 100;
+
+        if (percentage >= 100)
+            return "color: #33CC33"; // Green
+        else if (percentage >= 75)
+            return "color: #3399FF"; // Blue
+        else if (percentage >= 50)
+            return "color: #FFCC00"; // Yellow
+        else if (percentage >= 25)
+            return "color: #FF6666"; // Red
+        else
+            return "color: #FF0000"; // Dark red
+    }
+
     // Generate test data for the chart - only used as a fallback when real data isn't available
     private void InitializeTestData()
     {
@@ -1130,12 +1332,16 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
             // Clear other references
             _kingFriday = null;
             _kingFridayStats = null;
+            _kingFridayGoals = null;
             _kingSaturday = null;
             _kingSaturdayStats = null;
+            _kingSaturdayGoals = null;
             _kingSunday = null;
             _kingSundayStats = null;
+            _kingSundayGoals = null;
             _kingMonday = null;
             _kingMondayStats = null;
+            _kingMondayGoals = null;
             _SEGoalBegin = null;
             _SEGoalEnd = null;
             _EBGoalBegin = null;
