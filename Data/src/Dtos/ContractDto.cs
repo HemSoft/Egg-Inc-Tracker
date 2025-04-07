@@ -25,7 +25,7 @@ public class ContractDto
 
     [MaxLength(50)] public string? SeasonId { get; set; }
 
-    [Required] public int MinutesPerToken { get; set; }
+    [Required] public float MinutesPerToken { get; set; }
 
     [Required] public DateTime StartTime { get; set; }
 
@@ -119,7 +119,7 @@ public class ContractDto
 
         [JsonProperty("maxBoosts")] public int MaxBoosts { get; set; }
 
-        [JsonProperty("minutesPerToken")] public int MinutesPerToken { get; set; }
+        [JsonProperty("minutesPerToken")] public float MinutesPerToken { get; set; }
 
         [JsonProperty("chickenRunCooldownMinutes")]
         public int ChickenRunCooldownMinutes { get; set; }
@@ -147,7 +147,7 @@ public class ContractDto
     {
         [JsonProperty("type")] public int Type { get; set; }
 
-        [JsonProperty("targetAmount")] public long TargetAmount { get; set; }
+        [JsonProperty("targetAmount")] public BigInteger TargetAmount { get; set; }
 
         [JsonProperty("rewardType")] public int RewardType { get; set; }
 

@@ -19,8 +19,11 @@ builder.Services.AddDbContext<EggIncContext>();
 
 builder.Services.AddSingleton<DashboardState>();
 
-// Register HttpClient
-builder.Services.AddHttpClient<ApiService>();
+// Register HttpClient with extended timeout
+builder.Services.AddHttpClient<ApiService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30); // Increase timeout to 30 seconds
+});
 
 // Register ApiService
 builder.Services.AddScoped<ApiService>();

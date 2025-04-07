@@ -10,27 +10,54 @@
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
+
+<style>
+    .lap-marker {
+        position: absolute;
+        bottom: 0;
+        transform: translateX(-50%);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        pointer-events: none;
+    }
+
+    .lap-marker-line {
+        width: 1px;
+        height: 10px;
+        background-color: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .lap-marker-number {
+        font-size: 7px;
+        color: white;
+        margin-top: -2px;
+        text-shadow: 0px 0px 2px rgba(0, 0, 0, 0.8);
+        font-weight: bold;
+    }
+</style>
 <MudLayout>
-    <MudAppBar Elevation="1" Style="padding: 8px; height: auto;">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudText Typo="Typo.h5" GutterBottom="true">Egg-Inc Royal Dashboard </MudText>
+    <MudAppBar Elevation="1"
+        Style="padding: 8px; height: auto; background-image: url('/assets/banner.png'); background-size: cover; background-position: center;">
+        <div
+            style="background-color: rgba(@(_isDarkMode ? "26,26,39,0.7" : "255,255,255,0.7")); position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0;">
+        </div>
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+            OnClick="@((e) => DrawerToggle())" Style="z-index: 1;" />
+        <MudText Typo="Typo.h5" GutterBottom="true" Style="z-index: 1;">Egg-Inc Royal Dashboard </MudText>
         <MudSpacer />
 
         <MudPaper Class="d-flex align-center py-2 px-4 rounded-xl mr-5"
-                  Style="background-color: rgba(128,128,128,0.1); border: 1px solid rgba(180,180,180,0.3); margin-bottom: 4px; margin-top: 4px;">
+            Style="background-color: rgba(128,128,128,0.1); border: 1px solid rgba(180,180,180,0.3); margin-bottom: 4px; margin-top: 4px; z-index: 1;">
             <MudStack Spacing="0" Class="mr-4">
-                <MudButton Variant="Variant.Filled"
-                           Color="@(_isRunning ? Color.Error : Color.Success)"
-                           Size="Size.Small"
-                           Style="height: 24px; min-height: 24px;"
-                           OnClick="ToggleStopwatch">
+                <MudButton Variant="Variant.Filled" Color="@(_isRunning? Color.Error: Color.Success)"
+                    Size="Size.Small" Style="height: 24px; min-height: 24px;" OnClick="ToggleStopwatch">
                     @(_isRunning ? "Stop" : "Start")
                 </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Primary"
-                           Size="Size.Small"
-                           Style="height: 24px; min-height: 24px; margin-top: 4px;"
-                           OnClick="ResetStopwatch">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                    Style="height: 24px; min-height: 24px; margin-top: 4px;" OnClick="ResetStopwatch">
                     Reset
                 </MudButton>
             </MudStack>
@@ -47,21 +74,25 @@
                         }
                     </MudText>
                 </div>
-                <div @onclick="IncrementLegs" style="cursor: pointer; height: 10px; margin-top: 3px;">
+                <div @onclick="ResetMinuteProgress"
+                    style="cursor: pointer; height: 10px; margin-top: 3px; position: relative;">
                     <MudProgressLinear Color="@GetProgressColor(0, 60, _minuteStartTime)"
-                                       Value="@GetProgressValue(0, 60, _minuteStartTime)"
-                                       Class="my-0" />
+                        Value="@GetProgressValue(0, 60, _minuteStartTime)" Class="my-0" />
                 </div>
-                <div @onclick="Reset25MinProgress" style="cursor: pointer; height: 10px; margin-top: 5px;">
+                <div @onclick="IncrementLegs" style="cursor: pointer; height: 10px; margin-top: 5px; position: relative;">
                     <MudProgressLinear Color="@GetProgressColor(0, 1510, _25minStartTime)"
-                                       Value="@GetProgressValue(0, 1510, _25minStartTime)"
-                                       Class="my-0" />
+                        Value="@GetProgressValue(0, 1510, _25minStartTime)" Class="my-0" />
+                    @foreach (var marker in _lapMarkers)
+                    {
+                        <div class="lap-marker" style="left: @(marker)%">
+                            <div class="lap-marker-line"></div>
+                            <div class="lap-marker-number">@(_lapMarkers.IndexOf(marker) + 1)</div>
+                        </div>
+                    }
                 </div>
             </MudStack>
-            <MudButton Class="ml-3" Style="height: 100%; min-width: 50px;" 
-                       Variant="Variant.Outlined" 
-                       OnClick="IncrementLegs"
-                       Color="Color.Primary">
+            <MudButton Class="ml-3" Style="height: 100%; min-width: 50px;" Variant="Variant.Outlined"
+                OnClick="IncrementLegs" Color="Color.Primary">
                 <MudStack Spacing="0" AlignItems="AlignItems.Center">
                     <MudText Typo="Typo.caption">Legs</MudText>
                     <MudText Typo="Typo.h5" Style="font-family: monospace;">@_legCount</MudText>
@@ -70,13 +101,16 @@
         </MudPaper>
 
         <!-- Last Updated -->
-        <MudText Typo="Typo.h2" Class="mr-4">
+        <MudText Typo="Typo.h2" Class="mr-4" Style="z-index: 1;">
             @(DashboardState.LastUpdated.ToString("HH:mm"))
         </MudText>
-        <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
-        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
+        <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle"
+            Style="z-index: 1;" />
+        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End"
+            Style="z-index: 1;" />
     </MudAppBar>
-    <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2" Style="padding-top: 32px;">
+    <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2"
+        Style="padding-top: 32px;">
         <NavMenu />
     </MudDrawer>
     <MudMainContent Class="mt-16 pa-4">
@@ -94,6 +128,7 @@
     private DateTime _minuteStartTime = DateTime.Now;
     private DateTime _25minStartTime = DateTime.Now;
     private int _legCount = 0;
+    private List<double> _lapMarkers = new List<double>();
 
     private class StopwatchState
     {
@@ -101,6 +136,9 @@
         public DateTime StartTime { get; set; }
         public TimeSpan Elapsed { get; set; }
         public int LegCount { get; set; }
+        public List<double> LapMarkers { get; set; } = new List<double>();
+        public DateTime MinuteStartTime { get; set; }
+        public DateTime TwentyFiveMinStartTime { get; set; }
     }
 
     private bool _drawerOpen = true;
@@ -124,19 +162,19 @@
             {
                 _elapsed = DateTime.Now - _startTime;
                 await InvokeAsync(async () =>
-                {
-                    await SaveStopwatchState();
-                    StateHasChanged();
-                });
+        {
+            await SaveStopwatchState();
+            StateHasChanged();
+        });
             }
         };
 
         _theme = new()
-            {
-                PaletteLight = _lightPalette,
-                PaletteDark = _darkPalette,
-                LayoutProperties = new LayoutProperties()
-            };
+        {
+            PaletteLight = _lightPalette,
+            PaletteDark = _darkPalette,
+            LayoutProperties = new LayoutProperties()
+        };
 
         DashboardState.OnChange += StateHasChanged;
     }
@@ -170,8 +208,8 @@
     private Color GetProgressColor(double currentSeconds, double maxSeconds, DateTime? startTime = null)
     {
         var progress = startTime.HasValue
-            ? (DateTime.Now - startTime.Value).TotalSeconds / maxSeconds
-            : currentSeconds / maxSeconds;
+        ? (DateTime.Now - startTime.Value).TotalSeconds / maxSeconds
+        : currentSeconds / maxSeconds;
 
         if (progress >= 1) return Color.Error;
         return progress < 0.5 ? Color.Success : Color.Warning;
@@ -194,17 +232,20 @@
         try
         {
             var state = new StopwatchState
-                {
-                    IsRunning = _isRunning,
-                    StartTime = _startTime,
-                    Elapsed = _elapsed,
-                    LegCount = _legCount
-                };
+            {
+                IsRunning = _isRunning,
+                StartTime = _startTime,
+                Elapsed = _elapsed,
+                LegCount = _legCount,
+                LapMarkers = _lapMarkers,
+                MinuteStartTime = _minuteStartTime,
+                TwentyFiveMinStartTime = _25minStartTime
+            };
 
             await JSRuntime.InvokeVoidAsync(
-                "localStorage.setItem",
-                "stopwatchState",
-                JsonSerializer.Serialize(state)
+            "localStorage.setItem",
+            "stopwatchState",
+            JsonSerializer.Serialize(state)
             );
         }
         catch (Exception ex)
@@ -218,8 +259,8 @@
         try
         {
             var json = await JSRuntime.InvokeAsync<string>(
-                "localStorage.getItem",
-                "stopwatchState"
+            "localStorage.getItem",
+            "stopwatchState"
             );
 
             if (!string.IsNullOrEmpty(json))
@@ -231,6 +272,13 @@
                     _startTime = state.StartTime;
                     _elapsed = state.Elapsed;
                     _legCount = state.LegCount;
+                    _lapMarkers = state.LapMarkers ?? new List<double>();
+
+                    // Restore timer start times if they exist
+                    if (state.MinuteStartTime != default)
+                        _minuteStartTime = state.MinuteStartTime;
+                    if (state.TwentyFiveMinStartTime != default)
+                        _25minStartTime = state.TwentyFiveMinStartTime;
 
                     if (_isRunning)
                     {
@@ -260,7 +308,7 @@
         {
             _startTime = DateTime.Now - _elapsed;
             _timer?.Start();
-            
+
             // Initialize leg count to 1 when starting from zero
             if (_elapsed.TotalSeconds < 0.1 && _legCount == 0)
             {
@@ -278,6 +326,7 @@
         _elapsed = TimeSpan.Zero;
         _startTime = DateTime.Now;
         _legCount = 0;
+        _lapMarkers.Clear(); // Clear all lap markers
 
         // Reset the progress bars when stopwatch is reset
         _minuteStartTime = DateTime.Now;
@@ -308,54 +357,62 @@
         return $"{(int)_elapsed.TotalHours:D2}:{_elapsed.Minutes:D2}:{_elapsed.Seconds:D2}";
     }
 
-    private void IncrementLegs()
+    private async Task IncrementLegs()
     {
         if (_isRunning)
         {
             _legCount++;
             _minuteStartTime = DateTime.Now;
+
+            // Add a marker at the current position on the progress bar
+            // Calculate the percentage based on elapsed time since the 25min timer started
+            var elapsedSince25MinStart = (DateTime.Now - _25minStartTime).TotalSeconds;
+            double progressValue = Math.Min((elapsedSince25MinStart / 1510) * 100, 100);
+            _lapMarkers.Add(progressValue);
+
             StateHasChanged();
+            await SaveStopwatchState();
         }
     }
 
     private readonly PaletteLight _lightPalette = new()
-        {
-            Black = "#110e2d",
-            AppbarText = "#424242",
-            AppbarBackground = "rgba(255,255,255,0.8)",
-            DrawerBackground = "#ffffff",
-            GrayLight = "#e8e8e8",
-            GrayLighter = "#f9f9f9",
-        };
+    {
+        Black = "#110e2d",
+        AppbarText = "#424242",
+        AppbarBackground = "rgba(255,255,255,0.8)",
+        DrawerBackground = "#ffffff",
+        GrayLight = "#e8e8e8",
+        GrayLighter = "#f9f9f9",
+    };
 
     private readonly PaletteDark _darkPalette = new()
-        {
-            Primary = "#7e6fff",
-            Surface = "#1e1e2d",
-            Background = "#1a1a27",
-            BackgroundGray = "#151521",
-            AppbarText = "#92929f",
-            AppbarBackground = "rgba(26,26,39,0.8)",
-            DrawerBackground = "#1a1a27",
-            ActionDefault = "#74718e",
-            ActionDisabled = "#9999994d",
-            ActionDisabledBackground = "#605f6d4d",
-            TextPrimary = "#b2b0bf",
-            TextSecondary = "#92929f",
-            TextDisabled = "#ffffff33",
-            DrawerIcon = "#92929f",
-            DrawerText = "#92929f",
-            GrayLight = "#2a2833",
-            GrayLighter = "#1e1e2d",
-            Info = "#4a86ff",
-            Success = "#3dcb6c",
-            Warning = "#ffb545",
-            Error = "#ff3f5f",
-            LinesDefault = "#33323e",
-            TableLines = "#33323e",
-            Divider = "#292838",
-            OverlayLight = "#1e1e2d80",
-        };
+    {
+        Primary = "#7e6fff",
+        Surface = "#1e1e2d",
+        Background = "#1a1a27",
+        BackgroundGray = "#151521",
+        AppbarText = "#92929f",
+        AppbarBackground = "rgba(26,26,39,0.8)",
+        DrawerBackground = "#1a1a27",
+        ActionDefault = "#74718e",
+        ActionDisabled = "#9999994d",
+        ActionDisabledBackground = "#605f6d4d",
+        TextPrimary = "#b2b0bf",
+        TextSecondary = "#92929f",
+        TextDisabled = "#ffffff33",
+        DrawerIcon = "#92929f",
+        DrawerText = "#92929f",
+        GrayLight = "#2a2833",
+        GrayLighter = "#1e1e2d",
+        Info = "#4a86ff",
+        Success = "#3dcb6c",
+        Warning = "#ffb545",
+        Error = "#ff3f5f",
+        LinesDefault = "#33323e",
+        TableLines = "#33323e",
+        Divider = "#292838",
+        OverlayLight = "#1e1e2d80",
+    };
 
     public string DarkLightModeButtonIcon => _isDarkMode switch
     {

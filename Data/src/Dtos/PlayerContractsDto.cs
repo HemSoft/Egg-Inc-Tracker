@@ -97,36 +97,39 @@ public class PlayerContractDto
         var root = JsonConvert.DeserializeObject<JsonArchiveRoot>(apiResponse);
         foreach (var ev in root.ArchiveList)
         {
-            playerContract = new PlayerContractDto
+            if (!string.IsNullOrEmpty(ev.CoopIdentifier))
             {
-                EID = playerId,
-                KevId = ev.Contract.Identifier,
-                ContractScore = ev.Evaluation.Cxp,
-                ContractScoreChange = ev.Evaluation.CxpChange,
-                CoopId = ev.CoopIdentifier,
-                TimeAccepted = ConvertUnixTimestampToCST((long)ev.TimeAccepted),
-                Accepted = ev.Accepted,
-                CoopContributionFinalized = ev.CoopContributionFinalized ? 1 : 0,
-                NumberOfGoalsAchieved = ev.NumGoalsAchieved,
-                BoostsUsed = ev.BoostsUsed,
-                PointsReplay = ev.PointsReplay,
-                Grade = (byte)ev.Grade,
-                ContributionRatio = ev.Evaluation.ContributionRatio,
-                CompletionTime = ConvertUnixTimestampToCST((long) ev.TimeAccepted + (long) ev.Evaluation.CompletionTime),
-                ChickenRunsSent = (byte)ev.Evaluation.ChickenRunsSent,
-                TokensSent = (byte)ev.Evaluation.GiftTokensSent,
-                TokensReceived = (byte)ev.Evaluation.GiftTokensReceived,
-                TokenValueSent = ev.Evaluation.GiftTokenValueSent,
-                TokenValueReceived = (int)ev.Evaluation.GiftTokenValueReceived,
-                BoostTokenAllotment = ev.Evaluation.BoostTokenAllotment,
-                TeamworkScore = ev.Evaluation.TeamworkScore,
-                BuffTimeValue = ev.Evaluation.BuffTimeValue,
-                CountedInSeason = ev.Evaluation.CountedInSeason,
-                SeasonId = ev.Evaluation.SeasonId,
-                EvaluationStartTime = ConvertUnixTimestampToCST((long)ev.Evaluation.EvaluationStartTime),
-                CoopStatus = (byte)ev.Evaluation.Status
-            };
-            contracts.Add(playerContract);
+                playerContract = new PlayerContractDto
+                {
+                    EID = playerId,
+                    KevId = ev.Contract.Identifier,
+                    ContractScore = ev.Evaluation.Cxp,
+                    ContractScoreChange = ev.Evaluation.CxpChange,
+                    CoopId = ev.CoopIdentifier,
+                    TimeAccepted = ConvertUnixTimestampToCST((long)ev.TimeAccepted),
+                    Accepted = ev.Accepted,
+                    CoopContributionFinalized = ev.CoopContributionFinalized ? 1 : 0,
+                    NumberOfGoalsAchieved = ev.NumGoalsAchieved,
+                    BoostsUsed = ev.BoostsUsed,
+                    PointsReplay = ev.PointsReplay,
+                    Grade = (byte)ev.Grade,
+                    ContributionRatio = ev.Evaluation.ContributionRatio,
+                    CompletionTime = ConvertUnixTimestampToCST((long)ev.TimeAccepted + (long)ev.Evaluation.CompletionTime),
+                    ChickenRunsSent = (byte)ev.Evaluation.ChickenRunsSent,
+                    TokensSent = (byte)ev.Evaluation.GiftTokensSent,
+                    TokensReceived = (byte)ev.Evaluation.GiftTokensReceived,
+                    TokenValueSent = ev.Evaluation.GiftTokenValueSent,
+                    TokenValueReceived = (int)ev.Evaluation.GiftTokenValueReceived,
+                    BoostTokenAllotment = ev.Evaluation.BoostTokenAllotment,
+                    TeamworkScore = ev.Evaluation.TeamworkScore,
+                    BuffTimeValue = ev.Evaluation.BuffTimeValue,
+                    CountedInSeason = ev.Evaluation.CountedInSeason,
+                    SeasonId = ev.Evaluation.SeasonId,
+                    EvaluationStartTime = ConvertUnixTimestampToCST((long)ev.Evaluation.EvaluationStartTime),
+                    CoopStatus = (byte)ev.Evaluation.Status
+                };
+                contracts.Add(playerContract);
+            }
         }
 
         return contracts;

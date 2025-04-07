@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Your_Strong_Password123
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqldata:/var/opt/mssql
+
+  api:
+    build:
+      context: .
+      dockerfile: EggIncTrackerApi/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=sql;Database=EggIncTracker;User Id=sa;Password=Your_Strong_Password123;TrustServerCertificate=True
+    ports:
+      - "5000:80"
+    depends_on:
+      - sql
+
+  webapp:
+    build:
+      context: .
+      dockerfile: EggDash/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ApiBaseUrl=http://api
+    ports:
+      - "5001:80"
+    depends_on:
+      - api
+
+  function:
+    build:
+      context: .
+      dockerfile: UpdatePlayerFunction/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=sql;Database=EggIncTracker;User Id=sa;Password=Your_Strong_Password123;TrustServerCertificate=True
+    depends_on:
+      - sql
+
+volumes:
+  sqldata:

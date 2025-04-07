@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,7 +37,7 @@ builder.Services.AddVersionedApiExplorer(options =>
 
 // Register DbContext
 builder.Services.AddDbContext<EggIncContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection") 
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")
         ?? "Data Source=localhost;Initial Catalog=db-egginc;Integrated Security=True;Encrypt=False;Trust Server Certificate=True"));
 
 // Configure CORS
@@ -68,4 +69,4 @@ app.UseCors("AllowAll");
 app.UseAuthorization();
 app.MapControllers();
 
-app.Run(); 
+app.Run();

@@ -5,40 +5,104 @@
 
 <PageTitle>Recent Player Updates</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     <MudCard>
         <MudCardHeader>
-            <MudText Typo="Typo.h5">Recent Player Updates</MudText>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h5">Recent Player Updates</MudText>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudText Typo="Typo.body2">Last updated: @_timeSinceLastUpdate</MudText>
+            </CardHeaderActions>
         </MudCardHeader>
+        <MudCardActions>
+            <MudTextField @bind-Value="searchString" Placeholder="Search by player name" Adornment="Adornment.Start"
+                AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0 mb-3 ml-3"
+                Style="width: 300px;" Immediate="true" DebounceInterval="300">
+            </MudTextField>
+        </MudCardActions>
         <MudCardContent>
             @if (isLoading)
             {
-                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <div class="d-flex justify-center my-4">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                </div>
             }
             else if (playerUpdates.Any())
             {
-                <MudList Clickable="false" T="MajPlayerRankingDto">
-                    @foreach (var update in playerUpdates)
-                    {
-                        <MudListItem>
-                            <div class="d-flex align-center">
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@update.Updated.ToString("yyyy-MM-dd hh:mm tt")</MudText>
-                                <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
-                                <MudText Typo="Typo.body1" Class="mx-2"><b>@update.IGN</b></MudText>
-                                <MudText Typo="Typo.body2">
-                                    PE: <b>@update.PE</b>
-                                    SE: <b>@update.SEString</b>
-                                    EB: <b>@update.EBString</b>
-                                </MudText>
-                            </div>
-                        </MudListItem>
-                        <MudDivider Class="my-1" />
-                    }
-                </MudList>
-
-                <div class="d-flex justify-center mt-4">
-                    <MudPagination Count="@totalPages" Selected="@currentPage" SelectedChanged="OnPageChanged" Color="Color.Primary" />
-                </div>
+                <MudTable Items="@playerUpdates" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@isLoading"
+                    LoadingProgressColor="Color.Primary" T="MajPlayerRankingDto" HeaderClass="table-header"
+                    Filter="FilterFunc">
+                    <HeaderContent>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            Date/Time</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            Player</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            PE</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            Soul Eggs</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            SE Gained</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            SE This Week</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            EB</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            MER</MudTh>
+                        <MudTh
+                            Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                            JER</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Date/Time">
+                            <MudText Typo="Typo.body2">@context.Updated.ToLocalTime().ToString("yyyy-MM-dd hh:mm tt")
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Player">
+                            <MudText Typo="Typo.body1"><b>@context.IGN</b></MudText>
+                            <MudText Typo="Typo.caption">@context.DiscordName</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="PE">
+                            <MudText Typo="Typo.body2"><b>@context.PE</b></MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Soul Eggs">
+                            <MudText Typo="Typo.body2"><b>@context.SEString</b></MudText>
+                        </MudTd>
+                        <MudTd DataLabel="SE Gained">
+                            <MudText Typo="Typo.body2"
+                                Color="@(context.SEGains != null && !context.SEGains.Contains("-") && context.SEGains != "N/A" ? Color.Success : Color.Default)">
+                                <b>@(context.SEGains ?? "N/A")</b>
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="SE This Week">
+                            <MudText Typo="Typo.body2"
+                                Color="@(context.SEGainsWeek != null && !context.SEGainsWeek.Contains("-") && context.SEGainsWeek != "N/A" ? Color.Success : Color.Default)">
+                                <b>@(context.SEGainsWeek ?? "N/A")</b>
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="EB">
+                            <MudText Typo="Typo.body2"><b>@context.EBString</b></MudText>
+                        </MudTd>
+                        <MudTd DataLabel="MER">
+                            <MudText Typo="Typo.body2"><b>@context.MER</b></MudText>
+                        </MudTd>
+                        <MudTd DataLabel="JER">
+                            <MudText Typo="Typo.body2"><b>@context.JER</b></MudText>
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+                    </PagerContent>
+                </MudTable>
             }
             else
             {
