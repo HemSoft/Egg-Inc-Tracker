@@ -73,14 +73,59 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
     private PlayerDto? _kingSaturday;
     private PlayerStatsDto? _kingSaturdayStats;
     private PlayerGoalDto? _kingSaturdayGoals;
+    private MajPlayerRankingDto? _kingSaturdaySEGoalBegin;
+    private MajPlayerRankingDto? _kingSaturdaySEGoalEnd;
+    private MajPlayerRankingDto? _kingSaturdayEBGoalBegin;
+    private MajPlayerRankingDto? _kingSaturdayEBGoalEnd;
+    private MajPlayerRankingDto? _kingSaturdayMERGoalBegin;
+    private MajPlayerRankingDto? _kingSaturdayMERGoalEnd;
+    private MajPlayerRankingDto? _kingSaturdayJERGoalBegin;
+    private MajPlayerRankingDto? _kingSaturdayJERGoalEnd;
+    private string _kingSaturdaySEThisWeek = string.Empty;
+
+    // Progress bar percentages for King Saturday
+    private double _kingSaturdaySEGoalPercentage = 0;
+    private double _kingSaturdayEBGoalPercentage = 0;
+    private double _kingSaturdayMERGoalPercentage = 0;
+    private double _kingSaturdayJERGoalPercentage = 0;
 
     private PlayerDto? _kingSunday;
     private PlayerStatsDto? _kingSundayStats;
     private PlayerGoalDto? _kingSundayGoals;
+    private MajPlayerRankingDto? _kingSundaySEGoalBegin;
+    private MajPlayerRankingDto? _kingSundaySEGoalEnd;
+    private MajPlayerRankingDto? _kingSundayEBGoalBegin;
+    private MajPlayerRankingDto? _kingSundayEBGoalEnd;
+    private MajPlayerRankingDto? _kingSundayMERGoalBegin;
+    private MajPlayerRankingDto? _kingSundayMERGoalEnd;
+    private MajPlayerRankingDto? _kingSundayJERGoalBegin;
+    private MajPlayerRankingDto? _kingSundayJERGoalEnd;
+    private string _kingSundaySEThisWeek = string.Empty;
+
+    // Progress bar percentages for King Sunday
+    private double _kingSundaySEGoalPercentage = 0;
+    private double _kingSundayEBGoalPercentage = 0;
+    private double _kingSundayMERGoalPercentage = 0;
+    private double _kingSundayJERGoalPercentage = 0;
 
     private PlayerDto? _kingMonday;
     private PlayerStatsDto? _kingMondayStats;
     private PlayerGoalDto? _kingMondayGoals;
+    private MajPlayerRankingDto? _kingMondaySEGoalBegin;
+    private MajPlayerRankingDto? _kingMondaySEGoalEnd;
+    private MajPlayerRankingDto? _kingMondayEBGoalBegin;
+    private MajPlayerRankingDto? _kingMondayEBGoalEnd;
+    private MajPlayerRankingDto? _kingMondayMERGoalBegin;
+    private MajPlayerRankingDto? _kingMondayMERGoalEnd;
+    private MajPlayerRankingDto? _kingMondayJERGoalBegin;
+    private MajPlayerRankingDto? _kingMondayJERGoalEnd;
+    private string _kingMondaySEThisWeek = string.Empty;
+
+    // Progress bar percentages for King Monday
+    private double _kingMondaySEGoalPercentage = 0;
+    private double _kingMondayEBGoalPercentage = 0;
+    private double _kingMondayMERGoalPercentage = 0;
+    private double _kingMondayJERGoalPercentage = 0;
 
     private readonly ChartOptions _options = new()
     {
@@ -479,7 +524,7 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
         if (_kingFriday != null)
         {
             // Update the player's last update time in DashboardState
-            await InvokeAsync(() => DashboardState.SetPlayerLastUpdated(_kingFriday.Updated));
+            await InvokeAsync(() => DashboardState.SetPlayerLastUpdated("King Friday!", _kingFriday.Updated));
 
             // Get player history for today
             var playerHistoryToday = await ApiService.GetPlayerHistoryAsync(
@@ -700,6 +745,84 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
                     _kingSaturday.PrestigesThisWeek = _kingSaturday.PrestigesToday;
                 }
             }
+
+            // Calculate SE gain this week
+            if (playerHistoryWeek != null && playerHistoryWeek.Any())
+            {
+                var latestSE = _kingSaturday.SoulEggsFull;
+                var earliestSE = firstThisWeek?.SoulEggsFull ?? latestSE;
+
+                Logger.LogInformation($"King Saturday - Using latest SE: {latestSE}");
+                Logger.LogInformation($"King Saturday - Using earliest SE: {earliestSE}");
+
+                try
+                {
+                    // Use BigNumberCalculator to calculate the difference
+                    _kingSaturdaySEThisWeek = HemSoft.EggIncTracker.Domain.BigNumberCalculator.CalculateDifference(earliestSE, latestSE);
+                    Logger.LogInformation($"King Saturday - Calculated SE gain this week: {_kingSaturdaySEThisWeek}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error calculating SE gain this week for King Saturday");
+                    _kingSaturdaySEThisWeek = "0";
+                }
+            }
+            else
+            {
+                Logger.LogWarning("No player history for King Saturday this week, setting SE gain to 0");
+                _kingSaturdaySEThisWeek = "0";
+            }
+
+            // Update goal data using ApiService directly
+            var sePlayers = await ApiService.GetSurroundingSEPlayersAsync("King Saturday!", _kingSaturday.SoulEggs);
+            var ebPlayers = await ApiService.GetSurroundingEBPlayersAsync("King Saturday!", _kingSaturday.EarningsBonusPercentage);
+            var merPlayers = await ApiService.GetSurroundingMERPlayersAsync("King Saturday!", (decimal)_kingSaturday.MER);
+            var jerPlayers = await ApiService.GetSurroundingJERPlayersAsync("King Saturday!", (decimal)_kingSaturday.JER);
+
+            // Set goal data for progress bars
+            if (sePlayers != null)
+            {
+                _kingSaturdaySEGoalBegin = sePlayers.LowerPlayer;
+                _kingSaturdaySEGoalEnd = sePlayers.UpperPlayer;
+            }
+
+            if (ebPlayers != null)
+            {
+                _kingSaturdayEBGoalBegin = ebPlayers.LowerPlayer;
+                _kingSaturdayEBGoalEnd = ebPlayers.UpperPlayer;
+            }
+
+            if (merPlayers != null)
+            {
+                _kingSaturdayMERGoalBegin = merPlayers.LowerPlayer;
+                _kingSaturdayMERGoalEnd = merPlayers.UpperPlayer;
+            }
+
+            if (jerPlayers != null)
+            {
+                _kingSaturdayJERGoalBegin = jerPlayers.LowerPlayer;
+                _kingSaturdayJERGoalEnd = jerPlayers.UpperPlayer;
+            }
+
+            // Calculate progress bar percentages
+            var sePercentage = CalculateProgressPercentage(_kingSaturdayStats?.SE, _kingSaturdaySEGoalEnd?.SEString, _kingSaturdaySEGoalBegin?.SEString);
+            var ebPercentage = CalculateProgressPercentage(_kingSaturdayStats?.EB, _kingSaturdayEBGoalEnd?.EBString, _kingSaturdayEBGoalBegin?.EBString);
+            var merPercentage = CalculateProgressPercentage(_kingSaturdayStats?.MER.ToString(), _kingSaturdayMERGoalEnd?.MER.ToString(), _kingSaturdayMERGoalBegin?.MER.ToString());
+            var jerPercentage = CalculateProgressPercentage(_kingSaturdayStats?.JER.ToString(), _kingSaturdayJERGoalEnd?.JER.ToString(), _kingSaturdayJERGoalBegin?.JER.ToString());
+
+            // Ensure we have valid percentages (not zero)
+            _kingSaturdaySEGoalPercentage = sePercentage > 0 ? sePercentage : 50; // Default to 50% if calculation fails
+            _kingSaturdayEBGoalPercentage = ebPercentage > 0 ? ebPercentage : 50;
+            _kingSaturdayMERGoalPercentage = merPercentage > 0 ? merPercentage : 50;
+            _kingSaturdayJERGoalPercentage = jerPercentage > 0 ? jerPercentage : 50;
+
+            Logger.LogInformation($"King Saturday progress bar percentages: SE={_kingSaturdaySEGoalPercentage:F1}%, EB={_kingSaturdayEBGoalPercentage:F1}%, MER={_kingSaturdayMERGoalPercentage:F1}%, JER={_kingSaturdayJERGoalPercentage:F1}%");
+
+            // Update the player's last update time in DashboardState
+            await InvokeAsync(() => DashboardState.SetPlayerLastUpdated("King Saturday!", _kingSaturday.Updated));
+
+            // Force UI update after calculating progress bar percentages
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -782,6 +905,84 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
                     _kingSunday.PrestigesThisWeek = _kingSunday.PrestigesToday;
                 }
             }
+
+            // Calculate SE gain this week
+            if (playerHistoryWeek != null && playerHistoryWeek.Any())
+            {
+                var latestSE = _kingSunday.SoulEggsFull;
+                var earliestSE = firstThisWeek?.SoulEggsFull ?? latestSE;
+
+                Logger.LogInformation($"King Sunday - Using latest SE: {latestSE}");
+                Logger.LogInformation($"King Sunday - Using earliest SE: {earliestSE}");
+
+                try
+                {
+                    // Use BigNumberCalculator to calculate the difference
+                    _kingSundaySEThisWeek = HemSoft.EggIncTracker.Domain.BigNumberCalculator.CalculateDifference(earliestSE, latestSE);
+                    Logger.LogInformation($"King Sunday - Calculated SE gain this week: {_kingSundaySEThisWeek}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error calculating SE gain this week for King Sunday");
+                    _kingSundaySEThisWeek = "0";
+                }
+            }
+            else
+            {
+                Logger.LogWarning("No player history for King Sunday this week, setting SE gain to 0");
+                _kingSundaySEThisWeek = "0";
+            }
+
+            // Update goal data using ApiService directly
+            var sePlayers = await ApiService.GetSurroundingSEPlayersAsync("King Sunday!", _kingSunday.SoulEggs);
+            var ebPlayers = await ApiService.GetSurroundingEBPlayersAsync("King Sunday!", _kingSunday.EarningsBonusPercentage);
+            var merPlayers = await ApiService.GetSurroundingMERPlayersAsync("King Sunday!", (decimal)_kingSunday.MER);
+            var jerPlayers = await ApiService.GetSurroundingJERPlayersAsync("King Sunday!", (decimal)_kingSunday.JER);
+
+            // Set goal data for progress bars
+            if (sePlayers != null)
+            {
+                _kingSundaySEGoalBegin = sePlayers.LowerPlayer;
+                _kingSundaySEGoalEnd = sePlayers.UpperPlayer;
+            }
+
+            if (ebPlayers != null)
+            {
+                _kingSundayEBGoalBegin = ebPlayers.LowerPlayer;
+                _kingSundayEBGoalEnd = ebPlayers.UpperPlayer;
+            }
+
+            if (merPlayers != null)
+            {
+                _kingSundayMERGoalBegin = merPlayers.LowerPlayer;
+                _kingSundayMERGoalEnd = merPlayers.UpperPlayer;
+            }
+
+            if (jerPlayers != null)
+            {
+                _kingSundayJERGoalBegin = jerPlayers.LowerPlayer;
+                _kingSundayJERGoalEnd = jerPlayers.UpperPlayer;
+            }
+
+            // Calculate progress bar percentages
+            var sePercentage = CalculateProgressPercentage(_kingSundayStats?.SE, _kingSundaySEGoalEnd?.SEString, _kingSundaySEGoalBegin?.SEString);
+            var ebPercentage = CalculateProgressPercentage(_kingSundayStats?.EB, _kingSundayEBGoalEnd?.EBString, _kingSundayEBGoalBegin?.EBString);
+            var merPercentage = CalculateProgressPercentage(_kingSundayStats?.MER.ToString(), _kingSundayMERGoalEnd?.MER.ToString(), _kingSundayMERGoalBegin?.MER.ToString());
+            var jerPercentage = CalculateProgressPercentage(_kingSundayStats?.JER.ToString(), _kingSundayJERGoalEnd?.JER.ToString(), _kingSundayJERGoalBegin?.JER.ToString());
+
+            // Ensure we have valid percentages (not zero)
+            _kingSundaySEGoalPercentage = sePercentage > 0 ? sePercentage : 50; // Default to 50% if calculation fails
+            _kingSundayEBGoalPercentage = ebPercentage > 0 ? ebPercentage : 50;
+            _kingSundayMERGoalPercentage = merPercentage > 0 ? merPercentage : 50;
+            _kingSundayJERGoalPercentage = jerPercentage > 0 ? jerPercentage : 50;
+
+            Logger.LogInformation($"King Sunday progress bar percentages: SE={_kingSundaySEGoalPercentage:F1}%, EB={_kingSundayEBGoalPercentage:F1}%, MER={_kingSundayMERGoalPercentage:F1}%, JER={_kingSundayJERGoalPercentage:F1}%");
+
+            // Update the player's last update time in DashboardState
+            await InvokeAsync(() => DashboardState.SetPlayerLastUpdated("King Sunday!", _kingSunday.Updated));
+
+            // Force UI update after calculating progress bar percentages
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -864,6 +1065,84 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
                     _kingMonday.PrestigesThisWeek = _kingMonday.PrestigesToday;
                 }
             }
+
+            // Calculate SE gain this week
+            if (playerHistoryWeek != null && playerHistoryWeek.Any())
+            {
+                var latestSE = _kingMonday.SoulEggsFull;
+                var earliestSE = firstThisWeek?.SoulEggsFull ?? latestSE;
+
+                Logger.LogInformation($"King Monday - Using latest SE: {latestSE}");
+                Logger.LogInformation($"King Monday - Using earliest SE: {earliestSE}");
+
+                try
+                {
+                    // Use BigNumberCalculator to calculate the difference
+                    _kingMondaySEThisWeek = HemSoft.EggIncTracker.Domain.BigNumberCalculator.CalculateDifference(earliestSE, latestSE);
+                    Logger.LogInformation($"King Monday - Calculated SE gain this week: {_kingMondaySEThisWeek}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error calculating SE gain this week for King Monday");
+                    _kingMondaySEThisWeek = "0";
+                }
+            }
+            else
+            {
+                Logger.LogWarning("No player history for King Monday this week, setting SE gain to 0");
+                _kingMondaySEThisWeek = "0";
+            }
+
+            // Update goal data using ApiService directly
+            var sePlayers = await ApiService.GetSurroundingSEPlayersAsync("King Monday!", _kingMonday.SoulEggs);
+            var ebPlayers = await ApiService.GetSurroundingEBPlayersAsync("King Monday!", _kingMonday.EarningsBonusPercentage);
+            var merPlayers = await ApiService.GetSurroundingMERPlayersAsync("King Monday!", (decimal)_kingMonday.MER);
+            var jerPlayers = await ApiService.GetSurroundingJERPlayersAsync("King Monday!", (decimal)_kingMonday.JER);
+
+            // Set goal data for progress bars
+            if (sePlayers != null)
+            {
+                _kingMondaySEGoalBegin = sePlayers.LowerPlayer;
+                _kingMondaySEGoalEnd = sePlayers.UpperPlayer;
+            }
+
+            if (ebPlayers != null)
+            {
+                _kingMondayEBGoalBegin = ebPlayers.LowerPlayer;
+                _kingMondayEBGoalEnd = ebPlayers.UpperPlayer;
+            }
+
+            if (merPlayers != null)
+            {
+                _kingMondayMERGoalBegin = merPlayers.LowerPlayer;
+                _kingMondayMERGoalEnd = merPlayers.UpperPlayer;
+            }
+
+            if (jerPlayers != null)
+            {
+                _kingMondayJERGoalBegin = jerPlayers.LowerPlayer;
+                _kingMondayJERGoalEnd = jerPlayers.UpperPlayer;
+            }
+
+            // Calculate progress bar percentages
+            var sePercentage = CalculateProgressPercentage(_kingMondayStats?.SE, _kingMondaySEGoalEnd?.SEString, _kingMondaySEGoalBegin?.SEString);
+            var ebPercentage = CalculateProgressPercentage(_kingMondayStats?.EB, _kingMondayEBGoalEnd?.EBString, _kingMondayEBGoalBegin?.EBString);
+            var merPercentage = CalculateProgressPercentage(_kingMondayStats?.MER.ToString(), _kingMondayMERGoalEnd?.MER.ToString(), _kingMondayMERGoalBegin?.MER.ToString());
+            var jerPercentage = CalculateProgressPercentage(_kingMondayStats?.JER.ToString(), _kingMondayJERGoalEnd?.JER.ToString(), _kingMondayJERGoalBegin?.JER.ToString());
+
+            // Ensure we have valid percentages (not zero)
+            _kingMondaySEGoalPercentage = sePercentage > 0 ? sePercentage : 50; // Default to 50% if calculation fails
+            _kingMondayEBGoalPercentage = ebPercentage > 0 ? ebPercentage : 50;
+            _kingMondayMERGoalPercentage = merPercentage > 0 ? merPercentage : 50;
+            _kingMondayJERGoalPercentage = jerPercentage > 0 ? jerPercentage : 50;
+
+            Logger.LogInformation($"King Monday progress bar percentages: SE={_kingMondaySEGoalPercentage:F1}%, EB={_kingMondayEBGoalPercentage:F1}%, MER={_kingMondayMERGoalPercentage:F1}%, JER={_kingMondayJERGoalPercentage:F1}%");
+
+            // Update the player's last update time in DashboardState
+            await InvokeAsync(() => DashboardState.SetPlayerLastUpdated("King Monday!", _kingMonday.Updated));
+
+            // Force UI update after calculating progress bar percentages
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -1342,6 +1621,8 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
             _kingMonday = null;
             _kingMondayStats = null;
             _kingMondayGoals = null;
+
+            // Clear King Friday goal references
             _SEGoalBegin = null;
             _SEGoalEnd = null;
             _EBGoalBegin = null;
@@ -1350,6 +1631,36 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
             _MERGoalEnd = null;
             _JERGoalBegin = null;
             _JERGoalEnd = null;
+
+            // Clear King Saturday goal references
+            _kingSaturdaySEGoalBegin = null;
+            _kingSaturdaySEGoalEnd = null;
+            _kingSaturdayEBGoalBegin = null;
+            _kingSaturdayEBGoalEnd = null;
+            _kingSaturdayMERGoalBegin = null;
+            _kingSaturdayMERGoalEnd = null;
+            _kingSaturdayJERGoalBegin = null;
+            _kingSaturdayJERGoalEnd = null;
+
+            // Clear King Sunday goal references
+            _kingSundaySEGoalBegin = null;
+            _kingSundaySEGoalEnd = null;
+            _kingSundayEBGoalBegin = null;
+            _kingSundayEBGoalEnd = null;
+            _kingSundayMERGoalBegin = null;
+            _kingSundayMERGoalEnd = null;
+            _kingSundayJERGoalBegin = null;
+            _kingSundayJERGoalEnd = null;
+
+            // Clear King Monday goal references
+            _kingMondaySEGoalBegin = null;
+            _kingMondaySEGoalEnd = null;
+            _kingMondayEBGoalBegin = null;
+            _kingMondayEBGoalEnd = null;
+            _kingMondayMERGoalBegin = null;
+            _kingMondayMERGoalEnd = null;
+            _kingMondayJERGoalBegin = null;
+            _kingMondayJERGoalEnd = null;
 
             // Force garbage collection to clean up any lingering references
             GC.Collect();

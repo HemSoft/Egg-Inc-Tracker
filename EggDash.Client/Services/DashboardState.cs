@@ -8,8 +8,23 @@ public class DashboardState
     private DateTime _lastUpdated = DateTime.Now;
     public DateTime LastUpdated => _lastUpdated;
 
-    private DateTime _playerLastUpdated = DateTime.MinValue;
-    public DateTime PlayerLastUpdated => _playerLastUpdated;
+    // Store last updated timestamps for each player
+    private Dictionary<string, DateTime> _playerLastUpdated = new Dictionary<string, DateTime>()
+    {
+        { "King Friday!", DateTime.MinValue },
+        { "King Saturday!", DateTime.MinValue },
+        { "King Sunday!", DateTime.MinValue },
+        { "King Monday!", DateTime.MinValue }
+    };
+
+    // Legacy property for backward compatibility
+    public DateTime PlayerLastUpdated => _playerLastUpdated.GetValueOrDefault("King Friday!", DateTime.MinValue);
+
+    // New method to get last updated timestamp for a specific player
+    public DateTime GetPlayerLastUpdated(string playerName)
+    {
+        return _playerLastUpdated.GetValueOrDefault(playerName, DateTime.MinValue);
+    }
 
     public void SetLastUpdated(DateTime lastUpdated)
     {
@@ -17,9 +32,23 @@ public class DashboardState
         OnChange?.Invoke();
     }
 
+    // Update to accept player name
+    public void SetPlayerLastUpdated(string playerName, DateTime playerLastUpdated)
+    {
+        if (_playerLastUpdated.ContainsKey(playerName))
+        {
+            _playerLastUpdated[playerName] = playerLastUpdated;
+        }
+        else
+        {
+            _playerLastUpdated.Add(playerName, playerLastUpdated);
+        }
+        OnChange?.Invoke();
+    }
+
+    // Legacy method for backward compatibility
     public void SetPlayerLastUpdated(DateTime playerLastUpdated)
     {
-        _playerLastUpdated = playerLastUpdated;
-        OnChange?.Invoke();
+        SetPlayerLastUpdated("King Friday!", playerLastUpdated);
     }
 }
