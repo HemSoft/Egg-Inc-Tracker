@@ -165,7 +165,7 @@ public partial class PlayerDetail
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, $"Error getting goals for player {_player.PlayerName}");
+                Logger.LogError(ex, $"Error getting goals for player {_player?.PlayerName}");
                 _playerGoals = null; // Ensure it's null if fetching fails
             }
 

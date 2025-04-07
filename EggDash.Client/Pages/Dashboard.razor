@@ -1,6 +1,7 @@
 ﻿@page "/"
 @page "/dashboard"
 @using Microsoft.AspNetCore.Components
+@using EggDash.Client.Components // Added using statement
 @implements IDisposable
 @implements IAsyncDisposable
 
@@ -34,712 +35,75 @@ else
             <!----------------->
             <!-- King Monday -->
             <!----------------->
-            <MudItem xs="3">
-                <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%; cursor: pointer;"
-                    @onclick="() => NavigateToPlayerDetail(_kingMonday?.EID)">
-                    <div class="mb-4 text-center">
-                        <MudText Typo="Typo.h4" Align="Align.Center">King Monday</MudText>
-                        <MudText Typo="Typo.body1" Align="Align.Center">
-                            @if (DashboardState.GetPlayerLastUpdated("King Monday!") != DateTime.MinValue)
-                            {
-                                <MudText Inline="true" Class="ml-2 align-bottom">
-                                    (@_kingMonday?.Title -- Last Updated: @GetLocalTimeString(DashboardState.GetPlayerLastUpdated("King Monday!")))
-                                </MudText>
-                            }
-                            else
-                            {
-                                <MudText Inline="true" Class="ml-2 align-bottom">
-                                    (@_kingMonday?.Title)
-                                </MudText>
-                            }
-                        </MudText>
-                        <MudText Typo="Typo.body1" Align="Align.Center">
-                            <span class="d-inline-flex align-center mr-2">
-                                <MudImage src="/assets/egg_of_prophecy.webp" Width="24" Height="24"
-                                    Style="vertical-align: middle;"></MudImage>
-                                @_kingMonday?.ProphecyEggs
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                <MudImage src="/assets/egg_soul.webp" Width="24" Height="24"
-                                    Style="vertical-align: middle;"></MudImage>
-                                @_kingMonday?.SoulEggs
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                <MudImage src="/assets/chart.png" Width="24" Height="24" Style="vertical-align: middle;">
-                                </MudImage>
-                                @_kingMonday?.EarningsBonusPercentage
-                            </span>
-                        </MudText>
-                        <MudText Typo="Typo.subtitle2" Align="Align.Center" Class="mb-2">
-                            <span class="d-inline-flex align-center mr-2">
-                                SE/Week: (@_kingMondayStats?.SEPerWeek)
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                SE This Week: @_kingMondaySEThisWeek
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                Prestiges Today/Week:
-                                @if (_kingMondayGoals != null && _kingMondayGoals.DailyPrestigeGoal > 0)
-                                {
-                                    <span style="@GetProgressColorStyle(_kingMonday?.PrestigesToday, _kingMondayGoals.DailyPrestigeGoal)">
-                                        @_kingMonday?.PrestigesToday
-                                    </span>
-                                    <span> / </span>
-                                    <span style="@GetProgressColorStyle(_kingMonday?.PrestigesThisWeek, _kingMondayGoals.DailyPrestigeGoal * 7)">
-                                        @_kingMonday?.PrestigesThisWeek
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span>@_kingMonday?.PrestigesToday / @_kingMonday?.PrestigesThisWeek</span>
-                                }
-                            </span>
-                        </MudText>
-                    </div>
-                    <div class="mb-2 d-flex flex-column align-center">
-                        <div class="donut-chart-container" style="position: relative; width: 300px; height: 300px;">
-                            <div class="donut-chart-progress" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
-                                <div style="font-size: 24px; font-weight: bold; color: white;">@_kingMonday?.TitleProgress.ToString("F2")%</div>
-                                <div style="font-size: 14px; color: #ccc;">@_kingMondayTitleProgressLabels[0]</div>
-                            </div>
-                            <svg width="300" height="300" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="45" fill="transparent" stroke="#666666" stroke-width="10" />
-                                <circle cx="50" cy="50" r="45" fill="transparent" stroke="#4CAF50" stroke-width="10"
-                                    stroke-dasharray="@(2.83 * _kingMonday?.TitleProgress ?? 0) 283"
-                                    stroke-dashoffset="0" transform="rotate(-90 50 50)" />
-                            </svg>
-                        </div>
-                    </div>
-                    <!---------------------->
-                    <!-- SE Progress Bar: -->
-                    <!---------------------->
-                    <div class="mt-n2 px-4" style="width: 100%;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-0">
-                            SE (@_kingMondayStats?.SE) -- Rank: @((_kingMondaySEGoalEnd?.Ranking ?? 0) + 1)
-                        </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingMondaySEGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingMondaySEGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_kingMondaySEGoalBegin?.SEString) @(_kingMondaySEGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _kingMondaySEGoalBegin.IGN.Substring(0, NameCutOff) : _kingMondaySEGoalBegin?.IGN)
-                                                                                                                      </MudText>
-                                                                                                                      <MudText Typo="Typo.caption">
-                                @(_kingMondaySEGoalEnd?.IGN?.Length > NameCutOff ? _kingMondaySEGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _kingMondaySEGoalEnd?.IGN) (@_kingMondaySEGoalEnd?.SEString)
-                            </MudText>
-                        </div>
-                    </div>
-                    <!---------------------->
-                    <!-- EB Progress Bar: -->
-                    <!---------------------->
-                    <div class="mt-2 px-4" style="width: 100%;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-0">
-                            EB (@_kingMondayStats?.EB) -- Rank: @(_kingMondayEBGoalEnd?.Ranking + 1)
-                        </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingMondayEBGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingMondayEBGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_kingMondayEBGoalBegin?.EBString) @(_kingMondayEBGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _kingMondayEBGoalBegin.IGN.Substring(0, NameCutOff) : _kingMondayEBGoalBegin?.IGN)
-                                                                                                                      </MudText>
-                                                                                                                      <MudText Typo="Typo.caption">
-                                @(_kingMondayEBGoalEnd?.IGN?.Length > NameCutOff ? _kingMondayEBGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _kingMondayEBGoalEnd?.IGN) (@_kingMondayEBGoalEnd?.EBString)
-                            </MudText>
-                        </div>
-                    </div>
-                    <!----------------------->
-                    <!-- MER Progress Bar: -->
-                    <!----------------------->
-                    <div class="mt-2 px-4" style="width: 100%;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-0">
-                            MER (@_kingMondayStats?.MER) -- Rank: @_kingMondayMERGoalEnd?.Ranking
-                        </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingMondayMERGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingMondayMERGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_kingMondayMERGoalBegin?.MER) @(_kingMondayMERGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _kingMondayMERGoalBegin.IGN.Substring(0, NameCutOff) : _kingMondayMERGoalBegin?.IGN)
-                                                                                                                        </MudText>
-                                                                                                                        <MudText Typo="Typo.caption">
-                                @(_kingMondayMERGoalEnd?.IGN?.Length > NameCutOff ? _kingMondayMERGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _kingMondayMERGoalEnd?.IGN) (@_kingMondayMERGoalEnd?.MER)
-                            </MudText>
-                        </div>
-                    </div>
-                    <!----------------------->
-                    <!-- JER Progress Bar: -->
-                    <!----------------------->
-                    <div class="mt-2 px-4" style="width: 100%;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-0">
-                            JER (@_kingMondayStats?.JER) -- Rank: @_kingMondayJERGoalEnd?.Ranking
-                        </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingMondayJERGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingMondayJERGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_kingMondayJERGoalBegin?.JER) @(_kingMondayJERGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _kingMondayJERGoalBegin.IGN.Substring(0, NameCutOff) : _kingMondayJERGoalBegin?.IGN)
-                                                                                                                        </MudText>
-                                                                                                                        <MudText Typo="Typo.caption">
-                                @(_kingMondayJERGoalEnd?.IGN?.Length > NameCutOff ? _kingMondayJERGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _kingMondayJERGoalEnd?.IGN) (@_kingMondayJERGoalEnd?.JER)
-                            </MudText>
-                        </div>
-                    </div>
-                </MudPaper>
+            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingMonday?.EID)">
+                <PlayerCard Player="_kingMonday"
+                            PlayerStats="_kingMondayStats"
+                            PlayerGoals="_kingMondayGoals"
+                            SEGoalBegin="_kingMondaySEGoalBegin"
+                            SEGoalEnd="_kingMondaySEGoalEnd"
+                            EBGoalBegin="_kingMondayEBGoalBegin"
+                            EBGoalEnd="_kingMondayEBGoalEnd"
+                            MERGoalBegin="_kingMondayMERGoalBegin"
+                            MERGoalEnd="_kingMondayMERGoalEnd"
+                            JERGoalBegin="_kingMondayJERGoalBegin"
+                            JERGoalEnd="_kingMondayJERGoalEnd"
+                            PlayerSEThisWeek="_kingMondaySEThisWeek"
+                            DaysToNextTitle="_kingMondayDaysToNextTitle" />
             </MudItem>
             <!----------------->
             <!-- King Sunday -->
             <!----------------->
-            <MudItem xs="3">
-                <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%; cursor: pointer;"
-                    @onclick="() => NavigateToPlayerDetail(_kingSunday?.EID)">
-                    <div class="mb-4 text-center">
-                        <MudText Typo="Typo.h4" Align="Align.Center">King Sunday</MudText>
-                        <MudText Typo="Typo.body1" Align="Align.Center">
-                            @if (DashboardState.GetPlayerLastUpdated("King Sunday!") != DateTime.MinValue)
-                            {
-                                <MudText Inline="true" Class="ml-2 align-bottom">
-                                    (@_kingSunday?.Title -- Last Updated: @GetLocalTimeString(DashboardState.GetPlayerLastUpdated("King Sunday!")))
-                                </MudText>
-                            }
-                            else
-                            {
-                                <MudText Inline="true" Class="ml-2 align-bottom">
-                                    (@_kingSunday?.Title)
-                                </MudText>
-                            }
-                        </MudText>
-                        <MudText Typo="Typo.body1" Align="Align.Center">
-                            <span class="d-inline-flex align-center mr-2">
-                                <MudImage src="/assets/egg_of_prophecy.webp" Width="24" Height="24"
-                                    Style="vertical-align: middle;"></MudImage>
-                                @_kingSunday?.ProphecyEggs
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                <MudImage src="/assets/egg_soul.webp" Width="24" Height="24"
-                                    Style="vertical-align: middle;"></MudImage>
-                                @_kingSunday?.SoulEggs
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                <MudImage src="/assets/chart.png" Width="24" Height="24" Style="vertical-align: middle;">
-                                </MudImage>
-                                @_kingSunday?.EarningsBonusPercentage
-                            </span>
-                        </MudText>
-                        <MudText Typo="Typo.subtitle2" Align="Align.Center" Class="mb-2">
-                            <span class="d-inline-flex align-center mr-2">
-                                SE/Week: (@_kingSundayStats?.SEPerWeek)
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                SE This Week: @_kingSundaySEThisWeek
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                Prestiges Today/Week:
-                                @if (_kingSundayGoals != null && _kingSundayGoals.DailyPrestigeGoal > 0)
-                                {
-                                    <span style="@GetProgressColorStyle(_kingSunday?.PrestigesToday, _kingSundayGoals.DailyPrestigeGoal)">
-                                        @_kingSunday?.PrestigesToday
-                                    </span>
-                                    <span> / </span>
-                                    <span style="@GetProgressColorStyle(_kingSunday?.PrestigesThisWeek, _kingSundayGoals.DailyPrestigeGoal * 7)">
-                                        @_kingSunday?.PrestigesThisWeek
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span>@_kingSunday?.PrestigesToday / @_kingSunday?.PrestigesThisWeek</span>
-                                }
-                            </span>
-                        </MudText>
-                    </div>
-                    <div class="mb-2 d-flex flex-column align-center">
-                        <div class="donut-chart-container" style="position: relative; width: 300px; height: 300px;">
-                            <div class="donut-chart-progress" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
-                                <div style="font-size: 24px; font-weight: bold; color: white;">@_kingSunday?.TitleProgress.ToString("F2")%</div>
-                                <div style="font-size: 14px; color: #ccc;">@_kingSundayTitleProgressLabels[0]</div>
-                            </div>
-                            <svg width="300" height="300" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="45" fill="transparent" stroke="#666666" stroke-width="10" />
-                                <circle cx="50" cy="50" r="45" fill="transparent" stroke="#4CAF50" stroke-width="10"
-                                    stroke-dasharray="@(2.83 * _kingSunday?.TitleProgress ?? 0) 283"
-                                    stroke-dashoffset="0" transform="rotate(-90 50 50)" />
-                            </svg>
-                        </div>
-                    </div>
-                    <!---------------------->
-                    <!-- SE Progress Bar: -->
-                    <!---------------------->
-                    <div class="mt-n2 px-4" style="width: 100%;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-0">
-                            SE (@_kingSundayStats?.SE) -- Rank: @((_kingSundaySEGoalEnd?.Ranking ?? 0) + 1)
-                        </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingSundaySEGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingSundaySEGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_kingSundaySEGoalBegin?.SEString) @(_kingSundaySEGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _kingSundaySEGoalBegin.IGN.Substring(0, NameCutOff) : _kingSundaySEGoalBegin?.IGN)
-                                                                                                                      </MudText>
-                                                                                                                      <MudText Typo="Typo.caption">
-                                @(_kingSundaySEGoalEnd?.IGN?.Length > NameCutOff ? _kingSundaySEGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _kingSundaySEGoalEnd?.IGN) (@_kingSundaySEGoalEnd?.SEString)
-                            </MudText>
-                        </div>
-                    </div>
-                    <!---------------------->
-                    <!-- EB Progress Bar: -->
-                    <!---------------------->
-                    <div class="mt-2 px-4" style="width: 100%;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-0">
-                            EB (@_kingSundayStats?.EB) -- Rank: @(_kingSundayEBGoalEnd?.Ranking + 1)
-                        </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingSundayEBGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingSundayEBGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_kingSundayEBGoalBegin?.EBString) @(_kingSundayEBGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _kingSundayEBGoalBegin.IGN.Substring(0, NameCutOff) : _kingSundayEBGoalBegin?.IGN)
-                                                                                                                      </MudText>
-                                                                                                                      <MudText Typo="Typo.caption">
-                                @(_kingSundayEBGoalEnd?.IGN?.Length > NameCutOff ? _kingSundayEBGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _kingSundayEBGoalEnd?.IGN) (@_kingSundayEBGoalEnd?.EBString)
-                            </MudText>
-                        </div>
-                    </div>
-                    <!----------------------->
-                    <!-- MER Progress Bar: -->
-                    <!----------------------->
-                    <div class="mt-2 px-4" style="width: 100%;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-0">
-                            MER (@_kingSundayStats?.MER) -- Rank: @_kingSundayMERGoalEnd?.Ranking
-                        </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingSundayMERGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingSundayMERGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_kingSundayMERGoalBegin?.MER) @(_kingSundayMERGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _kingSundayMERGoalBegin.IGN.Substring(0, NameCutOff) : _kingSundayMERGoalBegin?.IGN)
-                                                                                                                        </MudText>
-                                                                                                                        <MudText Typo="Typo.caption">
-                                @(_kingSundayMERGoalEnd?.IGN?.Length > NameCutOff ? _kingSundayMERGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _kingSundayMERGoalEnd?.IGN) (@_kingSundayMERGoalEnd?.MER)
-                            </MudText>
-                        </div>
-                    </div>
-                    <!----------------------->
-                    <!-- JER Progress Bar: -->
-                    <!----------------------->
-                    <div class="mt-2 px-4" style="width: 100%;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-0">
-                            JER (@_kingSundayStats?.JER) -- Rank: @_kingSundayJERGoalEnd?.Ranking
-                        </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingSundayJERGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingSundayJERGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_kingSundayJERGoalBegin?.JER) @(_kingSundayJERGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _kingSundayJERGoalBegin.IGN.Substring(0, NameCutOff) : _kingSundayJERGoalBegin?.IGN)
-                                                                                                                        </MudText>
-                                                                                                                        <MudText Typo="Typo.caption">
-                                @(_kingSundayJERGoalEnd?.IGN?.Length > NameCutOff ? _kingSundayJERGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _kingSundayJERGoalEnd?.IGN) (@_kingSundayJERGoalEnd?.JER)
-                            </MudText>
-                        </div>
-                    </div>
-                </MudPaper>
+            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingSunday?.EID)">
+                 <PlayerCard Player="_kingSunday"
+                            PlayerStats="_kingSundayStats"
+                            PlayerGoals="_kingSundayGoals"
+                            SEGoalBegin="_kingSundaySEGoalBegin"
+                            SEGoalEnd="_kingSundaySEGoalEnd"
+                            EBGoalBegin="_kingSundayEBGoalBegin"
+                            EBGoalEnd="_kingSundayEBGoalEnd"
+                            MERGoalBegin="_kingSundayMERGoalBegin"
+                            MERGoalEnd="_kingSundayMERGoalEnd"
+                            JERGoalBegin="_kingSundayJERGoalBegin"
+                            JERGoalEnd="_kingSundayJERGoalEnd"
+                            PlayerSEThisWeek="_kingSundaySEThisWeek"
+                            DaysToNextTitle="_kingSundayDaysToNextTitle" />
             </MudItem>
             <!------------------->
             <!-- King Saturday -->
             <!------------------->
-            <MudItem xs="3">
-                <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%; cursor: pointer;"
-                    @onclick="() => NavigateToPlayerDetail(_kingSaturday?.EID)">
-                    <div class="mb-4 text-center">
-                        <MudText Typo="Typo.h4" Align="Align.Center">King Saturday</MudText>
-                        <MudText Typo="Typo.body1" Align="Align.Center">
-                            @if (DashboardState.GetPlayerLastUpdated("King Saturday!") != DateTime.MinValue)
-                            {
-                                <MudText Inline="true" Class="ml-2 align-bottom">
-                                    (@_kingSaturday?.Title -- Last Updated: @GetLocalTimeString(DashboardState.GetPlayerLastUpdated("King Saturday!")))
-                                </MudText>
-                            }
-                            else
-                            {
-                                <MudText Inline="true" Class="ml-2 align-bottom">
-                                    (@_kingSaturday?.Title)
-                                </MudText>
-                            }
-                        </MudText>
-                        <MudText Typo="Typo.body1" Align="Align.Center">
-                            <span class="d-inline-flex align-center mr-2">
-                                <MudImage src="/assets/egg_of_prophecy.webp" Width="24" Height="24"
-                                    Style="vertical-align: middle;"></MudImage>
-                                @_kingSaturday?.ProphecyEggs
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                <MudImage src="/assets/egg_soul.webp" Width="24" Height="24"
-                                    Style="vertical-align: middle;"></MudImage>
-                                @_kingSaturday?.SoulEggs
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                <MudImage src="/assets/chart.png" Width="24" Height="24" Style="vertical-align: middle;">
-                                </MudImage>
-                                @_kingSaturday?.EarningsBonusPercentage
-                            </span>
-                        </MudText>
-                        <MudText Typo="Typo.subtitle2" Align="Align.Center" Class="mb-2">
-                            <span class="d-inline-flex align-center mr-2">
-                                SE/Week: (@_kingSaturdayStats?.SEPerWeek)
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                SE This Week: @_kingSaturdaySEThisWeek
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                Prestiges Today/Week:
-                                @if (_kingSaturdayGoals != null && _kingSaturdayGoals.DailyPrestigeGoal > 0)
-                                {
-                                    <span style="@GetProgressColorStyle(_kingSaturday?.PrestigesToday, _kingSaturdayGoals.DailyPrestigeGoal)">
-                                        @_kingSaturday?.PrestigesToday
-                                    </span>
-                                    <span> / </span>
-                                    <span style="@GetProgressColorStyle(_kingSaturday?.PrestigesThisWeek, _kingSaturdayGoals.DailyPrestigeGoal * 7)">
-                                        @_kingSaturday?.PrestigesThisWeek
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span>@_kingSaturday?.PrestigesToday / @_kingSaturday?.PrestigesThisWeek</span>
-                                }
-                            </span>
-                        </MudText>
-                    </div>
-                    <div class="mb-2 d-flex flex-column align-center">
-                        <div class="donut-chart-container" style="position: relative; width: 300px; height: 300px;">
-                            <div class="donut-chart-progress" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
-                                <div style="font-size: 24px; font-weight: bold; color: white;">@_kingSaturday?.TitleProgress.ToString("F2")%</div>
-                                <div style="font-size: 14px; color: #ccc;">@_kingSaturdayTitleProgressLabels[0]</div>
-                            </div>
-                            <svg width="300" height="300" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="45" fill="transparent" stroke="#666666" stroke-width="10" />
-                                <circle cx="50" cy="50" r="45" fill="transparent" stroke="#4CAF50" stroke-width="10"
-                                    stroke-dasharray="@(2.83 * _kingSaturday?.TitleProgress ?? 0) 283"
-                                    stroke-dashoffset="0" transform="rotate(-90 50 50)" />
-                            </svg>
-                        </div>
-                    </div>
-                    <!---------------------->
-                    <!-- SE Progress Bar: -->
-                    <!---------------------->
-                    <div class="mt-n2 px-4" style="width: 100%;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-0">
-                            SE (@_kingSaturdayStats?.SE) -- Rank: @((_kingSaturdaySEGoalEnd?.Ranking ?? 0) + 1)
-                        </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingSaturdaySEGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingSaturdaySEGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_kingSaturdaySEGoalBegin?.SEString) @(_kingSaturdaySEGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _kingSaturdaySEGoalBegin.IGN.Substring(0, NameCutOff) : _kingSaturdaySEGoalBegin?.IGN)
-                                                                                                                      </MudText>
-                                                                                                                      <MudText Typo="Typo.caption">
-                                @(_kingSaturdaySEGoalEnd?.IGN?.Length > NameCutOff ? _kingSaturdaySEGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _kingSaturdaySEGoalEnd?.IGN) (@_kingSaturdaySEGoalEnd?.SEString)
-                            </MudText>
-                        </div>
-                    </div>
-                    <!---------------------->
-                    <!-- EB Progress Bar: -->
-                    <!---------------------->
-                    <div class="mt-2 px-4" style="width: 100%;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-0">
-                            EB (@_kingSaturdayStats?.EB) -- Rank: @(_kingSaturdayEBGoalEnd?.Ranking + 1)
-                        </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingSaturdayEBGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingSaturdayEBGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_kingSaturdayEBGoalBegin?.EBString) @(_kingSaturdayEBGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _kingSaturdayEBGoalBegin.IGN.Substring(0, NameCutOff) : _kingSaturdayEBGoalBegin?.IGN)
-                                                                                                                      </MudText>
-                                                                                                                      <MudText Typo="Typo.caption">
-                                @(_kingSaturdayEBGoalEnd?.IGN?.Length > NameCutOff ? _kingSaturdayEBGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _kingSaturdayEBGoalEnd?.IGN) (@_kingSaturdayEBGoalEnd?.EBString)
-                            </MudText>
-                        </div>
-                    </div>
-                    <!----------------------->
-                    <!-- MER Progress Bar: -->
-                    <!----------------------->
-                    <div class="mt-2 px-4" style="width: 100%;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-0">
-                            MER (@_kingSaturdayStats?.MER) -- Rank: @_kingSaturdayMERGoalEnd?.Ranking
-                        </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingSaturdayMERGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingSaturdayMERGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_kingSaturdayMERGoalBegin?.MER) @(_kingSaturdayMERGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _kingSaturdayMERGoalBegin.IGN.Substring(0, NameCutOff) : _kingSaturdayMERGoalBegin?.IGN)
-                                                                                                                        </MudText>
-                                                                                                                        <MudText Typo="Typo.caption">
-                                @(_kingSaturdayMERGoalEnd?.IGN?.Length > NameCutOff ? _kingSaturdayMERGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _kingSaturdayMERGoalEnd?.IGN) (@_kingSaturdayMERGoalEnd?.MER)
-                            </MudText>
-                        </div>
-                    </div>
-                    <!----------------------->
-                    <!-- JER Progress Bar: -->
-                    <!----------------------->
-                    <div class="mt-2 px-4" style="width: 100%;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-0">
-                            JER (@_kingSaturdayStats?.JER) -- Rank: @_kingSaturdayJERGoalEnd?.Ranking
-                        </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingSaturdayJERGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingSaturdayJERGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_kingSaturdayJERGoalBegin?.JER) @(_kingSaturdayJERGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _kingSaturdayJERGoalBegin.IGN.Substring(0, NameCutOff) : _kingSaturdayJERGoalBegin?.IGN)
-                                                                                                                        </MudText>
-                                                                                                                        <MudText Typo="Typo.caption">
-                                @(_kingSaturdayJERGoalEnd?.IGN?.Length > NameCutOff ? _kingSaturdayJERGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _kingSaturdayJERGoalEnd?.IGN) (@_kingSaturdayJERGoalEnd?.JER)
-                            </MudText>
-                        </div>
-                    </div>
-                </MudPaper>
+            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingSaturday?.EID)">
+                 <PlayerCard Player="_kingSaturday"
+                            PlayerStats="_kingSaturdayStats"
+                            PlayerGoals="_kingSaturdayGoals"
+                            SEGoalBegin="_kingSaturdaySEGoalBegin"
+                            SEGoalEnd="_kingSaturdaySEGoalEnd"
+                            EBGoalBegin="_kingSaturdayEBGoalBegin"
+                            EBGoalEnd="_kingSaturdayEBGoalEnd"
+                            MERGoalBegin="_kingSaturdayMERGoalBegin"
+                            MERGoalEnd="_kingSaturdayMERGoalEnd"
+                            JERGoalBegin="_kingSaturdayJERGoalBegin"
+                            JERGoalEnd="_kingSaturdayJERGoalEnd"
+                            PlayerSEThisWeek="_kingSaturdaySEThisWeek"
+                            DaysToNextTitle="_kingSaturdayDaysToNextTitle" />
             </MudItem>
             <!----------------->
             <!-- King Friday -->
             <!----------------->
-            <MudItem xs="3">
-                <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%; cursor: pointer;"
-                    @onclick="() => NavigateToPlayerDetail(_kingFriday?.EID)">
-                    <div class="mb-4 text-center">
-                        <MudText Typo="Typo.h4" Align="Align.Center">King Friday</MudText>
-                        <MudText Typo="Typo.body1" Align="Align.Center">
-                            @if (DashboardState.GetPlayerLastUpdated("King Friday!") != DateTime.MinValue)
-                            {
-                                <MudText Inline="true" Class="ml-2 align-bottom">
-                                    (@_kingFriday?.Title -- Last Updated: @GetLocalTimeString(DashboardState.GetPlayerLastUpdated("King Friday!")))
-                                </MudText>
-                            }
-                            else
-                            {
-                                <MudText Inline="true" Class="ml-2 align-bottom">
-                                    (@_kingFriday?.Title)
-                                </MudText>
-                            }
-                        </MudText>
-                        <MudText Typo="Typo.body1" Align="Align.Center">
-                            <span class="d-inline-flex align-center mr-2">
-                                <MudImage src="/assets/egg_of_prophecy.webp" Width="24" Height="24"
-                                    Style="vertical-align: middle;"></MudImage>
-                                @_kingFriday?.ProphecyEggs
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                <MudImage src="/assets/egg_soul.webp" Width="24" Height="24"
-                                    Style="vertical-align: middle;"></MudImage>
-                                @_kingFriday?.SoulEggs
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                <MudImage src="/assets/chart.png" Width="24" Height="24" Style="vertical-align: middle;">
-                                </MudImage>
-                                @_kingFriday?.EarningsBonusPercentage
-                            </span>
-                        </MudText>
-                        <MudText Typo="Typo.subtitle2" Align="Align.Center" Class="mb-2">
-                            <span class="d-inline-flex align-center mr-2">
-                                SE/Week: (@_kingFridayStats?.SEPerWeek)
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                SE This Week: @_kingFridaySEThisWeek
-                            </span>
-                            <span class="d-inline-flex align-center mr-2">
-                                Prestiges Today/Week:
-                                @if (_kingFridayGoals != null && _kingFridayGoals.DailyPrestigeGoal > 0)
-                                {
-                                    <span style="@GetProgressColorStyle(_kingFriday?.PrestigesToday, _kingFridayGoals.DailyPrestigeGoal)">
-                                        @_kingFriday?.PrestigesToday
-                                    </span>
-                                    <span> / </span>
-                                    <span style="@GetProgressColorStyle(_kingFriday?.PrestigesThisWeek, _kingFridayGoals.DailyPrestigeGoal * 7)">
-                                        @_kingFriday?.PrestigesThisWeek
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span>@_kingFriday?.PrestigesToday / @_kingFriday?.PrestigesThisWeek</span>
-                                }
-                            </span>
-                        </MudText>
-                    </div>
-                    <div class="mb-2 d-flex flex-column align-center">
-                        <div class="donut-chart-container" style="position: relative; width: 300px; height: 300px;">
-                            <div class="donut-chart-progress" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
-                                <div style="font-size: 24px; font-weight: bold; color: white;">@_kingFriday?.TitleProgress.ToString("F2")%</div>
-                                <div style="font-size: 14px; color: #ccc;">@_kingFridayTitleProgressLabels[0]</div>
-                            </div>
-                            <svg width="300" height="300" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="45" fill="transparent" stroke="#666666" stroke-width="10" />
-                                <circle cx="50" cy="50" r="45" fill="transparent" stroke="#4CAF50" stroke-width="10"
-                                    stroke-dasharray="@(2.83 * _kingFriday?.TitleProgress ?? 0) 283"
-                                    stroke-dashoffset="0" transform="rotate(-90 50 50)" />
-                            </svg>
-                        </div>
-
-                    </div>
-                    <!---------------------->
-                    <!-- SE Progress Bar: -->
-                    <!---------------------->
-                    <div class="mt-n2 px-4" style="width: 100%;">
-                        <MudText Typo="Typo.subtitle2" Class="mb-0">
-                            SE (@_kingFridayStats?.SE) -- Rank: @((_SEGoalEnd?.Ranking ?? 0) + 1)
-                        </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingFridaySEGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingFridaySEGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_SEGoalBegin?.SEString) @(_SEGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _SEGoalBegin.IGN.Substring(0, NameCutOff) : _SEGoalBegin?.IGN)
-                                                                                                                      </MudText>
-                                                                                                                      <MudText Typo="Typo.caption">
-                                @(_SEGoalEnd?.IGN?.Length > NameCutOff ? _SEGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _SEGoalEnd?.IGN) (@_SEGoalEnd?.SEString)
-                        </MudText>
-                    </div>
-                </div>
-                <!---------------------->
-                <!-- EB Progress Bar: -->
-                <!---------------------->
-                <div class="mt-2 px-4" style="width: 100%;">
-                    <MudText Typo="Typo.subtitle2" Class="mb-0">
-                        EB (@_kingFridayStats?.EB) -- Rank: @(_EBGoalEnd?.Ranking + 1)
-                    </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingFridayEBGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingFridayEBGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_EBGoalBegin?.EBString) @(_EBGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _EBGoalBegin.IGN.Substring(0, NameCutOff) : _EBGoalBegin?.IGN)
-                                                                                                                      </MudText>
-                                                                                                                      <MudText Typo="Typo.caption">
-                                @(_EBGoalEnd?.IGN?.Length > NameCutOff ? _EBGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _EBGoalEnd?.IGN) (@_EBGoalEnd?.EBString)
-                        </MudText>
-                    </div>
-                </div>
-                <!----------------------->
-                <!-- MER Progress Bar: -->
-                <!----------------------->
-                <div class="mt-2 px-4" style="width: 100%;">
-                    <MudText Typo="Typo.subtitle2" Class="mb-0">
-                        MER (@_kingFridayStats?.MER) -- Rank: @_MERGoalEnd?.Ranking
-                    </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingFridayMERGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingFridayMERGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_MERGoalBegin?.MER) @(_MERGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _MERGoalBegin.IGN.Substring(0, NameCutOff) : _MERGoalBegin?.IGN)
-                                                                                                                        </MudText>
-                                                                                                                        <MudText Typo="Typo.caption">
-                                @(_MERGoalEnd?.IGN?.Length > NameCutOff ? _MERGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _MERGoalEnd?.IGN) (@_MERGoalEnd?.MER)
-                        </MudText>
-                    </div>
-                </div>
-                <!----------------------->
-                <!-- JER Progress Bar: -->
-                <!----------------------->
-                <div class="mt-2 px-4" style="width: 100%;">
-                    <MudText Typo="Typo.subtitle2" Class="mb-0">
-                        JER (@_kingFridayStats?.JER) -- Rank: @_JERGoalEnd?.Ranking
-                    </MudText>
-                        <MudProgressLinear Color="Color.Success" Value="@_kingFridayJERGoalPercentage" Max="100"
-                            Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                            <MudText Typo="Typo.caption" Style="color: white;">
-                                @_kingFridayJERGoalPercentage.ToString("F1")%
-                            </MudText>
-                        </MudProgressLinear>
-                        <div class="d-flex justify-space-between mt-n1">
-                            <MudText Typo="Typo.caption">
-                                (@_JERGoalBegin?.JER) @(_JERGoalBegin?.IGN?.Length > NameCutOff ?
-                                                            _JERGoalBegin.IGN.Substring(0, NameCutOff) : _JERGoalBegin?.IGN)
-                                                                                                                        </MudText>
-                                                                                                                        <MudText Typo="Typo.caption">
-                                @(_JERGoalEnd?.IGN?.Length > NameCutOff ? _JERGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                            _JERGoalEnd?.IGN) (@_JERGoalEnd?.JER)
-                        </MudText>
-                    </div>
-                </div>
-            </MudPaper>
-        </MudItem>
+            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingFriday?.EID)">
+                 <PlayerCard Player="_kingFriday"
+                            PlayerStats="_kingFridayStats"
+                            PlayerGoals="_kingFridayGoals"
+                            SEGoalBegin="_SEGoalBegin"
+                            SEGoalEnd="_SEGoalEnd"
+                            EBGoalBegin="_EBGoalBegin"
+                            EBGoalEnd="_EBGoalEnd"
+                            MERGoalBegin="_MERGoalBegin"
+                            MERGoalEnd="_MERGoalEnd"
+                            JERGoalBegin="_JERGoalBegin"
+                            JERGoalEnd="_JERGoalEnd"
+                            PlayerSEThisWeek="_kingFridaySEThisWeek"
+                            DaysToNextTitle="_kingFridayDaysToNextTitle" />
+            </MudItem>
 
         </MudGrid>
     }
