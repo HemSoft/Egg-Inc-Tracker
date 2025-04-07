@@ -1,5 +1,6 @@
 @page "/player/{EID}"
 @using Microsoft.AspNetCore.Components
+@using MudBlazor; // Ensure MudBlazor is imported
 
 <PageTitle>Player Details - @(_player?.PlayerName ?? "Loading...")</PageTitle>
 
@@ -218,22 +219,50 @@
                 </MudPaper>
             </MudItem>
 
-            <!-- Placeholder Cards -->
-            <MudItem xs="3">
-                <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
-                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100%" Width="100%" />
-                </MudPaper>
-            </MudItem>
-            <MudItem xs="3">
-                <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
-                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100%" Width="100%" />
-                </MudPaper>
-            </MudItem>
-            <MudItem xs="3">
-                <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
-                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100%" Width="100%" />
-                </MudPaper>
-            </MudItem>
+            <!-- Player History Chart -->
+             <MudItem xs="9"> <!-- Take up remaining width -->
+                 <MudPaper Class="dashboard-tile d-flex flex-column" Style="height: 100%;">
+                     <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-2">Soul Egg History</MudText>
+
+                     <!-- Slider to control days display -->
+                     <div class="d-flex justify-center align-center px-4 mb-2">
+                         <MudText Class="mr-4">Days to display:</MudText>
+                         <MudSlider @bind-Value="_selectedHistoryDays" Min="1" Max="30" Step="1" Class="mx-4" Style="width: 300px;">
+                             @_selectedHistoryDays days
+                         </MudSlider>
+                         <MudButton Size="Size.Small" Color="Color.Primary" OnClick="@(() => OnHistoryDaysSliderChanged(_selectedHistoryDays))">
+                             Update
+                         </MudButton>
+                     </div>
+
+                     <!-- Line Chart -->
+                     @if (_playerHistorySeries.Any())
+                     {
+                         <MudChart ChartType="ChartType.Line" ChartSeries="_playerHistorySeries" XAxisLabels="_playerHistoryLabels" ChartOptions="_historyChartOptions" Height="400px" />
+                     }
+                     else
+                     {
+                         <MudText Align="Align.Center" Class="mt-4">No historical data available for the selected period.</MudText>
+                     }
+                 </MudPaper>
+             </MudItem>
+
+            <!-- Placeholder Cards - Removed as chart takes remaining space -->
+            @* <MudItem xs="3">
+                 <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+                     <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100%" Width="100%" />
+                 </MudPaper>
+             </MudItem>
+             <MudItem xs="3">
+                 <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+                     <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100%" Width="100%" />
+                 </MudPaper>
+             </MudItem>
+             <MudItem xs="3">
+                 <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+                     <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100%" Width="100%" />
+                 </MudPaper>
+             </MudItem> *@
         }
     </MudGrid>
 </div>

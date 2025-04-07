@@ -44,6 +44,26 @@ public partial class PlayerDetail
     private bool isLoading = true;
     private const int NameCutOff = 10;
 
+    // Fields for the history chart
+    private List<ChartSeries> _playerHistorySeries = new();
+    private string[] _playerHistoryLabels = Array.Empty<string>();
+    private double[] _playerHistoryData = Array.Empty<double>();
+    private readonly ChartOptions _historyChartOptions = new()
+    {
+        ChartPalette = new[] { "#4CAF50" }, // Green color for Soul Eggs
+        InterpolationOption = InterpolationOption.Straight,
+        YAxisFormat = "0.##",
+        XAxisLines = true,
+        YAxisLines = true,
+        YAxisTicks = 1,
+        ShowLabels = false,
+        ShowLegend = false,
+        ShowLegendLabels = false,
+        ShowToolTips = false
+    };
+    private int _selectedHistoryDays = 14; // Default days for history chart
+
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -148,6 +168,9 @@ public partial class PlayerDetail
                 Logger.LogError(ex, $"Error getting goals for player {_player.PlayerName}");
                 _playerGoals = null; // Ensure it's null if fetching fails
             }
+
+            // Load player history for the chart
+            await LoadPlayerHistory();
 
             // Update goal data using ApiService
             try
@@ -267,5 +290,76 @@ public partial class PlayerDetail
     private string GetProgressColorStyle(int? actual, int goal)
     {
         return PlayerDataService.GetProgressColorStyle(actual, goal);
+    }
+
+    private async Task LoadPlayerHistory()
+    {
+        if (_player == null || string.IsNullOrEmpty(_player.PlayerName))
+        {
+            _playerHistorySeries = new();
+            _playerHistoryLabels = Array.Empty<string>();
+            return;
+        }
+
+        try
+        {
+            Logger.LogInformation("Loading player history for {PlayerName} for the last {Days} days", _player.PlayerName, _selectedHistoryDays);
+            var endDate = DateTime.UtcNow;
+            var startDate = endDate.AddDays(-_selectedHistoryDays);
+
+            var historicalData = await ApiService.GetPlayerHistoryAsync(
+                _player.PlayerName,
+                startDate,
+                endDate);
+
+            if (historicalData?.Any() == true)
+            {
+                var sortedData = historicalData.OrderBy(p => p.Updated).ToList();
+
+                // Group data by day and take only the last entry for each day
+                var groupedByDay = sortedData
+                    .GroupBy(p => p.Updated.Date)
+                    .Select(g => g.OrderByDescending(p => p.Updated).First())
+                    .OrderBy(p => p.Updated)
+                    .ToList();
+
+                _playerHistoryLabels = groupedByDay
+                    .Select(p => p.Updated.ToString("MM/dd"))
+                    .ToArray();
+
+                // Use PlayerDataService's parser for consistency
+                _playerHistoryData = groupedByDay
+                    .Select(p => PlayerDataService.CalculateProgressPercentage(p.SoulEggs, null, null)) // Re-use parser logic
+                    .ToArray();
+
+                _playerHistorySeries = new List<ChartSeries>
+                {
+                    new ChartSeries { Name = "Soul Eggs", Data = _playerHistoryData }
+                };
+                 Logger.LogInformation("Loaded {Count} historical data points for chart", _playerHistoryData.Length);
+            }
+            else
+            {
+                 Logger.LogWarning("No historical data found for {PlayerName}", _player.PlayerName);
+                _playerHistorySeries = new();
+                _playerHistoryLabels = Array.Empty<string>();
+                _playerHistoryData = Array.Empty<double>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading player history data for {PlayerName}", _player.PlayerName);
+            _playerHistorySeries = new(); // Clear chart on error
+            _playerHistoryLabels = Array.Empty<string>();
+            _playerHistoryData = Array.Empty<double>();
+        }
+        StateHasChanged(); // Update UI after loading history
+    }
+
+     // Handle the slider value change for history days
+    private async void OnHistoryDaysSliderChanged(int value)
+    {
+        _selectedHistoryDays = value;
+        await LoadPlayerHistory(); // Reload history data with new range
     }
 }
