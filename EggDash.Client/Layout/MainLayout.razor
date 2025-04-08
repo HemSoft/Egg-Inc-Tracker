@@ -1,11 +1,9 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
 @inject IJSRuntime JSRuntime
 @inject DashboardState DashboardState
 @using System.Text.Json
 @using EggDash.Client.Services
-@using EggDash.Client.Components
-@using EggDash.Client.Extensions
 @implements IDisposable
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
@@ -45,30 +43,7 @@
         background: linear-gradient(to right, red, yellow, green);
     }
 
-    /* Event carousel styles */
-    .event-item {
-        transition: transform 0.3s ease-in-out;
-        animation: fadeIn 0.5s ease-in-out;
-    }
 
-    .event-item.dark-mode {
-        background-color: rgba(66, 66, 66, 0.7);
-    }
-
-    .event-item.light-mode {
-        background-color: rgba(255, 255, 255, 0.7);
-    }
-
-    @@keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
 </style>
 <MudLayout>
     <MudAppBar Elevation="1"
@@ -84,30 +59,7 @@
 
         <!-- Event Carousel -->
         <div style="width: 400px; z-index: 1000; height: 100%; display: flex; align-items: center; justify-content: center;">
-            @if (_currentEventIndex == 0)
-            {
-                <div class="event-item @(_isDarkMode ? "dark-mode" : "light-mode")" style="text-align: center; padding: 8px 16px; border-radius: 4px;">
-                    <MudText Typo="Typo.subtitle1" Style="font-weight: bold;">2x EARNINGS!</MudText>
-                    <MudText Typo="Typo.caption">
-                        Earnings Boost - 200% Boost
-                    </MudText>
-                    <MudText Typo="Typo.caption">
-                        Ends in 23h 45m
-                    </MudText>
-                </div>
-            }
-            else
-            {
-                <div class="event-item @(_isDarkMode ? "dark-mode" : "light-mode")" style="text-align: center; padding: 8px 16px; border-radius: 4px;">
-                    <MudText Typo="Typo.subtitle1" Style="font-weight: bold;">4x DRONE REWARDS!</MudText>
-                    <MudText Typo="Typo.caption">
-                        Drone Boost - 400% Boost
-                    </MudText>
-                    <MudText Typo="Typo.caption">
-                        Ends in 47h 15m
-                    </MudText>
-                </div>
-            }
+            <EggDash.Client.Components.EventCarousel IsDarkMode="_isDarkMode" />
         </div>
 
         <MudSpacer />
@@ -219,9 +171,7 @@
     private TimeSpan _elapsed = TimeSpan.Zero;
     private System.Timers.Timer? _timer;
 
-    // Event carousel
-    private int _currentEventIndex = 0;
-    private System.Timers.Timer? _eventRotationTimer;
+
 
     private bool _initialized;
     private bool _isLoading;
@@ -242,14 +192,7 @@
             }
         };
 
-        // Initialize event rotation timer
-        _eventRotationTimer = new System.Timers.Timer(5000); // Rotate every 5 seconds
-        _eventRotationTimer.Elapsed += async (sender, e) =>
-        {
-            _currentEventIndex = (_currentEventIndex + 1) % 2; // Toggle between 0 and 1
-            await InvokeAsync(StateHasChanged);
-        };
-        _eventRotationTimer.Start();
+
 
         _theme = new()
         {
@@ -434,8 +377,7 @@
     {
         DashboardState.OnChange -= StateHasChanged;
         _timer?.Dispose();
-        _eventRotationTimer?.Stop();
-        _eventRotationTimer?.Dispose();
+
     }
 
     private void DrawerToggle()

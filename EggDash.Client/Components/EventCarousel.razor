@@ -1,11 +1,50 @@
 @using HemSoft.EggIncTracker.Data.Dtos
 @using EggDash.Client.Services
 @using EggDash.Client.Extensions
+@using MudBlazor
+@using Microsoft.Extensions.Logging
+@implements IDisposable
 
 <div class="event-carousel" style="z-index: 1; height: 100%; display: flex; align-items: center; justify-content: center; width: 100%;">
     <MudText Typo="Typo.subtitle1">Event Carousel</MudText>
 </div>
 
 @code {
+    [Inject] private IApiService ApiService { get; set; } = default!;
+    [Inject] private ILogger<EventCarousel> Logger { get; set; } = default!;
     [Parameter] public bool IsDarkMode { get; set; }
+
+    private List<EventDto>? _events;
+    private EventDto? _currentEvent;
+    private int _currentIndex = 0;
+    private System.Timers.Timer? _rotationTimer;
+    private System.Timers.Timer? _refreshTimer;
+    private bool _isDarkMode => IsDarkMode;
+
+    public void Dispose()
+    {
+        if (_rotationTimer != null)
+        {
+            _rotationTimer.Stop();
+            _rotationTimer.Elapsed -= OnRotationTimerElapsed;
+            _rotationTimer.Dispose();
+        }
+
+        if (_refreshTimer != null)
+        {
+            _refreshTimer.Stop();
+            _refreshTimer.Elapsed -= OnRefreshTimerElapsed;
+            _refreshTimer.Dispose();
+        }
+    }
+
+    private void OnRotationTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        // Placeholder
+    }
+
+    private void OnRefreshTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        // Placeholder
+    }
 }
