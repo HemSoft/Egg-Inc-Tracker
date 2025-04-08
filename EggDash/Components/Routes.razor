@@ -1,7 +1,8 @@
 @using EggDash.Client.Layout
 @namespace EggDash.Components
 
-<Router AppAssembly="typeof(Program).Assembly" AdditionalAssemblies="new[] { typeof(EggDash.Client._Imports).Assembly }">
+<Router AppAssembly="typeof(Program).Assembly"
+    AdditionalAssemblies="new[] { typeof(EggDash.Client._Imports).Assembly }">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
