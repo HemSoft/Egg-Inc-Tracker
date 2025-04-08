@@ -10,16 +10,16 @@ public class MajPlayerRankingResult
 {
     public int Id { get; set; }
     public int Ranking { get; set; }
-    public string IGN { get; set; }
-    public string DiscordName { get; set; }
-    public string EBString { get; set; }
-    public string Role { get; set; }
+    public required string IGN { get; set; }
+    public required string DiscordName { get; set; }
+    public required string EBString { get; set; }
+    public required string Role { get; set; }
     public decimal SENumber { get; set; }
-    public string SEString { get; set; }
-    public string SEGains { get; set; }
-    public string SEGainsWeek { get; set; }
+    public required string SEString { get; set; }
+    public required string SEGains { get; set; }
+    public required string SEGainsWeek { get; set; }
     public int PE { get; set; }
-    public string Prestiges { get; set; }
+    public required string Prestiges { get; set; }
     public int PrestigeGains { get; set; }
     public decimal MER { get; set; }
     public decimal JER { get; set; }

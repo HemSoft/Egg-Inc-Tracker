@@ -191,8 +191,8 @@ public class MajPlayerRankingsController : ControllerBase
                 .OrderByDescending(r => r.SENumber)
                 .ToList();
 
-            MajPlayerRankingDto lowerPlayer = null;
-            MajPlayerRankingDto upperPlayer = null;
+            MajPlayerRankingDto? lowerPlayer = null;
+            MajPlayerRankingDto? upperPlayer = null;
             int rank = 0;
 
             foreach (var ranking in orderedRankings)
@@ -253,8 +253,8 @@ public class MajPlayerRankingsController : ControllerBase
                 .OrderByDescending(x => x.EBValue)
                 .ToList();
 
-            MajPlayerRankingDto lowerPlayer = null;
-            MajPlayerRankingDto upperPlayer = null;
+            MajPlayerRankingDto? lowerPlayer = null;
+            MajPlayerRankingDto? upperPlayer = null;
             int rank = 0;
 
             foreach (var item in rankingsWithEB)
@@ -307,8 +307,8 @@ public class MajPlayerRankingsController : ControllerBase
                 .OrderByDescending(r => r.MER)
                 .ToList();
 
-            MajPlayerRankingDto lowerPlayer = null;
-            MajPlayerRankingDto upperPlayer = null;
+            MajPlayerRankingDto? lowerPlayer = null;
+            MajPlayerRankingDto? upperPlayer = null;
             int rank = 0;
 
             foreach (var ranking in orderedRankings)
@@ -361,8 +361,8 @@ public class MajPlayerRankingsController : ControllerBase
                 .OrderByDescending(r => r.JER)
                 .ToList();
 
-            MajPlayerRankingDto lowerPlayer = null;
-            MajPlayerRankingDto upperPlayer = null;
+            MajPlayerRankingDto? lowerPlayer = null;
+            MajPlayerRankingDto? upperPlayer = null;
             int rank = 0;
 
             foreach (var ranking in orderedRankings)
@@ -806,8 +806,8 @@ public class MajPlayerRankingsController : ControllerBase
 /// </summary>
 public class SurroundingPlayersDto
 {
-    public MajPlayerRankingDto LowerPlayer { get; set; }
-    public MajPlayerRankingDto UpperPlayer { get; set; }
+    public MajPlayerRankingDto? LowerPlayer { get; set; }
+    public MajPlayerRankingDto? UpperPlayer { get; set; }
 }
 
 /// <summary>
@@ -816,6 +816,6 @@ public class SurroundingPlayersDto
 public class SaveRankingResponseDto
 {
     public bool Success { get; set; }
-    public string Message { get; set; }
-    public MajPlayerRankingDto PreviousRanking { get; set; }
+    public required string Message { get; set; }
+    public MajPlayerRankingDto? PreviousRanking { get; set; }
 }

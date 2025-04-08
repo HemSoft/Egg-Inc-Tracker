@@ -4,6 +4,8 @@
 @inject DashboardState DashboardState
 @using System.Text.Json
 @using EggDash.Client.Services
+@using EggDash.Client.Components
+@using EggDash.Client.Extensions
 @implements IDisposable
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
@@ -37,6 +39,36 @@
         text-shadow: 0px 0px 2px rgba(0, 0, 0, 0.8);
         font-weight: bold;
     }
+
+    /* Custom progress bar with gradient */
+    .custom-progress-bar .mud-progress-linear-bar {
+        background: linear-gradient(to right, red, yellow, green);
+    }
+
+    /* Event carousel styles */
+    .event-item {
+        transition: transform 0.3s ease-in-out;
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .event-item.dark-mode {
+        background-color: rgba(66, 66, 66, 0.7);
+    }
+
+    .event-item.light-mode {
+        background-color: rgba(255, 255, 255, 0.7);
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 <MudLayout>
     <MudAppBar Elevation="1"
@@ -47,6 +79,37 @@
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
             OnClick="@((e) => DrawerToggle())" Style="z-index: 1;" />
         <MudText Typo="Typo.h5" GutterBottom="true" Style="z-index: 1;">Egg-Inc Royal Dashboard </MudText>
+
+        <MudSpacer />
+
+        <!-- Event Carousel -->
+        <div style="width: 400px; z-index: 1000; height: 100%; display: flex; align-items: center; justify-content: center;">
+            @if (_currentEventIndex == 0)
+            {
+                <div class="event-item @(_isDarkMode ? "dark-mode" : "light-mode")" style="text-align: center; padding: 8px 16px; border-radius: 4px;">
+                    <MudText Typo="Typo.subtitle1" Style="font-weight: bold;">2x EARNINGS!</MudText>
+                    <MudText Typo="Typo.caption">
+                        Earnings Boost - 200% Boost
+                    </MudText>
+                    <MudText Typo="Typo.caption">
+                        Ends in 23h 45m
+                    </MudText>
+                </div>
+            }
+            else
+            {
+                <div class="event-item @(_isDarkMode ? "dark-mode" : "light-mode")" style="text-align: center; padding: 8px 16px; border-radius: 4px;">
+                    <MudText Typo="Typo.subtitle1" Style="font-weight: bold;">4x DRONE REWARDS!</MudText>
+                    <MudText Typo="Typo.caption">
+                        Drone Boost - 400% Boost
+                    </MudText>
+                    <MudText Typo="Typo.caption">
+                        Ends in 47h 15m
+                    </MudText>
+                </div>
+            }
+        </div>
+
         <MudSpacer />
 
         <MudPaper Class="d-flex align-center py-2 px-4 rounded-xl mr-5"
@@ -76,12 +139,18 @@
                 </div>
                 <div @onclick="ResetMinuteProgress"
                     style="cursor: pointer; height: 10px; margin-top: 3px; position: relative;">
-                    <MudProgressLinear Color="@GetProgressColor(0, 60, _minuteStartTime)"
-                        Value="@GetProgressValue(0, 60, _minuteStartTime)" Class="my-0" />
+                    <MudProgressLinear Value="@GetProgressValue(0, 60, _minuteStartTime)"
+                                     Striped="@(GetProgressValue(0, 60, _minuteStartTime) >= 100)"
+                                     Style="height: 10px;"
+                                     Color="@(GetProgressValue(0, 60, _minuteStartTime) >= 100 ? Color.Success : Color.Primary)"
+                                     Class="custom-progress-bar" />
                 </div>
                 <div @onclick="IncrementLegs" style="cursor: pointer; height: 10px; margin-top: 5px; position: relative;">
-                    <MudProgressLinear Color="@GetProgressColor(0, 1510, _25minStartTime)"
-                        Value="@GetProgressValue(0, 1510, _25minStartTime)" Class="my-0" />
+                    <MudProgressLinear Value="@GetProgressValue(0, 1510, _25minStartTime)"
+                                     Striped="@(GetProgressValue(0, 1510, _25minStartTime) >= 100)"
+                                     Style="height: 10px;"
+                                     Color="@(GetProgressValue(0, 1510, _25minStartTime) >= 100 ? Color.Success : Color.Primary)"
+                                     Class="custom-progress-bar" />
                     @foreach (var marker in _lapMarkers)
                     {
                         <div class="lap-marker" style="left: @(marker)%">
@@ -150,10 +219,14 @@
     private TimeSpan _elapsed = TimeSpan.Zero;
     private System.Timers.Timer? _timer;
 
+    // Event carousel
+    private int _currentEventIndex = 0;
+    private System.Timers.Timer? _eventRotationTimer;
+
     private bool _initialized;
     private bool _isLoading;
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
         _timer = new System.Timers.Timer(1000);
         _timer.Elapsed += async (sender, e) =>
@@ -169,6 +242,15 @@
             }
         };
 
+        // Initialize event rotation timer
+        _eventRotationTimer = new System.Timers.Timer(5000); // Rotate every 5 seconds
+        _eventRotationTimer.Elapsed += async (sender, e) =>
+        {
+            _currentEventIndex = (_currentEventIndex + 1) % 2; // Toggle between 0 and 1
+            await InvokeAsync(StateHasChanged);
+        };
+        _eventRotationTimer.Start();
+
         _theme = new()
         {
             PaletteLight = _lightPalette,
@@ -177,6 +259,8 @@
         };
 
         DashboardState.OnChange += StateHasChanged;
+
+        return Task.CompletedTask;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -205,14 +289,24 @@
         return Math.Min((currentSeconds / maxSeconds) * 100, 100);
     }
 
-    private Color GetProgressColor(double currentSeconds, double maxSeconds, DateTime? startTime = null)
+    private string GetProgressColorStyle(double currentSeconds, double maxSeconds, DateTime? startTime = null)
     {
         var progress = startTime.HasValue
         ? (DateTime.Now - startTime.Value).TotalSeconds / maxSeconds
         : currentSeconds / maxSeconds;
 
-        if (progress >= 1) return Color.Error;
-        return progress < 0.5 ? Color.Success : Color.Warning;
+        // Calculate percentage, clamping between 0 and 100
+        double percentage = Math.Clamp(progress * 100, 0, 100);
+
+        // Calculate RGB values for the gradient
+        // Red component decreases from 255 to 0 as percentage increases
+        int red = (int)(255 * (1 - percentage / 100.0));
+        // Green component increases from 0 to 255 as percentage increases
+        int green = (int)(255 * (percentage / 100.0));
+        // Blue component remains 0
+        int blue = 0;
+
+        return $"background-color: rgb({red}, {green}, {blue})";
     }
 
     private void ResetMinuteProgress()
@@ -340,6 +434,8 @@
     {
         DashboardState.OnChange -= StateHasChanged;
         _timer?.Dispose();
+        _eventRotationTimer?.Stop();
+        _eventRotationTimer?.Dispose();
     }
 
     private void DrawerToggle()

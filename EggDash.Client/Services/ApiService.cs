@@ -16,7 +16,7 @@ namespace EggDash.Client.Services
             _httpClient = httpClient;
             if (_httpClient.BaseAddress == null)
             {
-                _httpClient.BaseAddress = new Uri("https://localhost:5000/");
+                _httpClient.BaseAddress = new Uri("http://localhost:5001/");
             }
 
             // Ensure there's a trailing slash on the base address
@@ -397,6 +397,62 @@ namespace EggDash.Client.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in SaveMajPlayerRankingAsync");
+                return null;
+            }
+        }
+
+        public async Task<List<EventDto>?> GetActiveEventsAsync()
+        {
+            try
+            {
+                _logger.LogInformation("ApiService: Fetching active events");
+                var response = await _httpClient.GetAsync("api/v1/events/active");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var events = await response.Content.ReadFromJsonAsync<List<EventDto>>();
+                    _logger.LogInformation($"ApiService: Successfully fetched {events?.Count ?? 0} active events");
+                    return events;
+                }
+
+                _logger.LogError($"Error fetching active events: {response.StatusCode}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetActiveEventsAsync");
+                return null;
+            }
+        }
+
+        public async Task<List<EventDto>?> GetEventsAsync(bool activeOnly = false, string? eventType = null)
+        {
+            try
+            {
+                var queryParams = new List<string>();
+                if (activeOnly)
+                {
+                    queryParams.Add("activeOnly=true");
+                }
+                if (!string.IsNullOrEmpty(eventType))
+                {
+                    queryParams.Add($"eventType={Uri.EscapeDataString(eventType)}");
+                }
+
+                var queryString = queryParams.Count > 0 ? $"?{string.Join("&", queryParams)}" : "";
+                var response = await _httpClient.GetAsync($"api/v1/events{queryString}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<List<EventDto>>();
+                }
+
+                _logger.LogError($"Error fetching events: {response.StatusCode}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetEventsAsync");
                 return null;
             }
         }

@@ -12,7 +12,7 @@ namespace EggDash.Client.Services
         Task<PlayerStatsDto?> GetRankedPlayerAsync(string playerName, int recordLimit = 1, int sampleDaysBack = 30);
         Task<TitleInfoDto?> GetTitleInfoAsync(string playerName);
         Task<PlayerGoalDto?> GetPlayerGoalsAsync(string playerName);
-        
+
         // MajPlayerRankings endpoints
         Task<SurroundingPlayersDto?> GetSurroundingSEPlayersAsync(string playerName, string soulEggs);
         Task<SurroundingPlayersDto?> GetSurroundingEBPlayersAsync(string playerName, string earningsBonus);
@@ -20,5 +20,9 @@ namespace EggDash.Client.Services
         Task<SurroundingPlayersDto?> GetSurroundingJERPlayersAsync(string playerName, decimal jer);
         Task<List<MajPlayerRankingDto>?> GetLatestMajPlayerRankingsAsync(int limit = 30);
         Task<SaveRankingResponseDto?> SaveMajPlayerRankingAsync(MajPlayerRankingDto majPlayerRanking);
+
+        // Events endpoints
+        Task<List<EventDto>?> GetActiveEventsAsync();
+        Task<List<EventDto>?> GetEventsAsync(bool activeOnly = false, string? eventType = null);
     }
 }

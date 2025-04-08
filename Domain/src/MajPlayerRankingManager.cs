@@ -164,7 +164,7 @@ public static class MajPlayerRankingManager
             }
 
             var response = await apiClient.SaveMajPlayerRankingAsync(majPlayerRanking);
-            
+
             if (response == null)
             {
                 logger?.LogWarning("SaveMajPlayerRankingAsync returned null");
@@ -194,11 +194,14 @@ public static class MajPlayerRankingManager
 // Note: This is a quick solution for the refactoring, but dependency injection would be better
 public static class ServiceLocator
 {
-    private static readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, object> _services =
+        new System.Collections.Concurrent.ConcurrentDictionary<Type, object>();
+    private static readonly object _lock = new object();
 
     public static void RegisterService<T>(T service) where T : class
     {
-        _services[typeof(T)] = service;
+        // Use thread-safe AddOrUpdate method
+        _services.AddOrUpdate(typeof(T), service, (_, _) => service);
     }
 
     public static T GetService<T>() where T : class

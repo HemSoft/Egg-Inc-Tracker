@@ -4,19 +4,19 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <base href="/" />  
+    <base href="/" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href=@Assets["_content/MudBlazor/MudBlazor.min.css"] rel="stylesheet" />
-    
+
     <link rel="stylesheet" href="css/app.css" />
-    
+
     <ImportMap />
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <HeadOutlet @rendermode="InteractiveAuto" />
 </head>
 
 <body>
-    <Routes @rendermode="InteractiveAuto" />
+    <EggDash.Components.Routes @rendermode="InteractiveAuto" />
     <script src="_framework/blazor.web.js"></script>
     <script src=@Assets["_content/MudBlazor/MudBlazor.min.js"]></script>
 </body>

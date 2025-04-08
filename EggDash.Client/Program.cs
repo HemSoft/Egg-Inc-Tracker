@@ -19,6 +19,7 @@ builder.Services.AddHttpClient<ApiService>(client =>
 
 // Register ApiService
 builder.Services.AddScoped<ApiService>();
+builder.Services.AddScoped<EggDash.Client.Services.IApiService>(sp => sp.GetRequiredService<ApiService>());
 
 // Register the new PlayerDataService
 builder.Services.AddScoped<PlayerDataService>();

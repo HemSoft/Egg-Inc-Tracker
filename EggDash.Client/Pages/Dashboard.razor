@@ -10,13 +10,10 @@
 <div class="dashboard-container mt-4 px-3">
     <div class="d-flex justify-space-between align-center mb-4">
         <MudText Typo="Typo.body2">Last updated: @_timeSinceLastUpdate</MudText>
-        @if (_isRefreshing)
-        {
-            <div class="d-flex align-center">
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                <MudText Typo="Typo.body2">Refreshing...</MudText>
-            </div>
-        }
+        <div class="d-flex align-center" style="visibility: @(_isRefreshing ? "visible" : "hidden")">
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2"/>
+            <MudText Typo="Typo.body2">Refreshing...</MudText>
+        </div>
     </div>
 
 @if (_isRefreshing && _lastUpdated == default)

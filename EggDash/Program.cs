@@ -27,6 +27,7 @@ builder.Services.AddHttpClient<ApiService>(client =>
 
 // Register ApiService
 builder.Services.AddScoped<ApiService>();
+builder.Services.AddScoped<EggDash.Client.Services.IApiService>(sp => sp.GetRequiredService<ApiService>());
 
 // Register the new PlayerDataService for server-side rendering
 builder.Services.AddScoped<PlayerDataService>();
@@ -55,6 +56,8 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles(); // Ensure static files middleware is present
 app.UseAntiforgery();
+
+app.MapStaticAssets();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

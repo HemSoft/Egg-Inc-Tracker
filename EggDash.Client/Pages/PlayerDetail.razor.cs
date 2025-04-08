@@ -160,8 +160,8 @@ public partial class PlayerDetail
             // Get player goals
             try
             {
-                _playerGoals = await ApiService.GetPlayerGoalsAsync(_player.PlayerName);
-                Logger.LogInformation($"Retrieved goals for {_player.PlayerName}: DailyPrestigeGoal={_playerGoals?.DailyPrestigeGoal}");
+                _playerGoals = await ApiService.GetPlayerGoalsAsync(_player?.PlayerName ?? string.Empty);
+                Logger.LogInformation($"Retrieved goals for {_player?.PlayerName ?? "unknown"}: DailyPrestigeGoal={_playerGoals?.DailyPrestigeGoal}");
             }
             catch (Exception ex)
             {
@@ -175,11 +175,11 @@ public partial class PlayerDetail
             // Update goal data using ApiService
             try
             {
-                 Logger.LogInformation("Fetching surrounding player data for {PlayerName}", _player.PlayerName);
-                var sePlayers = await ApiService.GetSurroundingSEPlayersAsync(_player.PlayerName, _player.SoulEggs);
-                var ebPlayers = await ApiService.GetSurroundingEBPlayersAsync(_player.PlayerName, _player.EarningsBonusPercentage);
-                var merPlayers = await ApiService.GetSurroundingMERPlayersAsync(_player.PlayerName, (decimal)_player.MER);
-                var jerPlayers = await ApiService.GetSurroundingJERPlayersAsync(_player.PlayerName, (decimal)_player.JER);
+                 Logger.LogInformation("Fetching surrounding player data for {PlayerName}", _player?.PlayerName ?? "unknown");
+                var sePlayers = _player != null ? await ApiService.GetSurroundingSEPlayersAsync(_player.PlayerName, _player.SoulEggs) : null;
+                var ebPlayers = _player != null ? await ApiService.GetSurroundingEBPlayersAsync(_player.PlayerName, _player.EarningsBonusPercentage) : null;
+                var merPlayers = _player != null ? await ApiService.GetSurroundingMERPlayersAsync(_player.PlayerName, (decimal)_player.MER) : null;
+                var jerPlayers = _player != null ? await ApiService.GetSurroundingJERPlayersAsync(_player.PlayerName, (decimal)_player.JER) : null;
 
                 // Set the goal data from the API responses
                 _SEGoalBegin = sePlayers?.LowerPlayer ?? new MajPlayerRankingDto(); // Use empty DTO as fallback
