@@ -401,7 +401,7 @@ namespace EggDash.Client.Services
             }
         }
 
-        public async Task<List<EventDto>?> GetActiveEventsAsync()
+        public async Task<List<CurrentEventDto>?> GetActiveEventsAsync()
         {
             try
             {
@@ -410,7 +410,7 @@ namespace EggDash.Client.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var events = await response.Content.ReadFromJsonAsync<List<EventDto>>();
+                    var events = await response.Content.ReadFromJsonAsync<List<CurrentEventDto>>();
                     _logger.LogInformation($"ApiService: Successfully fetched {events?.Count ?? 0} active events");
                     return events;
                 }
