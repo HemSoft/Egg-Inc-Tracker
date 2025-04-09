@@ -1,101 +1,78 @@
+namespace EggIncTrackerApi.Controllers;
+
 using HemSoft.EggIncTracker.Data;
 using HemSoft.EggIncTracker.Data.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace EggIncTrackerApi.Controllers
+[ApiController]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
+public class EventsController(EggIncContext context, ILogger<EventsController> logger) : ControllerBase
 {
-    [ApiController]
-    [ApiVersion("1.0")]
-    [Route("api/v{version:apiVersion}/[controller]")]
-    public class EventsController : ControllerBase
+    private readonly EggIncContext _context = context;
+    private readonly ILogger<EventsController> _logger = logger;
+
+    /// <summary>
+    /// Get event by ID
+    /// </summary>
+    [HttpGet("{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<EventDto>> GetEvent(string id)
     {
-        private readonly EggIncContext _context;
-        private readonly ILogger<EventsController> _logger;
+        var eventEntry = await _context.Events
+            .Where(e => e.EventId == id)
+            .OrderByDescending(e => e.StartTime)
+            .FirstOrDefaultAsync();
 
-        public EventsController(EggIncContext context, ILogger<EventsController> logger)
+        if (eventEntry == null)
         {
-            _context = context;
-            _logger = logger;
+            return NotFound($"Event with ID {id} not found");
         }
 
-        /// <summary>
-        /// Get all events
-        /// </summary>
-        [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<EventDto>>> GetEvents(
-            [FromQuery] bool activeOnly = false,
-            [FromQuery] string? eventType = null)
-        {
-            var query = _context.Events.AsQueryable();
+        return Ok(eventEntry);
+    }
 
-            if (activeOnly)
+    /// <summary>
+    /// Get active events
+    /// </summary>
+    [HttpGet("active")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<CurrentEventDto>>> GetCurrentEvents()
+    {
+        // Use a raw SQL query with explicit mapping to CurrentEventDto
+        var currentEvents = new List<CurrentEventDto>();
+
+        try
+        {
+            using (var command = _context.Database.GetDbConnection().CreateCommand())
             {
-                var now = DateTime.UtcNow;
-                query = query.Where(e => e.EndTime > now);
+                command.CommandText = "EXEC CurrentEvents";
+
+                if (command.Connection.State != System.Data.ConnectionState.Open)
+                    await command.Connection.OpenAsync();
+
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        currentEvents.Add(new CurrentEventDto
+                        {
+                            SubTitle = reader.GetString(0),
+                            EndTime = reader.IsDBNull(1) ? null : reader.GetDateTime(1)
+                        });
+                    }
+                }
             }
 
-            if (!string.IsNullOrEmpty(eventType))
-            {
-                query = query.Where(e => e.EventType == eventType);
-            }
-
-            query = query.OrderByDescending(e => e.StartTime);
-
-            return await query.ToListAsync();
+            _logger.LogInformation($"Found {currentEvents.Count} active events");
+            return Ok(currentEvents);
         }
-
-        /// <summary>
-        /// Get event by ID
-        /// </summary>
-        [HttpGet("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<EventDto>> GetEvent(string id)
+        catch (Exception ex)
         {
-            var eventEntry = await _context.Events
-                .Where(e => e.EventId == id)
-                .OrderByDescending(e => e.StartTime)
-                .FirstOrDefaultAsync();
-
-            if (eventEntry == null)
-            {
-                return NotFound($"Event with ID {id} not found");
-            }
-
-            return Ok(eventEntry);
-        }
-
-        /// <summary>
-        /// Get event types
-        /// </summary>
-        [HttpGet("types")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<string>>> GetEventTypes()
-        {
-            var eventTypes = await _context.Events
-                .Select(e => e.EventType)
-                .Distinct()
-                .ToListAsync();
-
-            return Ok(eventTypes);
-        }
-
-        /// <summary>
-        /// Get active events
-        /// </summary>
-        [HttpGet("active")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<EventDto>>> GetActiveEvents()
-        {
-            var now = DateTime.UtcNow;
-            var activeEvents = await _context.Events
-                .Where(e => e.StartTime <= now && e.EndTime >= now)
-                .OrderBy(e => e.EndTime)
-                .ToListAsync();
-
-            return Ok(activeEvents);
+            _logger.LogError(ex, "Error retrieving current events");
+            return StatusCode(500, "An error occurred while retrieving current events");
         }
     }
-} 
+}

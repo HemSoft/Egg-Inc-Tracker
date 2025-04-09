@@ -22,7 +22,7 @@ namespace EggDash.Client.Services
         Task<SaveRankingResponseDto?> SaveMajPlayerRankingAsync(MajPlayerRankingDto majPlayerRanking);
 
         // Events endpoints
-        Task<List<EventDto>?> GetActiveEventsAsync();
+        Task<List<CurrentEventDto>?> GetActiveEventsAsync();
         Task<List<EventDto>?> GetEventsAsync(bool activeOnly = false, string? eventType = null);
     }
 }
