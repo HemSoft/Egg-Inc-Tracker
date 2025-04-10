@@ -516,25 +516,68 @@ namespace EggDash.Client.Services
                 // Calculate prestige counts
                 if (player.Prestiges.HasValue)
                 {
-                    // Use current prestiges as baseline if no history record found for the start of the period
-                    int baselineToday = firstToday?.Prestiges ?? player.Prestiges.Value;
-                    int baselineWeek = firstThisWeek?.Prestiges ?? player.Prestiges.Value;
+                    // Check if we have any history records for today
+                    if (playerHistoryToday == null || !playerHistoryToday.Any())
+                    {
+                        // No history for today - this is the first record of the day
+                        // If this is the first prestige of the day, we should count it as 1
+                        _logger.LogInformation("No history found for {PlayerName} today, checking if this is the first prestige", player.PlayerName);
 
-                    prestigesToday = player.Prestiges.Value - baselineToday;
+                        // Get yesterday's last record to use as baseline
+                        var yesterdayEnd = localToday.AddDays(-1).ToUniversalTime();
+                        var yesterdayStart = new DateTime(yesterdayEnd.Year, yesterdayEnd.Month, yesterdayEnd.Day, 0, 0, 0, DateTimeKind.Utc);
+
+                        var playerHistoryYesterday = await _apiService.GetPlayerHistoryAsync(
+                            player.PlayerName,
+                            yesterdayStart,
+                            yesterdayEnd);
+
+                        var lastYesterday = playerHistoryYesterday?.OrderByDescending(x => x.Updated).FirstOrDefault();
+
+                        // If we have yesterday's record, use it as baseline
+                        if (lastYesterday != null && lastYesterday.Prestiges.HasValue)
+                        {
+                            int baselineToday = lastYesterday.Prestiges.Value;
+                            prestigesToday = player.Prestiges.Value - baselineToday;
+
+                            _logger.LogInformation("Using yesterday's last record as baseline for {PlayerName}: Yesterday={Yesterday}, Today={Today}, Difference={Diff}",
+                                player.PlayerName, baselineToday, player.Prestiges.Value, prestigesToday);
+                        }
+                        else
+                        {
+                            // No history from yesterday either, assume this is the first prestige if value is 1 or more
+                            prestigesToday = player.Prestiges.Value > 0 ? 1 : 0;
+                            _logger.LogInformation("No history from yesterday for {PlayerName}, assuming first prestige: {Prestiges}",
+                                player.PlayerName, prestigesToday);
+                        }
+                    }
+                    else
+                    {
+                        // We have history records for today, use the first one as baseline
+                        // Use the firstToday variable that was already declared
+                        int baselineToday = firstToday?.Prestiges ?? player.Prestiges.Value;
+
+                        prestigesToday = player.Prestiges.Value - baselineToday;
+                        _logger.LogInformation("Using today's first record as baseline for {PlayerName}: Baseline={Baseline}, Current={Current}, Difference={Diff}",
+                            player.PlayerName, baselineToday, player.Prestiges.Value, prestigesToday);
+                    }
+
+                    // Calculate weekly prestiges
+                    int baselineWeek = firstThisWeek?.Prestiges ?? player.Prestiges.Value;
                     prestigesThisWeek = player.Prestiges.Value - baselineWeek;
 
                     // Ensure prestiges are not negative
                     prestigesToday = Math.Max(0, prestigesToday ?? 0);
                     prestigesThisWeek = Math.Max(0, prestigesThisWeek ?? 0);
 
-
                     // Ensure PrestigesThisWeek is at least equal to PrestigesToday
                     if (prestigesToday.HasValue && (!prestigesThisWeek.HasValue || prestigesThisWeek.Value < prestigesToday.Value))
                     {
                         prestigesThisWeek = prestigesToday;
                     }
-                    _logger.LogInformation("Calculated prestiges for {PlayerName}: Today={Today}, Week={Week} (Current: {Current}, BaselineToday: {BaselineToday}, BaselineWeek: {BaselineWeek})",
-                       player.PlayerName, prestigesToday, prestigesThisWeek, player.Prestiges, baselineToday, baselineWeek);
+
+                    _logger.LogInformation("Final prestige counts for {PlayerName}: Today={Today}, Week={Week} (Current: {Current})",
+                       player.PlayerName, prestigesToday, prestigesThisWeek, player.Prestiges);
                 }
                 else
                 {

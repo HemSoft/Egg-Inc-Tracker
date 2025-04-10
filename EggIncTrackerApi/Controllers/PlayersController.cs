@@ -224,6 +224,8 @@ namespace EggIncTrackerApi.Controllers
         {
             try
             {
+                logger.LogInformation("Fetching title info for player: {PlayerName}", name);
+
                 var player = await context.Players
                     .Where(p => p.PlayerName == name)
                     .OrderByDescending(p => p.Updated)
@@ -231,31 +233,68 @@ namespace EggIncTrackerApi.Controllers
 
                 if (player == null)
                 {
+                    logger.LogWarning("Player not found: {PlayerName}", name);
                     return NotFound($"Player with name {name} not found");
                 }
 
+                logger.LogInformation("Found player {PlayerName}, calculating earnings bonus", name);
+
                 // Get current earnings bonus as BigInteger
-                BigInteger earningsBonus = CalculateEarningsBonusPercentageNumber(player);
+                BigInteger earningsBonus;
+                try
+                {
+                    earningsBonus = CalculateEarningsBonusPercentageNumber(player);
+                    logger.LogInformation("Calculated earnings bonus for {PlayerName}: {EarningsBonus}", name, earningsBonus);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error calculating earnings bonus for {PlayerName}. SoulEggsFull: {SoulEggsFull}, ProphecyEggs: {ProphecyEggs}",
+                        name, player.SoulEggsFull, player.ProphecyEggs);
+                    return StatusCode(500, "Error calculating earnings bonus");
+                }
 
                 // Calculate title progress
-                var (currentTitle, nextTitle, progress) = GetTitleWithProgress(earningsBonus);
+                (string currentTitle, string nextTitle, double progress) titleInfo;
+                try
+                {
+                    titleInfo = GetTitleWithProgress(earningsBonus);
+                    logger.LogInformation("Calculated title progress for {PlayerName}: Current={CurrentTitle}, Next={NextTitle}, Progress={Progress}%",
+                        name, titleInfo.currentTitle, titleInfo.nextTitle, titleInfo.progress);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error calculating title progress for {PlayerName}", name);
+                    return StatusCode(500, "Error calculating title progress");
+                }
 
                 // Calculate projected title change
-                var projectedTitleChange = CalculateProjectedTitleChange(player);
+                DateTime projectedTitleChange;
+                try
+                {
+                    projectedTitleChange = CalculateProjectedTitleChange(player);
+                    logger.LogInformation("Calculated projected title change for {PlayerName}: {ProjectedDate}",
+                        name, projectedTitleChange);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error calculating projected title change for {PlayerName}", name);
+                    // Use a fallback value instead of failing
+                    projectedTitleChange = DateTime.MaxValue;
+                }
 
-                var titleInfo = new TitleInfoDto
+                var response = new TitleInfoDto
                 {
                     CurrentTitle = player.Title,
                     NextTitle = player.NextTitle,
-                    TitleProgress = progress,
+                    TitleProgress = titleInfo.progress,
                     ProjectedTitleChange = projectedTitleChange.ToString("o")
                 };
 
-                return Ok(titleInfo);
+                return Ok(response);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error calculating title info for {PlayerName}", name);
+                logger.LogError(ex, "Unhandled error calculating title info for {PlayerName}", name);
                 return StatusCode(500, "An error occurred while calculating title info");
             }
         }
@@ -349,25 +388,63 @@ namespace EggIncTrackerApi.Controllers
 
         private BigInteger CalculateEarningsBonusPercentageNumber(PlayerDto player)
         {
-            var sefull = BigInteger.Parse(player.SoulEggsFull);
-            var eb = sefull * new BigInteger(150 * Math.Pow(1.1, player.ProphecyEggs));
-            return eb;
+            if (string.IsNullOrEmpty(player.SoulEggsFull))
+            {
+                logger.LogWarning("SoulEggsFull is null or empty for player {PlayerName}", player.PlayerName);
+                return BigInteger.Zero;
+            }
+
+            try
+            {
+                var sefull = BigInteger.Parse(player.SoulEggsFull);
+                var eb = sefull * new BigInteger(150 * Math.Pow(1.1, player.ProphecyEggs));
+                return eb;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error parsing SoulEggsFull '{SoulEggsFull}' for player {PlayerName}",
+                    player.SoulEggsFull, player.PlayerName);
+                throw; // Rethrow to be caught by the caller
+            }
         }
 
         private DateTime CalculateProjectedTitleChange(PlayerDto player)
         {
-            // For now, returning a simplified implementation
-            // In a real implementation, you would need to port the full logic from PlayerManager
-            var ebNeeded = CalculateEBNeededForNextTitle(player.PlayerName);
-            var ebProgressPerHour = CalculateEBProgressPerHour(player.PlayerName, 30);
-
-            if (ebNeeded <= 0 || ebProgressPerHour <= 0)
+            try
             {
-                return DateTime.MaxValue; // No projection available
-            }
+                // For now, returning a simplified implementation
+                // In a real implementation, you would need to port the full logic from PlayerManager
+                var ebNeeded = CalculateEBNeededForNextTitle(player.PlayerName);
+                logger.LogInformation("EB needed for next title for {PlayerName}: {EBNeeded}", player.PlayerName, ebNeeded);
 
-            var hoursNeeded = BigInteger.Divide(ebNeeded, ebProgressPerHour);
-            return DateTime.Now.AddHours((double)hoursNeeded);
+                var ebProgressPerHour = CalculateEBProgressPerHour(player.PlayerName, 30);
+                logger.LogInformation("EB progress per hour for {PlayerName}: {EBProgressPerHour}", player.PlayerName, ebProgressPerHour);
+
+                if (ebNeeded <= 0 || ebProgressPerHour <= 0)
+                {
+                    logger.LogInformation("No projection available for {PlayerName} (ebNeeded={EBNeeded}, ebProgressPerHour={EBProgressPerHour})",
+                        player.PlayerName, ebNeeded, ebProgressPerHour);
+                    return DateTime.MaxValue; // No projection available
+                }
+
+                var hoursNeeded = BigInteger.Divide(ebNeeded, ebProgressPerHour);
+                logger.LogInformation("Hours needed for next title for {PlayerName}: {HoursNeeded}", player.PlayerName, hoursNeeded);
+
+                // Check if hours needed is a reasonable number to prevent overflow
+                if (hoursNeeded > BigInteger.Parse("87600")) // 10 years in hours
+                {
+                    logger.LogWarning("Projected title change too far in the future for {PlayerName}: {HoursNeeded} hours",
+                        player.PlayerName, hoursNeeded);
+                    return DateTime.MaxValue;
+                }
+
+                return DateTime.Now.AddHours((double)hoursNeeded);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error calculating projected title change for {PlayerName}", player.PlayerName);
+                throw; // Rethrow to be caught by the caller
+            }
         }
 
         private BigInteger CalculateEBNeededForNextTitle(string playerName)
