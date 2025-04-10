@@ -24,6 +24,9 @@ builder.Services.AddScoped<EggDash.Client.Services.IApiService>(sp => sp.GetRequ
 // Register the new PlayerDataService
 builder.Services.AddScoped<PlayerDataService>();
 
+// Register the EventService as a singleton so it persists throughout the application
+builder.Services.AddSingleton<EventService>();
+
 builder.Services.AddMudServices();
 
 var app = builder.Build();
