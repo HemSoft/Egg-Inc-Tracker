@@ -56,7 +56,7 @@
 </style>
 
 @code {
-    [Inject] private EventService EventService { get; set; } = default!;
+    [Inject] private IApiService ApiService { get; set; } = default!;
     [Inject] private ILogger<EventCarousel> Logger { get; set; } = default!;
     [Parameter] public bool IsDarkMode { get; set; }
 
@@ -64,6 +64,7 @@
     private CurrentEventDto? _currentEvent;
     private int _currentIndex = 0;
     private System.Timers.Timer? _rotationTimer;
+    private System.Timers.Timer? _refreshTimer;
     private bool _isDarkMode;
     private bool _isLoading = true;
     private string? _errorMessage;
@@ -76,10 +77,6 @@
             // Initialize dark mode
             _isDarkMode = IsDarkMode;
 
-            // Subscribe to the EventService's EventsUpdated event
-            EventService.EventsUpdated += OnEventsUpdated;
-
-            // Load events from the EventService
             await LoadEventsAsync();
 
             // Set up rotation timer (10 seconds)
@@ -87,6 +84,12 @@
             _rotationTimer.Elapsed += OnRotationTimerElapsed;
             _rotationTimer.AutoReset = true;
             _rotationTimer.Start();
+
+            // Set up refresh timer (5 minutes)
+            _refreshTimer = new System.Timers.Timer(300000); // 5 minutes
+            _refreshTimer.Elapsed += OnRefreshTimerElapsed;
+            _refreshTimer.AutoReset = true;
+            _refreshTimer.Start();
 
             Logger.LogInformation("EventCarousel: Initialized successfully");
         }
@@ -120,7 +123,7 @@
             _isLoading = true;
             _errorMessage = null;
 
-            var events = await EventService.GetEventsAsync();
+            var events = await ApiService.GetActiveEventsAsync();
 
             if (events == null || !events.Any())
             {
@@ -147,43 +150,6 @@
         {
             _isLoading = false;
             StateHasChanged();
-        }
-    }
-
-    private async void OnEventsUpdated(object? sender, List<CurrentEventDto>? events)
-    {
-        try
-        {
-            Logger.LogInformation("EventCarousel: Events updated from service");
-
-            if (events == null || !events.Any())
-            {
-                await InvokeAsync(() =>
-                {
-                    _events = new List<CurrentEventDto>();
-                    _currentEvent = null;
-                    StateHasChanged();
-                });
-                return;
-            }
-
-            await InvokeAsync(() =>
-            {
-                _events = events;
-                // If we were at the end of the list, reset to the beginning
-                if (_currentIndex >= _events.Count)
-                {
-                    _currentIndex = 0;
-                }
-                _currentEvent = _events[_currentIndex];
-                StateHasChanged();
-            });
-
-            Logger.LogInformation($"EventCarousel: Updated with {events.Count} events");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error handling events update");
         }
     }
 
@@ -242,19 +208,32 @@
         }
     }
 
+    private async void OnRefreshTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        try
+        {
+            await InvokeAsync(LoadEventsAsync);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error in refresh timer");
+        }
+    }
+
     public void Dispose()
     {
-        // Unsubscribe from the EventService's EventsUpdated event
-        if (EventService != null)
-        {
-            EventService.EventsUpdated -= OnEventsUpdated;
-        }
-
         if (_rotationTimer != null)
         {
             _rotationTimer.Stop();
             _rotationTimer.Elapsed -= OnRotationTimerElapsed;
             _rotationTimer.Dispose();
+        }
+
+        if (_refreshTimer != null)
+        {
+            _refreshTimer.Stop();
+            _refreshTimer.Elapsed -= OnRefreshTimerElapsed;
+            _refreshTimer.Dispose();
         }
     }
 
