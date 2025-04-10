@@ -37,31 +37,65 @@
                     SE/Week: (@PlayerStats?.SEPerWeek)
                 </span>
                 <span class="d-inline-flex align-center mr-2">
-                    SE This Week: @PlayerSEThisWeek
+                    @if (PlayerGoals != null && !string.IsNullOrEmpty(PlayerGoals.WeeklySEGainGoal) && !string.IsNullOrEmpty(PlayerSEThisWeek))
+                    {
+                        var (isGoalMet, missingAmount, expectedAmount, percentComplete) = PlayerDataService.CalculateMissingSEGain(PlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal);
+                        string tooltipText = isGoalMet
+                            ? $"Goal met! Current progress: {PlayerSEThisWeek} / Expected: {expectedAmount} ({percentComplete}%)"
+                            : $"Missing {missingAmount} to reach today's goal of {expectedAmount} ({percentComplete}%)";
+
+                        <MudTooltip Text="@tooltipText" Arrow="true" Placement="Placement.Top">
+                            <span>
+                                SE This Week: <span style="@PlayerDataService.GetSEProgressColorStyle(PlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal)">@PlayerSEThisWeek</span>
+                                @if (isGoalMet)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" Color="Color.Success" Class="ml-1"></MudIcon>
+                                }
+                            </span>
+                        </MudTooltip>
+                    }
+                    else
+                    {
+                        <span>SE This Week: @PlayerSEThisWeek</span>
+                    }
                 </span>
                 <span class="d-inline-flex align-center mr-2">
                     Prestiges Today/Week:
                     @if (PlayerGoals is { DailyPrestigeGoal: > 0 })
                     {
-                        <span style="@GetProgressColorStyle(Player?.PrestigesToday, PlayerGoals.DailyPrestigeGoal)">
-                            @Player?.PrestigesToday
-                            @if (PlayerDataService.HasReachedDailyPrestigeGoal(Player?.PrestigesToday,
-                                                PlayerGoals.DailyPrestigeGoal))
-                            {
-                                <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small"
-                                    Color="Color.Success" Class="ml-1"></MudIcon>
-                            }
-                        </span>
+                        var (isDailyGoalMet, missingDailyPrestiges, expectedDailyPrestiges, dailyPercentComplete) = PlayerDataService.CalculateMissingDailyPrestiges(Player?.PrestigesToday, PlayerGoals.DailyPrestigeGoal);
+                        string dailyTooltipText = isDailyGoalMet
+                            ? $"Goal met! Current progress: {Player?.PrestigesToday} / Expected: {expectedDailyPrestiges} ({dailyPercentComplete}%)"
+                            : $"Missing {missingDailyPrestiges} prestiges to reach today's goal of {expectedDailyPrestiges} ({dailyPercentComplete}%)";
+                        <MudTooltip Text="@dailyTooltipText" Arrow="true" Placement="Placement.Top">
+                            <span>
+                                <span style="@GetProgressColorStyle(Player?.PrestigesToday, PlayerGoals.DailyPrestigeGoal)">
+                                    @Player?.PrestigesToday
+                                </span>
+                                @if (isDailyGoalMet)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small"
+                                        Color="Color.Success" Class="ml-1"></MudIcon>
+                                }
+                            </span>
+                        </MudTooltip>
                         <span> / </span>
-                        <span style="@GetProgressColorStyle(Player?.PrestigesThisWeek, PlayerGoals.DailyPrestigeGoal * 7)">
-                            @Player?.PrestigesThisWeek
-                            @if (PlayerDataService.HasReachedWeeklyPrestigeGoalForCurrentDay(Player?.PrestigesThisWeek,
-                                                PlayerGoals.DailyPrestigeGoal))
-                            {
-                                <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small"
-                                    Color="Color.Success" Class="ml-1"></MudIcon>
-                            }
-                        </span>
+                        var (isWeeklyGoalMet, missingWeeklyPrestiges, expectedWeeklyPrestiges, weeklyPercentComplete) = PlayerDataService.CalculateMissingPrestiges(Player?.PrestigesThisWeek, PlayerGoals.DailyPrestigeGoal);
+                        string weeklyTooltipText = isWeeklyGoalMet
+                            ? $"Goal met! Current progress: {Player?.PrestigesThisWeek} / Expected: {expectedWeeklyPrestiges} ({weeklyPercentComplete}%)"
+                            : $"Missing {missingWeeklyPrestiges} prestiges to reach today's goal of {expectedWeeklyPrestiges} ({weeklyPercentComplete}%)";
+                        <MudTooltip Text="@weeklyTooltipText" Arrow="true" Placement="Placement.Top">
+                            <span>
+                                <span style="@GetProgressColorStyle(Player?.PrestigesThisWeek, expectedWeeklyPrestiges)">
+                                    @Player?.PrestigesThisWeek
+                                </span>
+                                @if (isWeeklyGoalMet)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small"
+                                        Color="Color.Success" Class="ml-1"></MudIcon>
+                                }
+                            </span>
+                        </MudTooltip>
                     }
                     else
                     {

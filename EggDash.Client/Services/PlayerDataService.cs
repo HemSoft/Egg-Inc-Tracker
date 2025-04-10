@@ -208,6 +208,44 @@ namespace EggDash.Client.Services
         }
 
         /// <summary>
+        /// Gets the color style for SE This Week based on progress toward the daily portion of the weekly goal
+        /// </summary>
+        public string GetSEProgressColorStyle(string? seThisWeek, string? weeklySEGainGoal)
+        {
+            if (string.IsNullOrEmpty(seThisWeek) || string.IsNullOrEmpty(weeklySEGainGoal))
+                return "color: white"; // Default color if no goal or data
+
+            // Get the current day of the week (1 = Monday, 7 = Sunday)
+            var localNow = DateTime.Now;
+            var dayOfWeek = (int)localNow.DayOfWeek;
+            // Convert to 1-based with Monday as 1
+            int daysSinceMonday = dayOfWeek == 0 ? 7 : dayOfWeek;
+
+            // Parse the SE values
+            double currentSEGain = ParseBigNumber(seThisWeek);
+            double weeklySEGoal = ParseBigNumber(weeklySEGainGoal);
+
+            if (weeklySEGoal <= 0)
+                return "color: white";
+
+            // Calculate the expected SE gain for the current day (proportional to days passed)
+            double expectedSEGain = (weeklySEGoal / 7.0) * daysSinceMonday;
+
+            // Calculate percentage of daily goal achieved
+            double percentage = Math.Min((currentSEGain / expectedSEGain) * 100, 100);
+
+            // Calculate RGB values for the gradient from red to green
+            // Red component decreases from 255 to 0 as percentage increases
+            int red = (int)(255 * (1 - percentage / 100.0));
+            // Green component increases from 0 to 255 as percentage increases
+            int green = (int)(255 * (percentage / 100.0));
+            // Blue component remains 0
+            int blue = 0;
+
+            return $"color: rgb({red}, {green}, {blue})";
+        }
+
+        /// <summary>
         /// Determines if the daily prestige goal has been reached
         /// </summary>
         public bool HasReachedDailyPrestigeGoal(int? prestigesToday, int dailyPrestigeGoal)
@@ -216,6 +254,26 @@ namespace EggDash.Client.Services
                 return false;
 
             return prestigesToday.Value >= dailyPrestigeGoal;
+        }
+
+        /// <summary>
+        /// Calculates how many prestiges are missing to reach the daily goal
+        /// </summary>
+        /// <returns>A tuple with (bool IsGoalMet, int MissingAmount, int ExpectedAmount, int PercentComplete)</returns>
+        public (bool IsGoalMet, int MissingAmount, int ExpectedAmount, int PercentComplete) CalculateMissingDailyPrestiges(int? prestigesToday, int dailyPrestigeGoal)
+        {
+            if (prestigesToday == null || dailyPrestigeGoal <= 0)
+                return (false, 0, 0, 0);
+
+            bool isGoalMet = prestigesToday.Value >= dailyPrestigeGoal;
+            int missingAmount = Math.Max(0, dailyPrestigeGoal - prestigesToday.Value);
+
+            // Calculate percentage complete (capped at 100%)
+            int percentComplete = dailyPrestigeGoal > 0
+                ? (int)Math.Min(Math.Round((double)prestigesToday.Value / dailyPrestigeGoal * 100), 100)
+                : 0;
+
+            return (isGoalMet, missingAmount, dailyPrestigeGoal, percentComplete);
         }
 
         /// <summary>
@@ -239,6 +297,175 @@ namespace EggDash.Client.Services
                 prestigesThisWeek, expectedPrestiges, daysSinceMonday, dailyPrestigeGoal);
 
             return prestigesThisWeek.Value >= expectedPrestiges;
+        }
+
+        /// <summary>
+        /// Calculates how many prestiges are missing to reach the daily portion of the weekly goal
+        /// </summary>
+        /// <returns>A tuple with (bool IsGoalMet, int MissingAmount, int ExpectedAmount, int PercentComplete)</returns>
+        public (bool IsGoalMet, int MissingAmount, int ExpectedAmount, int PercentComplete) CalculateMissingPrestiges(int? prestigesThisWeek, int dailyPrestigeGoal)
+        {
+            if (prestigesThisWeek == null || dailyPrestigeGoal <= 0)
+                return (false, 0, 0, 0);
+
+            // Get the current day of the week (1 = Monday, 7 = Sunday)
+            var localNow = DateTime.Now;
+            var dayOfWeek = (int)localNow.DayOfWeek;
+            // Convert to 1-based with Monday as 1
+            int daysSinceMonday = dayOfWeek == 0 ? 7 : dayOfWeek;
+
+            // Calculate the expected prestiges for the current day
+            int expectedPrestiges = dailyPrestigeGoal * daysSinceMonday;
+
+            bool isGoalMet = prestigesThisWeek.Value >= expectedPrestiges;
+            int missingAmount = Math.Max(0, expectedPrestiges - prestigesThisWeek.Value);
+
+            // Calculate percentage complete (capped at 100%)
+            int percentComplete = expectedPrestiges > 0
+                ? (int)Math.Min(Math.Round((double)prestigesThisWeek.Value / expectedPrestiges * 100), 100)
+                : 0;
+
+            return (isGoalMet, missingAmount, expectedPrestiges, percentComplete);
+        }
+
+        /// <summary>
+        /// Determines if the weekly SE gain goal has been reached for the current day of the week
+        /// </summary>
+        public bool HasReachedWeeklySEGainGoalForCurrentDay(string? seThisWeek, string? weeklySEGainGoal)
+        {
+            if (string.IsNullOrEmpty(seThisWeek) || string.IsNullOrEmpty(weeklySEGainGoal))
+                return false;
+
+            // Get the current day of the week (1 = Monday, 7 = Sunday)
+            var localNow = DateTime.Now;
+            var dayOfWeek = (int)localNow.DayOfWeek;
+            // Convert to 1-based with Monday as 1
+            int daysSinceMonday = dayOfWeek == 0 ? 7 : dayOfWeek;
+
+            // Parse the SE values
+            double currentSEGain = ParseBigNumber(seThisWeek);
+            double weeklySEGoal = ParseBigNumber(weeklySEGainGoal);
+
+            if (weeklySEGoal <= 0)
+                return false;
+
+            // Calculate the expected SE gain for the current day (proportional to days passed)
+            double expectedSEGain = (weeklySEGoal / 7.0) * daysSinceMonday;
+
+            _logger.LogDebug("Weekly SE gain goal check: Current={Current}, Expected={Expected}, DayOfWeek={DayOfWeek}, WeeklyGoal={WeeklyGoal}",
+                currentSEGain, expectedSEGain, daysSinceMonday, weeklySEGoal);
+
+            return currentSEGain >= expectedSEGain;
+        }
+
+        /// <summary>
+        /// Calculates how much SE gain is missing to reach the daily portion of the weekly goal
+        /// </summary>
+        /// <returns>A tuple with (bool IsGoalMet, string MissingAmount, string ExpectedAmount, int PercentComplete)</returns>
+        public (bool IsGoalMet, string MissingAmount, string ExpectedAmount, int PercentComplete) CalculateMissingSEGain(string? seThisWeek, string? weeklySEGainGoal)
+        {
+            if (string.IsNullOrEmpty(seThisWeek) || string.IsNullOrEmpty(weeklySEGainGoal))
+                return (false, "0", "0", 0);
+
+            // Get the current day of the week (1 = Monday, 7 = Sunday)
+            var localNow = DateTime.Now;
+            var dayOfWeek = (int)localNow.DayOfWeek;
+            // Convert to 1-based with Monday as 1
+            int daysSinceMonday = dayOfWeek == 0 ? 7 : dayOfWeek;
+
+            // Parse the SE values
+            double currentSEGain = ParseBigNumber(seThisWeek);
+            double weeklySEGoal = ParseBigNumber(weeklySEGainGoal);
+
+            if (weeklySEGoal <= 0)
+                return (false, "0", "0", 0);
+
+            // Calculate the expected SE gain for the current day (proportional to days passed)
+            double expectedSEGain = (weeklySEGoal / 7.0) * daysSinceMonday;
+
+            bool isGoalMet = currentSEGain >= expectedSEGain;
+            double missingAmount = Math.Max(0, expectedSEGain - currentSEGain);
+
+            // Calculate percentage complete (capped at 100%)
+            int percentComplete = expectedSEGain > 0
+                ? (int)Math.Min(Math.Round((currentSEGain / expectedSEGain) * 100), 100)
+                : 0;
+
+            // Format the missing amount in the same format as the current SE This Week value
+            string formattedMissingAmount;
+            string formattedExpectedAmount;
+
+            // For scientific notation (values with 's' suffix), we need to convert to the same scale
+            if (seThisWeek.EndsWith('s') && weeklySEGainGoal.EndsWith('s'))
+            {
+                // Extract the numeric parts
+                if (double.TryParse(seThisWeek.TrimEnd('s'), NumberStyles.Float, CultureInfo.InvariantCulture, out double currentValue) &&
+                    double.TryParse(weeklySEGainGoal.TrimEnd('s'), NumberStyles.Float, CultureInfo.InvariantCulture, out double goalValue))
+                {
+                    // Calculate in the same scale as the displayed values
+                    double expectedValueInSScale = (goalValue / 7.0) * daysSinceMonday;
+                    double missingValueInSScale = Math.Max(0, expectedValueInSScale - currentValue);
+
+                    // Format with 3 decimal places to match the game's format
+                    formattedMissingAmount = $"{missingValueInSScale:0.000}s";
+                    formattedExpectedAmount = $"{expectedValueInSScale:0.000}s";
+
+                    _logger.LogDebug("Scientific notation calculation: Current={Current}s, Expected={Expected}s, Missing={Missing}s",
+                        currentValue, expectedValueInSScale, missingValueInSScale);
+                }
+                else
+                {
+                    // Fallback if parsing fails
+                    formattedMissingAmount = $"{missingAmount:0.000}s";
+                    formattedExpectedAmount = $"{expectedSEGain:0.000}s";
+                }
+            }
+            else
+            {
+                // Try to determine the suffix used in the current SE This Week value
+                string suffix = "";
+                foreach (var suffixPair in Suffixes)
+                {
+                    if (seThisWeek.EndsWith(suffixPair.Key, StringComparison.OrdinalIgnoreCase))
+                    {
+                        suffix = suffixPair.Key;
+                        break;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(suffix))
+                {
+                    // Extract the numeric part and scale
+                    var numericPart = seThisWeek.Substring(0, seThisWeek.Length - suffix.Length);
+                    if (double.TryParse(numericPart, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
+                    {
+                        // Calculate the scale factor based on the suffix
+                        double scale = 1.0;
+                        if (Suffixes.TryGetValue(suffix, out var suffixValue))
+                        {
+                            scale = 1.0 / suffixValue;
+                        }
+
+                        // Format with the same suffix
+                        formattedMissingAmount = $"{missingAmount * scale:0.000}{suffix}";
+                        formattedExpectedAmount = $"{expectedSEGain * scale:0.000}{suffix}";
+                    }
+                    else
+                    {
+                        // Fallback to simple formatting
+                        formattedMissingAmount = missingAmount.ToString("0.000");
+                        formattedExpectedAmount = expectedSEGain.ToString("0.000");
+                    }
+                }
+                else
+                {
+                    // No suffix found, use simple formatting
+                    formattedMissingAmount = missingAmount.ToString("0.000");
+                    formattedExpectedAmount = expectedSEGain.ToString("0.000");
+                }
+            }
+
+            return (isGoalMet, formattedMissingAmount, formattedExpectedAmount, percentComplete);
         }
 
         // --- More Complex Methods (To be added) ---
