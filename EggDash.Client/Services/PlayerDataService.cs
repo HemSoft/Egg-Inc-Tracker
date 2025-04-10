@@ -78,8 +78,8 @@ namespace EggDash.Client.Services
                 double targetValue = ParseBigNumber(target);
                 double previousValue = ParseBigNumber(previous);
 
-                 _logger.LogDebug("Parsed values for percentage calc: Current={CurrentVal}, Target={TargetVal}, Previous={PreviousVal} (Input: C={CurrentIn}, T={TargetIn}, P={PreviousIn})",
-                     currentValue, targetValue, previousValue, current, target, previous);
+                _logger.LogDebug("Parsed values for percentage calc: Current={CurrentVal}, Target={TargetVal}, Previous={PreviousVal} (Input: C={CurrentIn}, T={TargetIn}, P={PreviousIn})",
+                    currentValue, targetValue, previousValue, current, target, previous);
 
                 // --- Double Calculation ---
                 if (targetValue <= previousValue)
@@ -94,10 +94,10 @@ namespace EggDash.Client.Services
                 // Check for non-positive range AFTER checking target <= previous
                 if (range <= 0)
                 {
-                     // This case should ideally be caught by the first check, but as a safeguard:
-                     // If range is zero or negative, and target > previous (which shouldn't happen here),
-                     // treat progress as 100% if current >= target, otherwise 0%.
-                     return currentValue >= targetValue ? 100.0 : 0.0;
+                    // This case should ideally be caught by the first check, but as a safeguard:
+                    // If range is zero or negative, and target > previous (which shouldn't happen here),
+                    // treat progress as 100% if current >= target, otherwise 0%.
+                    return currentValue >= targetValue ? 100.0 : 0.0;
                 }
 
                 double progress = currentValue - previousValue;
@@ -109,8 +109,8 @@ namespace EggDash.Client.Services
 
                 // Final clamp: Ensure percentage is strictly between 0 and 100.
                 var finalPercentage = Math.Min(Math.Max(percentage, 0.0), 100.0);
-                 _logger.LogDebug("Calculated percentage details: Progress={Progress}, Range={Range}, RawPercentage={RawPercentage}, FinalPercentage={FinalPercentage}",
-                     progress, range, percentage, finalPercentage);
+                _logger.LogDebug("Calculated percentage details: Progress={Progress}, Range={Range}, RawPercentage={RawPercentage}, FinalPercentage={FinalPercentage}",
+                    progress, range, percentage, finalPercentage);
                 return finalPercentage;
             }
             catch (Exception ex)
@@ -155,7 +155,7 @@ namespace EggDash.Client.Services
                     var numericPart = cleanValue.Substring(0, cleanValue.Length - suffixPair.Key.Length);
                     if (double.TryParse(numericPart, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
                     {
-                         return number * suffixPair.Value;
+                        return number * suffixPair.Value;
                     }
                     else
                     {
@@ -171,14 +171,14 @@ namespace EggDash.Client.Services
             {
                 if (double.TryParse(cleanValue, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out result)) // Added AllowThousands
                 {
-                     _logger.LogDebug("ParseBigNumber parsed as plain number: {Result}", result); // Log result
+                    _logger.LogDebug("ParseBigNumber parsed as plain number: {Result}", result); // Log result
                     return result;
                 }
             }
             catch (Exception ex)
             {
-                 _logger.LogError(ex, "Error parsing plain number: {CleanValue}", cleanValue);
-                 result = 0; // Ensure result is 0 on error
+                _logger.LogError(ex, "Error parsing plain number: {CleanValue}", cleanValue);
+                result = 0; // Ensure result is 0 on error
             }
 
 
@@ -205,6 +205,40 @@ namespace EggDash.Client.Services
                 return "color: #FF6666"; // Red
             else
                 return "color: #FF0000"; // Dark red
+        }
+
+        /// <summary>
+        /// Determines if the daily prestige goal has been reached
+        /// </summary>
+        public bool HasReachedDailyPrestigeGoal(int? prestigesToday, int dailyPrestigeGoal)
+        {
+            if (prestigesToday == null || dailyPrestigeGoal <= 0)
+                return false;
+
+            return prestigesToday.Value >= dailyPrestigeGoal;
+        }
+
+        /// <summary>
+        /// Determines if the weekly prestige goal has been reached for the current day of the week
+        /// </summary>
+        public bool HasReachedWeeklyPrestigeGoalForCurrentDay(int? prestigesThisWeek, int dailyPrestigeGoal)
+        {
+            if (prestigesThisWeek == null || dailyPrestigeGoal <= 0)
+                return false;
+
+            // Get the current day of the week (1 = Monday, 7 = Sunday)
+            var localNow = DateTime.Now;
+            var dayOfWeek = (int)localNow.DayOfWeek;
+            // Convert to 1-based with Monday as 1
+            int daysSinceMonday = dayOfWeek == 0 ? 7 : dayOfWeek;
+
+            // Calculate the expected prestiges for the current day
+            int expectedPrestiges = dailyPrestigeGoal * daysSinceMonday;
+
+            _logger.LogDebug("Weekly prestige goal check: Current={Current}, Expected={Expected}, DayOfWeek={DayOfWeek}, DailyGoal={DailyGoal}",
+                prestigesThisWeek, expectedPrestiges, daysSinceMonday, dailyPrestigeGoal);
+
+            return prestigesThisWeek.Value >= expectedPrestiges;
         }
 
         // --- More Complex Methods (To be added) ---

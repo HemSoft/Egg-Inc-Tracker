@@ -12,18 +12,18 @@
                     @if (LastUpdatedTimestamp.HasValue && LastUpdatedTimestamp.Value != DateTime.MinValue)
                     {
                         <span> -- Last Updated: @GetLocalTimeString(LastUpdatedTimestamp)</span>
-                    })
+                    }
+    )
                 </MudText>
             </MudText>
             <MudText Typo="Typo.body1" Align="Align.Center">
                 <span class="d-inline-flex align-center mr-2">
-                    <MudImage src="/assets/egg_of_prophecy.webp" Width="24" Height="24"
-                        Style="vertical-align: middle;"></MudImage>
+                    <MudImage src="/assets/egg_of_prophecy.webp" Width="24" Height="24" Style="vertical-align: middle;">
+                    </MudImage>
                     @Player?.ProphecyEggs
                 </span>
                 <span class="d-inline-flex align-center mr-2">
-                    <MudImage src="/assets/egg_soul.webp" Width="24" Height="24"
-                        Style="vertical-align: middle;"></MudImage>
+                    <MudImage src="/assets/egg_soul.webp" Width="24" Height="24" Style="vertical-align: middle;"></MudImage>
                     @Player?.SoulEggs
                 </span>
                 <span class="d-inline-flex align-center mr-2">
@@ -45,10 +45,22 @@
                     {
                         <span style="@GetProgressColorStyle(Player?.PrestigesToday, PlayerGoals.DailyPrestigeGoal)">
                             @Player?.PrestigesToday
+                            @if (PlayerDataService.HasReachedDailyPrestigeGoal(Player?.PrestigesToday,
+                                                PlayerGoals.DailyPrestigeGoal))
+                            {
+                                <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small"
+                                    Color="Color.Success" Class="ml-1"></MudIcon>
+                            }
                         </span>
                         <span> / </span>
                         <span style="@GetProgressColorStyle(Player?.PrestigesThisWeek, PlayerGoals.DailyPrestigeGoal * 7)">
                             @Player?.PrestigesThisWeek
+                            @if (PlayerDataService.HasReachedWeeklyPrestigeGoalForCurrentDay(Player?.PrestigesThisWeek,
+                                                PlayerGoals.DailyPrestigeGoal))
+                            {
+                                <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small"
+                                    Color="Color.Success" Class="ml-1"></MudIcon>
+                            }
                         </span>
                     }
                     else
@@ -60,15 +72,17 @@
         </div>
         <div class="mb-2 d-flex flex-column align-center">
             <div class="donut-chart-container" style="position: relative; width: 300px; height: 300px;">
-                <div class="donut-chart-progress" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
-                    <div style="font-size: 24px; font-weight: bold; color: white;">@Player?.TitleProgress.ToString("F2")%</div>
+                <div class="donut-chart-progress"
+                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                    <div style="font-size: 24px; font-weight: bold; color: white;">@Player?.TitleProgress.ToString("F2")%
+                    </div>
                     <div style="font-size: 14px; color: #ccc;">Next title in @DaysToNextTitle days</div>
                 </div>
                 <svg width="300" height="300" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="45" fill="transparent" stroke="#666666" stroke-width="10" />
                     <circle cx="50" cy="50" r="45" fill="transparent" stroke="#4CAF50" stroke-width="10"
-                        stroke-dasharray="@(2.83 * Player?.TitleProgress ?? 0) 283"
-                        stroke-dashoffset="0" transform="rotate(-90 50 50)" />
+                        stroke-dasharray="@(2.83 * Player?.TitleProgress ?? 0) 283" stroke-dashoffset="0"
+                        transform="rotate(-90 50 50)" />
                 </svg>
             </div>
         </div>
@@ -81,10 +95,10 @@
             </MudText>
             @{
                 var playerSEGoalPercentage = CalculateProgressPercentage(
-                    Player?.SoulEggs, SEGoalEnd?.SEString, SEGoalBegin?.SEString);
+                Player?.SoulEggs, SEGoalEnd?.SEString, SEGoalBegin?.SEString);
             }
-            <MudProgressLinear Color="Color.Success" Value="@playerSEGoalPercentage" Max="100"
-                Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
+            <MudProgressLinear Color="Color.Success" Value="@playerSEGoalPercentage" Max="100" Striped="false"
+                Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
                 <MudText Typo="Typo.caption" Style="color: white;">
                     @playerSEGoalPercentage.ToString("F1")%
                 </MudText>
@@ -92,27 +106,27 @@
             <div class="d-flex justify-space-between mt-n1">
                 <MudText Typo="Typo.caption">
                     (@SEGoalBegin?.SEString) @(SEGoalBegin?.IGN?.Length > NameCutOff ?
-                                                SEGoalBegin.IGN.Substring(0, NameCutOff) : SEGoalBegin?.IGN)
-                </MudText>
-                <MudText Typo="Typo.caption">
+                                    SEGoalBegin.IGN.Substring(0, NameCutOff) : SEGoalBegin?.IGN)
+                                                                                            </MudText>
+                                                                                            <MudText Typo="Typo.caption">
                     @(SEGoalEnd?.IGN?.Length > NameCutOff ? SEGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                SEGoalEnd?.IGN) (@SEGoalEnd?.SEString)
-                </MudText>
-            </div>
-        </div>
-        <!---------------------->
-        <!-- EB Progress Bar: -->
-        <!---------------------->
-        <div class="mt-2 px-4" style="width: 100%;">
-            <MudText Typo="Typo.subtitle2" Class="mb-0">
-                EB (@PlayerStats?.EB) -- Rank: @(EBGoalEnd?.Ranking + 1)
+                                    SEGoalEnd?.IGN) (@SEGoalEnd?.SEString)
             </MudText>
-            @{
+        </div>
+    </div>
+    <!---------------------->
+    <!-- EB Progress Bar: -->
+    <!---------------------->
+    <div class="mt-2 px-4" style="width: 100%;">
+        <MudText Typo="Typo.subtitle2" Class="mb-0">
+            EB (@PlayerStats?.EB) -- Rank: @(EBGoalEnd?.Ranking + 1)
+        </MudText>
+        @{
                 var playerEBGoalPercentage = CalculateProgressPercentage(
-                    PlayerStats?.EB, EBGoalEnd?.EBString, EBGoalBegin?.EBString);
+                PlayerStats?.EB, EBGoalEnd?.EBString, EBGoalBegin?.EBString);
             }
-            <MudProgressLinear Color="Color.Success" Value="@playerEBGoalPercentage" Max="100"
-                Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
+            <MudProgressLinear Color="Color.Success" Value="@playerEBGoalPercentage" Max="100" Striped="false"
+                Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
                 <MudText Typo="Typo.caption" Style="color: white;">
                     @playerEBGoalPercentage.ToString("F1")%
                 </MudText>
@@ -120,27 +134,27 @@
             <div class="d-flex justify-space-between mt-n1">
                 <MudText Typo="Typo.caption">
                     (@EBGoalBegin?.EBString) @(EBGoalBegin?.IGN?.Length > NameCutOff ?
-                                                EBGoalBegin.IGN.Substring(0, NameCutOff) : EBGoalBegin?.IGN)
-                </MudText>
-                <MudText Typo="Typo.caption">
+                                    EBGoalBegin.IGN.Substring(0, NameCutOff) : EBGoalBegin?.IGN)
+                                                                                            </MudText>
+                                                                                            <MudText Typo="Typo.caption">
                     @(EBGoalEnd?.IGN?.Length > NameCutOff ? EBGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                EBGoalEnd?.IGN) (@EBGoalEnd?.EBString)
-                </MudText>
-            </div>
-        </div>
-        <!----------------------->
-        <!-- MER Progress Bar: -->
-        <!----------------------->
-        <div class="mt-2 px-4" style="width: 100%;">
-            <MudText Typo="Typo.subtitle2" Class="mb-0">
-                MER (@PlayerStats?.MER) -- Rank: @MERGoalEnd?.Ranking
+                                    EBGoalEnd?.IGN) (@EBGoalEnd?.EBString)
             </MudText>
-            @{
+        </div>
+    </div>
+    <!----------------------->
+    <!-- MER Progress Bar: -->
+    <!----------------------->
+    <div class="mt-2 px-4" style="width: 100%;">
+        <MudText Typo="Typo.subtitle2" Class="mb-0">
+            MER (@PlayerStats?.MER) -- Rank: @MERGoalEnd?.Ranking
+        </MudText>
+        @{
                 var playerMERGoalPercentage = CalculateProgressPercentage(PlayerStats?.MER.ToString(),
-                    MERGoalEnd?.MER.ToString(), MERGoalBegin?.MER.ToString());
+                MERGoalEnd?.MER.ToString(), MERGoalBegin?.MER.ToString());
             }
-            <MudProgressLinear Color="Color.Success" Value="@playerMERGoalPercentage" Max="100"
-                Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
+            <MudProgressLinear Color="Color.Success" Value="@playerMERGoalPercentage" Max="100" Striped="false"
+                Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
                 <MudText Typo="Typo.caption" Style="color: white;">
                     @playerMERGoalPercentage.ToString("F1")%
                 </MudText>
@@ -148,27 +162,27 @@
             <div class="d-flex justify-space-between mt-n1">
                 <MudText Typo="Typo.caption">
                     (@MERGoalBegin?.MER) @(MERGoalBegin?.IGN?.Length > NameCutOff ?
-                                                MERGoalBegin.IGN.Substring(0, NameCutOff) : MERGoalBegin?.IGN)
-                </MudText>
-                <MudText Typo="Typo.caption">
+                                    MERGoalBegin.IGN.Substring(0, NameCutOff) : MERGoalBegin?.IGN)
+                                                                                              </MudText>
+                                                                                              <MudText Typo="Typo.caption">
                     @(MERGoalEnd?.IGN?.Length > NameCutOff ? MERGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                MERGoalEnd?.IGN) (@MERGoalEnd?.MER)
-                </MudText>
-            </div>
-        </div>
-        <!----------------------->
-        <!-- JER Progress Bar: -->
-        <!----------------------->
-        <div class="mt-2 px-4" style="width: 100%;">
-            <MudText Typo="Typo.subtitle2" Class="mb-0">
-                JER (@PlayerStats?.JER) -- Rank: @JERGoalEnd?.Ranking
+                                    MERGoalEnd?.IGN) (@MERGoalEnd?.MER)
             </MudText>
-            @{
+        </div>
+    </div>
+    <!----------------------->
+    <!-- JER Progress Bar: -->
+    <!----------------------->
+    <div class="mt-2 px-4" style="width: 100%;">
+        <MudText Typo="Typo.subtitle2" Class="mb-0">
+            JER (@PlayerStats?.JER) -- Rank: @JERGoalEnd?.Ranking
+        </MudText>
+        @{
                 var playerJERGoalPercentage = CalculateProgressPercentage(PlayerStats?.JER.ToString(),
-                    JERGoalEnd?.JER.ToString(), JERGoalBegin?.JER.ToString());
+                JERGoalEnd?.JER.ToString(), JERGoalBegin?.JER.ToString());
             }
-            <MudProgressLinear Color="Color.Success" Value="@playerJERGoalPercentage" Max="100"
-                Striped="false" Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
+            <MudProgressLinear Color="Color.Success" Value="@playerJERGoalPercentage" Max="100" Striped="false"
+                Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
                 <MudText Typo="Typo.caption" Style="color: white;">
                     @playerJERGoalPercentage.ToString("F1")%
                 </MudText>
@@ -176,15 +190,15 @@
             <div class="d-flex justify-space-between mt-n1">
                 <MudText Typo="Typo.caption">
                     (@JERGoalBegin?.JER) @(JERGoalBegin?.IGN?.Length > NameCutOff ?
-                                                JERGoalBegin.IGN.Substring(0, NameCutOff) : JERGoalBegin?.IGN)
-                </MudText>
-                <MudText Typo="Typo.caption">
+                                    JERGoalBegin.IGN.Substring(0, NameCutOff) : JERGoalBegin?.IGN)
+                                                                                              </MudText>
+                                                                                              <MudText Typo="Typo.caption">
                     @(JERGoalEnd?.IGN?.Length > NameCutOff ? JERGoalEnd.IGN.Substring(0, NameCutOff) :
-                                                JERGoalEnd?.IGN) (@JERGoalEnd?.JER)
-                </MudText>
-            </div>
+                                    JERGoalEnd?.IGN) (@JERGoalEnd?.JER)
+            </MudText>
         </div>
-    </MudPaper>
+    </div>
+</MudPaper>
 }
 else
 {
