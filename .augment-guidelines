@@ -1,5 +1,13 @@
 # Instructions
 
+## Code Structure
+
+The /ref folder is purely for reference. Those projects serve as a best practice for how to implement certain technologies and nuget packages.
+The /sources folder is where all the projects live along with their source code.
+The /tests folder is where all the tests live.
+The /resources folder contains the SQlite database for the News Functions project.
+The /sql folder contains the SQL scripts for the EggIncTracker project. They are just random useful scripts.
+
 ## Change Guidelines
 
 ### DO NOT

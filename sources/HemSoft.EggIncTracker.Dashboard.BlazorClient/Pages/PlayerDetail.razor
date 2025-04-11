@@ -1,0 +1,102 @@
+@page "/player/{EID}"
+@using Microsoft.AspNetCore.Components
+@using MudBlazor
+@using HemSoft.EggIncTracker.Dashboard.BlazorClient.Components
+
+<PageTitle>Player Details - @(_player?.PlayerName ?? "Loading...")</PageTitle>
+
+<div class="dashboard-container mt-4 px-3">
+    <div class="d-flex justify-space-between mb-4">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowBack"
+            OnClick="NavigateBack">Back to Dashboard</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Secondary"
+            StartIcon="@(isLoading? Icons.Material.Filled.HourglassTop : Icons.Material.Filled.Refresh)"
+            OnClick="ManualRefresh" Disabled="isLoading">
+            @if (isLoading)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <span class="ms-2">Loading...</span>
+            }
+            else
+            {
+                <span>Refresh Data</span>
+            }
+        </MudButton>
+    </div>
+    <MudGrid Spacing="2" Class="fill-grid">
+        @if (isLoading)
+        {
+            <MudItem xs="12">
+                <MudPaper Class="pa-4 d-flex justify-center">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                </MudPaper>
+            </MudItem>
+        }
+        else if (_player == null)
+        {
+            <MudItem xs="12">
+                <MudAlert Severity="Severity.Error">Player not found</MudAlert>
+                <MudText Class="mt-4">Debug Info: EID parameter = '@EID'</MudText>
+            </MudItem>
+        }
+        else
+        {
+            <!-- Player Card Row -->
+            <MudItem xs="3">
+                <PlayerCard Player="_player" PlayerStats="_playerStats" PlayerGoals="_playerGoals"
+                    SEGoalBegin="_SEGoalBegin" SEGoalEnd="_SEGoalEnd" EBGoalBegin="_EBGoalBegin" EBGoalEnd="_EBGoalEnd"
+                    MERGoalBegin="_MERGoalBegin" MERGoalEnd="_MERGoalEnd" JERGoalBegin="_JERGoalBegin"
+                    JERGoalEnd="_JERGoalEnd" PlayerSEThisWeek="_playerSEThisWeek" DaysToNextTitle="_daysToNextTitle" />
+            </MudItem>
+
+            <!-- Player History Chart -->
+            <MudItem xs="9"> <!-- Take up remaining width -->
+                <MudPaper Class="dashboard-tile d-flex flex-column" Style="height: 100%;">
+                    <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-2">Soul Egg History</MudText>
+
+                    <!-- Slider to control days display -->
+                    <div class="d-flex justify-center align-center px-4 mb-2">
+                        <MudText Class="mr-4">Days to display:</MudText>
+                        <MudSlider @bind-Value="_selectedHistoryDays" Min="1" Max="30" Step="1" Class="mx-4"
+                            Style="width: 300px;">
+                            @_selectedHistoryDays days
+                        </MudSlider>
+                        <MudButton Size="Size.Small" Color="Color.Primary"
+                            OnClick="@(() => OnHistoryDaysSliderChanged(_selectedHistoryDays))">
+                            Update
+                        </MudButton>
+                    </div>
+
+                    <!-- Line Chart -->
+                    @if (_playerHistorySeries.Any())
+                    {
+                        <MudChart ChartType="ChartType.Line" ChartSeries="_playerHistorySeries"
+                            XAxisLabels="_playerHistoryLabels" ChartOptions="_historyChartOptions" Height="400px" />
+                    }
+                    else
+                    {
+                        <MudText Align="Align.Center" Class="mt-4">No historical data available for the selected period.
+                        </MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <!-- Placeholder Cards - Removed as chart takes remaining space -->
+            @* <MudItem xs="3">
+                 <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+                     <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100%" Width="100%" />
+                 </MudPaper>
+             </MudItem>
+             <MudItem xs="3">
+                 <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+                     <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100%" Width="100%" />
+                 </MudPaper>
+             </MudItem>
+             <MudItem xs="3">
+                 <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
+                     <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100%" Width="100%" />
+                 </MudPaper>
+             </MudItem> *@
+        }
+    </MudGrid>
+</div>

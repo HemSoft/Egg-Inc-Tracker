@@ -1,0 +1,287 @@
+@using HemSoft.EggIncTracker.Data.Dtos
+@using HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
+@using HemSoft.EggIncTracker.Dashboard.BlazorClient.Extensions
+@using MudBlazor
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+
+<div class="event-carousel @(_isDarkMode ? "dark-mode" : "light-mode")"
+    style="z-index: 1; height: 100%; display: flex; align-items: center; justify-content: center; width: 100%;">
+    @if (_isLoading)
+    {
+        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudText Typo="Typo.subtitle1" Color="Color.Error">@_errorMessage</MudText>
+    }
+    else if (_events == null || !_events.Any())
+    {
+        <MudText Typo="Typo.subtitle1">No active events</MudText>
+    }
+    else if (_currentEvent != null)
+    {
+        <div class="d-flex flex-column align-center justify-center event-content @_transitionClass" style="width: 100%;">
+            <div class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Filled.Event" Color="Color.Primary" Size="Size.Medium" Class="mr-2" />
+                <MudText Typo="Typo.subtitle1" Color="Color.Primary">@_currentEvent.SubTitle
+                </MudText>
+            </div>
+            <MudText Typo="Typo.caption" Class="mt-1">@GetTimeRemaining(_currentEvent)</MudText>
+        </div>
+    }
+</div>
+
+<style>
+    .event-carousel.dark-mode {
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .event-carousel.light-mode {
+        color: rgba(0, 0, 0, 0.9);
+    }
+
+    .event-content {
+        transition: opacity 0.3s ease-in-out;
+        opacity: 1;
+    }
+
+    .event-content.fade-out {
+        opacity: 0;
+    }
+
+    .event-content.fade-in {
+        opacity: 1;
+    }
+</style>
+
+@code {
+    [Inject] private IApiService ApiService { get; set; } = default!;
+    [Inject] private ILogger<EventCarousel> Logger { get; set; } = default!;
+    [Parameter] public bool IsDarkMode { get; set; }
+
+    private List<CurrentEventDto>? _events;
+    private CurrentEventDto? _currentEvent;
+    private int _currentIndex = 0;
+    private System.Timers.Timer? _rotationTimer;
+    private System.Timers.Timer? _refreshTimer;
+    private bool _isDarkMode;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Logger.LogInformation("EventCarousel: Initializing");
+            // Initialize dark mode
+            _isDarkMode = IsDarkMode;
+
+            await LoadEventsAsync();
+
+            // Set up rotation timer (10 seconds)
+            _rotationTimer = new System.Timers.Timer(10000);
+            _rotationTimer.Elapsed += OnRotationTimerElapsed;
+            _rotationTimer.AutoReset = true;
+            _rotationTimer.Start();
+
+            // Set up refresh timer (5 minutes)
+            _refreshTimer = new System.Timers.Timer(300000); // 5 minutes
+            _refreshTimer.Elapsed += OnRefreshTimerElapsed;
+            _refreshTimer.AutoReset = true;
+            _refreshTimer.Start();
+
+            Logger.LogInformation("EventCarousel: Initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing EventCarousel");
+            _errorMessage = "Error loading events. Please try again later.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Check if dark mode has changed
+        if (_isDarkMode != IsDarkMode)
+        {
+            Logger.LogInformation($"EventCarousel: Dark mode changed to {IsDarkMode}");
+            _isDarkMode = IsDarkMode;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadEventsAsync()
+    {
+        try
+        {
+            Logger.LogInformation("EventCarousel: Loading events");
+            _isLoading = true;
+            _errorMessage = null;
+
+            var events = await ApiService.GetActiveEventsAsync();
+
+            if (events == null || !events.Any())
+            {
+                Logger.LogInformation("EventCarousel: No active events found");
+                _events = new List<CurrentEventDto>();
+                _currentEvent = null;
+                return;
+            }
+
+            _events = events;
+            _currentIndex = 0;
+            _currentEvent = _events.FirstOrDefault();
+
+            Logger.LogInformation($"EventCarousel: Loaded {_events.Count} events");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading events");
+            _errorMessage = "Error loading events. Please try again later.";
+            _events = new List<CurrentEventDto>();
+            _currentEvent = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool _isTransitioning = false;
+    private string _transitionClass = "";
+
+    private async void OnRotationTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        try
+        {
+            // Skip rotation if we're already transitioning or if there are no events
+            if (_isTransitioning || _events == null || !_events.Any())
+            {
+                return;
+            }
+
+            // If we only have one event, no need to rotate
+            if (_events.Count == 1)
+            {
+                return;
+            }
+
+            _isTransitioning = true;
+
+            // Start fade-out transition
+            await InvokeAsync(async () =>
+            {
+                _transitionClass = "fade-out";
+                StateHasChanged();
+
+                // Wait for fade-out animation to complete
+                await Task.Delay(300);
+
+                // Move to the next event
+                _currentIndex = (_currentIndex + 1) % _events.Count;
+                _currentEvent = _events[_currentIndex];
+
+                // Start fade-in transition
+                _transitionClass = "fade-in";
+                StateHasChanged();
+
+                // Wait for fade-in animation to complete
+                await Task.Delay(300);
+
+                // Reset transition class
+                _transitionClass = "";
+                StateHasChanged();
+
+                _isTransitioning = false;
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error in rotation timer");
+            _isTransitioning = false;
+        }
+    }
+
+    private async void OnRefreshTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        try
+        {
+            await InvokeAsync(LoadEventsAsync);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error in refresh timer");
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_rotationTimer != null)
+        {
+            _rotationTimer.Stop();
+            _rotationTimer.Elapsed -= OnRotationTimerElapsed;
+            _rotationTimer.Dispose();
+        }
+
+        if (_refreshTimer != null)
+        {
+            _refreshTimer.Stop();
+            _refreshTimer.Elapsed -= OnRefreshTimerElapsed;
+            _refreshTimer.Dispose();
+        }
+    }
+
+    private string GetEventIcon(string eventType)
+    {
+        return eventType switch
+        {
+            "hab-sale" => Icons.Material.Filled.Home,
+            "piggy-boost" => Icons.Material.Filled.Savings,
+            "mission-fuel" => Icons.Material.Filled.Rocket,
+            "boost-duration" => Icons.Material.Filled.Speed,
+            "prestige-boost" => Icons.Material.Filled.EmojiEvents,
+            _ => Icons.Material.Filled.Event
+        };
+    }
+
+    private Color GetEventColor(string eventType)
+    {
+        return eventType switch
+        {
+            "hab-sale" => Color.Primary,
+            "piggy-boost" => Color.Success,
+            "mission-fuel" => Color.Warning,
+            "boost-duration" => Color.Info,
+            "prestige-boost" => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+
+    private string GetTimeRemaining(CurrentEventDto eventDto)
+    {
+        if (eventDto.EndTime.HasValue)
+        {
+            var timeRemaining = eventDto.EndTime.Value - DateTime.Now;
+            if (timeRemaining.TotalDays >= 1)
+            {
+                return $"{Math.Floor(timeRemaining.TotalDays)}d {timeRemaining.Hours}h remaining";
+            }
+            else if (timeRemaining.TotalHours >= 1)
+            {
+                return $"{Math.Floor(timeRemaining.TotalHours)}h {timeRemaining.Minutes}m remaining";
+            }
+            else
+            {
+                return $"{timeRemaining.Minutes}m {timeRemaining.Seconds}s remaining";
+            }
+        }
+
+        return "Time remaining unknown";
+    }
+}

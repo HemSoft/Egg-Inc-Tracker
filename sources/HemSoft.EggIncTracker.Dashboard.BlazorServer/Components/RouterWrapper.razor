@@ -1,0 +1,17 @@
+@using HemSoft.EggIncTracker.Dashboard.BlazorClient.Layout
+@namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Components
+
+<Router AppAssembly="@typeof(Program).Assembly"
+    AdditionalAssemblies="new[] { typeof(HemSoft.EggIncTracker.Dashboard.BlazorClient._Imports).Assembly }">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData"
+            DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p role="alert">Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>

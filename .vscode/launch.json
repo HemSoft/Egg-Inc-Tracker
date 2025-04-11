@@ -20,13 +20,13 @@
             }
         },
         {
-            "name": "Launch EggDash",
+            "name": "Launch Dashboard",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build-eggdash",
-            "program": "${workspaceFolder}/EggDash/bin/Debug/net9.0/EggDash.dll",
+            "preLaunchTask": "build-dashboard",
+            "program": "${workspaceFolder}/sources/HemSoft.EggIncTracker.Dashboard.BlazorServer/bin/Debug/net9.0/HemSoft.EggIncTracker.Dashboard.BlazorServer.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/EggDash",
+            "cwd": "${workspaceFolder}/sources/HemSoft.EggIncTracker.Dashboard.BlazorServer",
             "stopAtEntry": false,
             "serverReadyAction": {
                 "action": "openExternally",
@@ -62,8 +62,8 @@
         {
             "name": "Debug All Projects",
             "configurations": [
-                "Launch EggIncTrackerApi", 
-                "Launch EggDash", 
+                "Launch EggIncTrackerApi",
+                "Launch Dashboard",
                 "Debug UpdatePlayerFunction"
             ],
             "stopAll": true

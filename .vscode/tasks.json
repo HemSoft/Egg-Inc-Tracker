@@ -65,7 +65,7 @@
 			}
 		},
 		{
-			"label": "build-eggdash",
+			"label": "build-dashboard",
 			"command": "dotnet",
 			"args": [
 				"build",
@@ -76,7 +76,7 @@
 			"group": "build",
 			"problemMatcher": "$msCompile",
 			"options": {
-				"cwd": "${workspaceFolder}/EggDash"
+				"cwd": "${workspaceFolder}/sources/HemSoft.EggIncTracker.Dashboard.BlazorServer"
 			}
 		},
 		{

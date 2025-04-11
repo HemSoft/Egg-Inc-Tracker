@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>HemSoft.EggIncTracker.Domain</RootNamespace>
+    <AssemblyName>HemSoft.EggIncTracker.Domain</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HemSoft.EggIncTracker.Data\HemSoft.EggIncTracker.Data.csproj" />
+  </ItemGroup>
+
+</Project>
