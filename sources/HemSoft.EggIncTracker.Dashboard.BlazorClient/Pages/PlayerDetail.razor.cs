@@ -39,7 +39,7 @@ public partial class PlayerDetail
     private MajPlayerRankingDto _JERGoalBegin = new();
     private MajPlayerRankingDto _JERGoalEnd = new();
     private PlayerGoalDto? _playerGoals; // Added field for player goals
-    private string _playerSEThisWeek = string.Empty;
+    private string currentPlayerSEThisWeek = string.Empty; // Renamed field
     private int _daysToNextTitle = 0;
     private bool isLoading = true;
     private const int NameCutOff = 10;
@@ -130,6 +130,7 @@ public partial class PlayerDetail
             }
 
             Logger.LogInformation($"Player found: {_player.PlayerName}");
+            StateHasChanged(); // Force UI update after player is loaded
 
             // Get player stats
             _playerStats = await ApiService.GetRankedPlayerAsync(_player.PlayerName, 1, 30);
@@ -144,6 +145,7 @@ public partial class PlayerDetail
 
             // Calculate SE This Week
             await CalculateSEThisWeek();
+            StateHasChanged(); // Force UI update after SE this week is calculated
 
             // Calculate Prestiges Today/Week using the service
             if (_player != null)
@@ -226,11 +228,11 @@ public partial class PlayerDetail
         // Calculate SE This Week using the service
         if (_player != null)
         {
-            _playerSEThisWeek = await PlayerDataService.CalculateSEThisWeekAsync(_player);
+            currentPlayerSEThisWeek = await PlayerDataService.CalculateSEThisWeekAsync(_player); // Assign to renamed field
         }
         else
         {
-            _playerSEThisWeek = "0"; // Default if player is null
+            currentPlayerSEThisWeek = "0"; // Default if player is null
         }
     }
 

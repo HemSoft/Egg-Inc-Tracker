@@ -67,16 +67,17 @@
                     SE/Week: (@PlayerStats?.SEPerWeek)
                 </span>
                 <span class="d-inline-flex align-center mr-2">
-                    @if (PlayerGoals != null && !string.IsNullOrEmpty(PlayerGoals.WeeklySEGainGoal) && !string.IsNullOrEmpty(PlayerSEThisWeek))
+                    @* Use the local field _localPlayerSEThisWeek consistently *@
+                    @if (PlayerGoals != null && !string.IsNullOrEmpty(PlayerGoals.WeeklySEGainGoal) && !string.IsNullOrEmpty(_localPlayerSEThisWeek))
                     {
-                        var (isGoalMet, missingAmount, expectedAmount, percentComplete) = PlayerDataService.CalculateMissingSEGain(PlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal);
+                        var (isGoalMet, missingAmount, expectedAmount, percentComplete) = PlayerDataService.CalculateMissingSEGain(_localPlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal);
                         string tooltipText = isGoalMet
-                            ? $"Goal met! Current progress: {PlayerSEThisWeek} / Expected: {expectedAmount} ({percentComplete}%)"
+                            ? $"Goal met! Current progress: {_localPlayerSEThisWeek} / Expected: {expectedAmount} ({percentComplete}%)"
                             : $"Missing {missingAmount} to reach today's goal of {expectedAmount} ({percentComplete}%)";
 
                         <MudTooltip Text="@tooltipText" Arrow="true" Placement="Placement.Top">
                             <span>
-                                SE This Week: <span style="@PlayerDataService.GetSEProgressColorStyle(PlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal)">@PlayerSEThisWeek</span>
+                                SE This Week: <span style="@PlayerDataService.GetSEProgressColorStyle(_localPlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal)">@_localPlayerSEThisWeek</span>
                                 @if (isGoalMet)
                                 {
                                     <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" Color="Color.Success" Class="ml-1"></MudIcon>
@@ -86,7 +87,7 @@
                     }
                     else
                     {
-                        <span>SE This Week: @PlayerSEThisWeek</span>
+                        <span>SE This Week: @_localPlayerSEThisWeek</span> @* Use local field *@
                     }
                 </span>
                 <span class="d-inline-flex align-center mr-2">
@@ -494,10 +495,11 @@ else
     [Parameter] public MajPlayerRankingDto? MERGoalEnd { get; set; }
     [Parameter] public MajPlayerRankingDto? JERGoalBegin { get; set; }
     [Parameter] public MajPlayerRankingDto? JERGoalEnd { get; set; }
-    [Parameter] public string? PlayerSEThisWeek { get; set; }
+    [Parameter] public string? PlayerSEThisWeek { get; set; } // Parameter received from parent
     [Parameter] public int DaysToNextTitle { get; set; }
     [Parameter] public DateTime? LastUpdatedTimestamp { get; set; }
 
+    private string? _localPlayerSEThisWeek; // Local field to store the parameter value
     private const int NameCutOff = 10; // Or get from config/parameter if needed
     private bool _showFireworks = false;
     private bool _allGoalsAchieved = false;
@@ -550,11 +552,12 @@ else
     // Check if all goals are met
     private bool AreAllGoalsMet()
     {
-        if (PlayerGoals == null || string.IsNullOrEmpty(PlayerGoals.WeeklySEGainGoal) || string.IsNullOrEmpty(PlayerSEThisWeek))
+        // Use the local field for checks
+        if (PlayerGoals == null || string.IsNullOrEmpty(PlayerGoals.WeeklySEGainGoal) || string.IsNullOrEmpty(_localPlayerSEThisWeek))
             return false;
 
-        // Check SE This Week goal
-        var (isSEGoalMet, _, _, _) = PlayerDataService.CalculateMissingSEGain(PlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal);
+        // Check SE This Week goal using local field
+        var (isSEGoalMet, _, _, _) = PlayerDataService.CalculateMissingSEGain(_localPlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal);
 
         // Check Prestiges Today goal
         var (isDailyPrestigeGoalMet, _, _, _) = PlayerDataService.CalculateMissingDailyPrestiges(Player?.PrestigesToday, PlayerGoals.DailyPrestigeGoal);
@@ -572,8 +575,13 @@ else
 
     protected override void OnParametersSet()
     {
+        // Assign parameter value to local field when parameters are set
+        _localPlayerSEThisWeek = PlayerSEThisWeek;
+        Logger.LogDebug("PlayerCard OnParametersSet: PlayerSEThisWeek parameter = '{ParamValue}', _localPlayerSEThisWeek = '{LocalValue}'", PlayerSEThisWeek, _localPlayerSEThisWeek);
+
         // Check goals whenever parameters change
         CheckGoalsAndShowFireworks();
+        base.OnParametersSet(); // Call base method
     }
 
     private void CheckGoalsAndShowFireworks()

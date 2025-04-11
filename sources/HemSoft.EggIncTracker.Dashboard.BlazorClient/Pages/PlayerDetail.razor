@@ -46,7 +46,8 @@
                 <PlayerCard Player="_player" PlayerStats="_playerStats" PlayerGoals="_playerGoals"
                     SEGoalBegin="_SEGoalBegin" SEGoalEnd="_SEGoalEnd" EBGoalBegin="_EBGoalBegin" EBGoalEnd="_EBGoalEnd"
                     MERGoalBegin="_MERGoalBegin" MERGoalEnd="_MERGoalEnd" JERGoalBegin="_JERGoalBegin"
-                    JERGoalEnd="_JERGoalEnd" PlayerSEThisWeek="_playerSEThisWeek" DaysToNextTitle="_daysToNextTitle" />
+                    JERGoalEnd="_JERGoalEnd" PlayerSEThisWeek="@currentPlayerSEThisWeek" DaysToNextTitle="_daysToNextTitle"
+                    LastUpdatedTimestamp="_player?.Updated" />
             </MudItem>
 
             <!-- Player History Chart -->

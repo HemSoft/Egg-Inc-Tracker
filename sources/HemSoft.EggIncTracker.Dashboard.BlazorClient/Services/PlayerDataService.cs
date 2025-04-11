@@ -649,30 +649,30 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                     var latestSE = player.SoulEggsFull; // Use the full SE value from the current player DTO
                     var earliestSE = firstThisWeek.SoulEggsFull; // Use the full SE value from the earliest record this week
 
-                    _logger.LogInformation("Calculating SE gain for {PlayerName}: LatestSE={LatestSE}, EarliestSE={EarliestSE} (from {Timestamp})",
-                        player.PlayerName, latestSE, earliestSE, firstThisWeek.Updated);
+                    _logger.LogInformation("[PlayerDataService] Calculating SE gain for {PlayerName}: LatestSE='{LatestSE}', EarliestSE='{EarliestSE}' (from {Timestamp})",
+                        player.PlayerName, latestSE, earliestSE, firstThisWeek.Updated); // Added quotes and tag
 
                     try
                     {
                         // Use BigNumberCalculator to calculate the difference
                         seThisWeek = BigNumberCalculator.CalculateDifference(earliestSE, latestSE);
-                        _logger.LogInformation("Calculated SE gain this week for {PlayerName}: {SEGain}", player.PlayerName, seThisWeek);
+                        _logger.LogInformation("[PlayerDataService] Calculated SE gain this week for {PlayerName}: Result='{SEGain}'", player.PlayerName, seThisWeek); // Added quotes and tag
                     }
                     catch (Exception calcEx)
                     {
-                        _logger.LogError(calcEx, "Error using BigNumberCalculator for SE gain for {PlayerName}", player.PlayerName);
+                        _logger.LogError(calcEx, "[PlayerDataService] Error using BigNumberCalculator for SE gain for {PlayerName}. Earliest='{EarliestSE}', Latest='{LatestSE}'", player.PlayerName, earliestSE, latestSE); // Added tag and values
                         seThisWeek = "0"; // Default on calculation error
                     }
                 }
                 else
                 {
-                    _logger.LogWarning("No player history found for {PlayerName} this week, setting SE gain to 0", player.PlayerName);
+                    _logger.LogWarning("[PlayerDataService] No player history found for {PlayerName} this week, setting SE gain to 0", player.PlayerName); // Added tag
                     seThisWeek = "0";
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error calculating SE this week for {PlayerName}", player.PlayerName);
+                _logger.LogError(ex, "[PlayerDataService] Error calculating SE this week for {PlayerName}", player.PlayerName); // Added tag
                 seThisWeek = "0"; // Default to 0 on error
             }
             return seThisWeek;
