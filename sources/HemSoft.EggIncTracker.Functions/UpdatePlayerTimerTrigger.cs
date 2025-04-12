@@ -16,7 +16,8 @@ using Newtonsoft.Json;
 public class UpdatePlayerTimerTrigger
 {
     private readonly ILogger _logger;
-    private readonly HttpClient _httpClient = new();
+    private readonly HttpClient _httpClient;
+    private readonly IApiService _apiService;
     //private const string DiscordWebhookUrl = "https://discord.com/api/webhooks/1257956380875161680/1RuZ7b8i2JzpW_E4NUkWLgSF2t_JBjgfqar5h7kLmJavZ6tXH_VT8PIUr8R6zcGlAlRP";
 
     private const string DiscordWebhookUrl =
@@ -30,20 +31,17 @@ public class UpdatePlayerTimerTrigger
     private const string KingMondayEid = "EI6725967592947712";
     private const string KingMondayPlayerName = "King Monday!";
 
-    public UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory)
+    public UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory, IApiService apiService, HttpClient httpClient)
     {
         _logger = loggerFactory.CreateLogger<UpdatePlayerTimerTrigger>();
+        _apiService = apiService;
+        _httpClient = httpClient;
 
-        // Explicitly configure the HttpClient with the correct base address
-        _httpClient.BaseAddress = new Uri("https://localhost:5000/");
-        _logger.LogInformation($"Setting HttpClient base address to: {_httpClient.BaseAddress}");
+        _logger.LogInformation($"UpdatePlayerTimerTrigger initialized with HttpClient BaseAddress: {_httpClient.BaseAddress} and Timeout: {_httpClient.Timeout.TotalSeconds} seconds");
 
-        // Create and register API service 
-        var apiService = new FunctionApiService(_httpClient, _logger);
-        ServiceLocator.RegisterService<IApiService>(apiService);
-
-        // Register logger
-        ServiceLocator.RegisterService<ILogger>(_logger);
+        // Register services in ServiceLocator for compatibility with existing code
+        ServiceLocator.RegisterService<IApiService>(_apiService);
+        ServiceLocator.RegisterService(_logger); // Register as non-generic ILogger for compatibility
     }
 
     [Function("UpdateMain")]

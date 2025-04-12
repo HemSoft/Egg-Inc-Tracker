@@ -204,6 +204,23 @@ public static class ServiceLocator
         _services.AddOrUpdate(typeof(T), service, (_, _) => service);
     }
 
+    // Non-generic registration method for ILogger and other special cases
+    public static void RegisterService(object service)
+    {
+        if (service == null)
+            return;
+
+        // Register by the actual runtime type
+        var type = service.GetType();
+        _services.AddOrUpdate(type, service, (_, _) => service);
+
+        // Also register by all implemented interfaces
+        foreach (var interfaceType in type.GetInterfaces())
+        {
+            _services.AddOrUpdate(interfaceType, service, (_, _) => service);
+        }
+    }
+
     public static T GetService<T>() where T : class
     {
         if (_services.TryGetValue(typeof(T), out var service))

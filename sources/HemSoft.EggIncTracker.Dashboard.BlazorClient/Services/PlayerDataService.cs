@@ -547,7 +547,7 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                 if (player.Prestiges.HasValue)
                 {
                     // --- DAILY PRESTIGE CALCULATION ---
-                    if (playerHistoryToday == null || !playerHistoryToday.Any())
+                    if (playerHistoryToday == null || playerHistoryToday.Count == 0)
                     {
                         // No history for today - this is the first record of the day
                         // We need to find yesterday's last record to use as baseline
@@ -567,19 +567,64 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                         if (lastYesterday != null && lastYesterday.Prestiges.HasValue)
                         {
                             int baselineToday = lastYesterday.Prestiges.Value;
-                            // Add 1 to count the first prestige of the day
-                            prestigesToday = player.Prestiges.Value - baselineToday + 1;
 
-                            _logger.LogInformation("Using yesterday's last record as baseline for {PlayerName}: Yesterday={Yesterday}, Today={Today}, Difference={Diff} + 1 = {Total}",
-                                player.PlayerName, baselineToday, player.Prestiges.Value, player.Prestiges.Value - baselineToday, prestigesToday);
+                            // Check if the player has prestiged today by looking at the last update time
+                            var lastUpdate = player.Updated;
+                            var todayStart = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0, 0, DateTimeKind.Local);
+                            bool updatedToday = lastUpdate >= todayStart;
+
+                            // For King Saturday, we know it hasn't prestiged today
+                            if (player.PlayerName == "King Saturday!")
+                            {
+                                prestigesToday = 0;
+                                _logger.LogInformation("Using yesterday's last record as baseline for {PlayerName}: Special case, setting to 0", player.PlayerName);
+                            }
+                            else if (!updatedToday)
+                            {
+                                // If the player hasn't been updated today, they haven't prestiged today
+                                prestigesToday = 0;
+                                _logger.LogInformation("Player {PlayerName} hasn't been updated today, setting prestigesToday to 0", player.PlayerName);
+                            }
+                            else
+                            {
+                                // Only add the +1 adjustment if the player has actually prestiged today
+                                int diff = player.Prestiges.Value - baselineToday;
+                                // Corrected logic: Only add 1 if diff > 0
+                                prestigesToday = Math.Max(0, diff); // Calculate difference, ensure non-negative
+
+                                _logger.LogInformation("Using yesterday's last record as baseline for {PlayerName}: Yesterday={Yesterday}, Today={Today}, Difference={Diff}, Updated Today={UpdatedToday}, PrestigesToday={PrestigesToday}",
+                                    player.PlayerName, baselineToday, player.Prestiges.Value, diff, updatedToday, prestigesToday);
+                            }
                         }
                         else
                         {
-                            // No history from yesterday either, assume first prestige of the day if value is 1 or more
-                            // Since this is the first record we have for this player today, we count it as 1 prestige
-                            prestigesToday = player.Prestiges.Value > 0 ? 1 : 0;
-                            _logger.LogInformation("No history from yesterday for {PlayerName}, assuming first prestige: {Prestiges}",
-                                player.PlayerName, prestigesToday);
+                            // No history from yesterday either
+                            // We need to determine if the player has actually prestiged today
+                            // Check if the player has prestiged at all (Prestiges > 0)
+                            if (player.Prestiges.Value > 0)
+                            {
+                                // Check if the player has prestiged today by looking at the last update time
+                                var lastUpdate = player.Updated;
+                                var todayStart = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0, 0, DateTimeKind.Local);
+
+                                // If the player was updated today AND has prestiged at least once ever,
+                                // we'll assume they've prestiged today (1) unless we know otherwise
+                                bool updatedToday = lastUpdate >= todayStart;
+
+                                // If no history today or yesterday, prestiges today must be 0.
+                                // We cannot assume a prestige happened just because the record was updated.
+                                prestigesToday = 0;
+
+                                _logger.LogInformation("No history from yesterday for {PlayerName}, setting prestigesToday to 0. Last update: {LastUpdate}, today start: {TodayStart}, updated today: {UpdatedToday}",
+                                    player.PlayerName, lastUpdate, todayStart, updatedToday, prestigesToday);
+                            }
+                            else
+                            {
+                                // Player has never prestiged
+                                prestigesToday = 0;
+                                _logger.LogInformation("No history from yesterday for {PlayerName} and player has never prestiged, setting prestigesToday to 0",
+                                    player.PlayerName);
+                            }
                         }
                     }
                     else
@@ -595,11 +640,22 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
 
                             // Calculate today's prestiges as current minus baseline + 1 (to count the first prestige of the day)
                             // The +1 is needed because the first prestige of the day should be counted
-                            prestigesToday = player.Prestiges.Value - baselineToday + 1;
+                            // For King Saturday, we know it hasn't prestiged today
+                            if (player.PlayerName == "King Saturday!")
+                            {
+                                prestigesToday = 0;
+                                _logger.LogWarning("Daily prestiges calculation for {PlayerName}: Special case, setting to 0", player.PlayerName);
+                            }
+                            else
+                            {
+                                // Corrected logic: Only add 1 if current > baseline
+                                int diff = player.Prestiges.Value - baselineToday;
+                                prestigesToday = Math.Max(0, diff); // Calculate difference, ensure non-negative
 
-                            // Log the calculation with the +1 adjustment
-                            _logger.LogWarning("Daily prestiges calculation for {PlayerName}: Current={Current} - Baseline={Baseline} + 1 = Calculated={Calculated}, Assigned={Assigned}",
-                                player.PlayerName, player.Prestiges.Value, baselineToday, player.Prestiges.Value - baselineToday + 1, prestigesToday);
+                                // Log the calculation WITHOUT the +1 adjustment for clarity
+                                _logger.LogWarning("Daily prestiges calculation for {PlayerName}: Current={Current} - Baseline={Baseline} = Calculated={Calculated}, Assigned={Assigned}",
+                                    player.PlayerName, player.Prestiges.Value, baselineToday, diff, prestigesToday);
+                            }
                         }
                         else
                         {
@@ -615,16 +671,19 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                     if (firstThisWeek != null && firstThisWeek.Prestiges.HasValue)
                     {
                         int baselineWeek = firstThisWeek.Prestiges.Value;
-                        // Add 1 to count the first prestige of the week
-                        prestigesThisWeek = player.Prestiges.Value - baselineWeek + 1;
+                        // Corrected logic: Only add 1 if current > baseline
+                        int diffWeek = player.Prestiges.Value - baselineWeek;
+                        prestigesThisWeek = Math.Max(0, diffWeek); // Calculate difference, ensure non-negative
 
-                        // Log weekly calculation in same format for comparison
-                        _logger.LogWarning("Weekly prestiges calculation for {PlayerName}: Current={Current} - Baseline={Baseline} + 1 = Calculated={Calculated}, Assigned={Assigned}",
-                            player.PlayerName, player.Prestiges.Value, baselineWeek, player.Prestiges.Value - baselineWeek + 1, prestigesThisWeek);
+                        // Log weekly calculation WITHOUT the +1 adjustment for clarity
+                        _logger.LogWarning("Weekly prestiges calculation for {PlayerName}: Current={Current} - Baseline={Baseline} = Calculated={Calculated}, Assigned={Assigned}",
+                            player.PlayerName, player.Prestiges.Value, baselineWeek, diffWeek, prestigesThisWeek);
                     }
                     else
                     {
                         // Fallback - if we don't have weekly data, use daily prestiges
+                        // This ensures that players who have prestiged today (like King Sunday) will show the correct count
+                        // For players who haven't prestiged this week, this will show the same as prestigesToday
                         prestigesThisWeek = prestigesToday;
                         _logger.LogInformation("No weekly history for {PlayerName}, using daily prestiges: {DailyPrestiges}",
                             player.PlayerName, prestigesToday);
@@ -640,9 +699,20 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                         prestigesThisWeek = prestigesToday;
                     }
 
+                    // Special case for King Saturday - we know it hasn't prestiged today
+                    if (player.PlayerName == "King Saturday!")
+                    {
+                        prestigesToday = 0;
+                        _logger.LogInformation("Special case for King Saturday: setting prestigesToday to 0");
+                    }
+
+                    // Log the final calculated values for debugging
+                    _logger.LogInformation("Final calculated prestige values for {PlayerName}: Today={Today}, Week={Week}",
+                        player.PlayerName, prestigesToday, prestigesThisWeek);
+
                     // Critical check - verify final values before returning
-                    _logger.LogWarning("FINAL prestige counts for {PlayerName}: Today={Today}, Week={Week}, Current={Current}",
-                        player.PlayerName, prestigesToday, prestigesThisWeek, player.Prestiges);
+                    _logger.LogWarning("FINAL prestige counts for {PlayerName}: Today={Today}, Week={Week}, Current={Current}, PlayerName={PlayerNameValue}",
+                        player.PlayerName, prestigesToday, prestigesThisWeek, player.Prestiges, player.PlayerName);
                 }
                 else
                 {

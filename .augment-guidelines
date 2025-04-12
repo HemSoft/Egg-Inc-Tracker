@@ -2,8 +2,35 @@
 
 ## MCP Tooling
 
-Pay special attention to the fact that you can consult and collaborate with MCP-LLM. Use this tool as your trooubleshooting tool.
+Pay special attention to the fact that you can consult and collaborate with MCP-LLM. Use this tool as your troubleshooting tool.
 Give it as much context as you can and it will help you.
+
+### Using MCP-LLM
+
+The MCP-LLM tool is available through two main functions:
+
+1. `generate_MCP-LLM` - Use this function to generate text based on a prompt. Example:
+   ```
+   generate_MCP-LLM with prompt parameter
+   ```
+
+2. `chat_MCP-LLM` - Use this function for conversational interactions. Example:
+   ```
+   chat_MCP-LLM with messages parameter containing an array of role/content pairs
+   ```
+
+When using these tools:
+- Provide detailed context in your prompts
+- Use the generate function for one-off queries
+- Use the chat function for maintaining conversation context
+- The model will respond with helpful information, code suggestions, and troubleshooting advice
+
+Remember that MCP-LLM is a powerful collaboration tool that can help with:
+- Debugging code issues
+- Suggesting implementation approaches
+- Explaining complex concepts
+- Providing code examples
+- Analyzing error messages
 ## Code Structure
 
 The /ref folder is purely for reference. Those projects serve as a best practice for how to implement certain technologies and nuget packages.
@@ -16,6 +43,7 @@ The /sql folder contains the SQL scripts for the EggIncTracker project. They are
 
 ### DO NOT
 
+- DO NOT hardcode values as a substitute for making real solutions.
 - DO NOT change, add, or remove any nuget packages or their version without consulting with the user first.
 - DO NOT run the application. Let the user be in charge of that.
 - DO NOT change any signigicant structures of the application without consulting with the user first.

@@ -138,7 +138,6 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
             DateTime? to = null,
             int? limit = null)
         {
-            var test = "test";
             return await ExecuteWithRetryAsync<List<PlayerDto>>(async () =>
             {
                 // Build the query string with optional parameters
@@ -170,6 +169,13 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                 if (response.IsSuccessStatusCode)
                 {
                     return await response.Content.ReadFromJsonAsync<List<PlayerDto>>();
+                }
+
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    // If no history is found, return an empty list instead of null
+                    _logger.LogInformation($"No history found for player {playerName} in the specified time range. Returning empty list.");
+                    return new List<PlayerDto>();
                 }
 
                 _logger.LogError($"Error fetching player history: {response.StatusCode}");

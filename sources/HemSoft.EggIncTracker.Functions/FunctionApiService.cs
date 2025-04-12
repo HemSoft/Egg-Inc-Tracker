@@ -8,13 +8,16 @@ namespace UpdatePlayerFunction
     public class FunctionApiService : IApiService
     {
         private readonly HttpClient _httpClient;
-        private readonly ILogger _logger;
+        private readonly ILogger<FunctionApiService> _logger;
         private readonly string _apiBaseUrl = Environment.GetEnvironmentVariable("ApiBaseUrl") ?? "https://localhost:5000/";
 
-        public FunctionApiService(HttpClient httpClient, ILogger logger)
+        public FunctionApiService(HttpClient httpClient, ILogger<FunctionApiService> logger)
         {
             _httpClient = httpClient;
             _logger = logger;
+
+            // Set a reasonable timeout for the HttpClient (30 seconds instead of the default 100)
+            _httpClient.Timeout = TimeSpan.FromSeconds(30);
 
             // Log the current base address if it exists
             if (_httpClient.BaseAddress != null)
@@ -35,6 +38,8 @@ namespace UpdatePlayerFunction
             {
                 _httpClient.BaseAddress = new Uri(_httpClient.BaseAddress.ToString() + "/");
             }
+
+            _logger.LogInformation($"FunctionApiService initialized with BaseAddress: {_httpClient.BaseAddress} and Timeout: {_httpClient.Timeout.TotalSeconds} seconds");
         }
 
         public async Task<SurroundingPlayersDto?> GetSurroundingSEPlayersAsync(string playerName, string soulEggs)
@@ -117,23 +122,41 @@ namespace UpdatePlayerFunction
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync("api/v1/majplayerrankings", majPlayerRanking);
+                _logger.LogInformation($"Saving MajPlayerRanking for {majPlayerRanking.IGN} with SE: {majPlayerRanking.SEString}");
+
+                // Use a separate timeout for this specific operation
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+
+                var response = await _httpClient.PostAsJsonAsync("api/v1/majplayerrankings", majPlayerRanking, cts.Token);
                 if (response.IsSuccessStatusCode)
                 {
-                    return await response.Content.ReadFromJsonAsync<SaveRankingResponseDto>();
+                    var result = await response.Content.ReadFromJsonAsync<SaveRankingResponseDto>();
+                    _logger.LogInformation($"Successfully saved MajPlayerRanking for {majPlayerRanking.IGN}");
+                    return result;
                 }
 
-                _logger.LogWarning($"Failed to save MajPlayerRanking, StatusCode: {response.StatusCode}");
+                var responseContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning($"Failed to save MajPlayerRanking for {majPlayerRanking.IGN}, StatusCode: {response.StatusCode}, Response: {responseContent}");
                 return new SaveRankingResponseDto
                 {
                     Success = false,
-                    Message = $"API returned {response.StatusCode}",
+                    Message = $"API returned {response.StatusCode}: {responseContent}",
+                    PreviousRanking = new MajPlayerRankingDto()
+                };
+            }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogError(ex, $"Request timeout in SaveMajPlayerRankingAsync for {majPlayerRanking.IGN}");
+                return new SaveRankingResponseDto
+                {
+                    Success = false,
+                    Message = $"Request timed out: {ex.Message}",
                     PreviousRanking = new MajPlayerRankingDto()
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in SaveMajPlayerRankingAsync");
+                _logger.LogError(ex, $"Error in SaveMajPlayerRankingAsync for {majPlayerRanking.IGN}");
                 return new SaveRankingResponseDto
                 {
                     Success = false,
