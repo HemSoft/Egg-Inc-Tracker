@@ -573,13 +573,7 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                             var todayStart = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0, 0, DateTimeKind.Local);
                             bool updatedToday = lastUpdate >= todayStart;
 
-                            // For King Saturday, we know it hasn't prestiged today
-                            if (player.PlayerName == "King Saturday!")
-                            {
-                                prestigesToday = 0;
-                                _logger.LogInformation("Using yesterday's last record as baseline for {PlayerName}: Special case, setting to 0", player.PlayerName);
-                            }
-                            else if (!updatedToday)
+                            if (!updatedToday)
                             {
                                 // If the player hasn't been updated today, they haven't prestiged today
                                 prestigesToday = 0;
@@ -638,24 +632,13 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                             // Use the first record of today as baseline
                             int baselineToday = firstToday.Prestiges.Value;
 
-                            // Calculate today's prestiges as current minus baseline + 1 (to count the first prestige of the day)
-                            // The +1 is needed because the first prestige of the day should be counted
-                            // For King Saturday, we know it hasn't prestiged today
-                            if (player.PlayerName == "King Saturday!")
-                            {
-                                prestigesToday = 0;
-                                _logger.LogWarning("Daily prestiges calculation for {PlayerName}: Special case, setting to 0", player.PlayerName);
-                            }
-                            else
-                            {
-                                // Corrected logic: Only add 1 if current > baseline
-                                int diff = player.Prestiges.Value - baselineToday;
-                                prestigesToday = Math.Max(0, diff); // Calculate difference, ensure non-negative
+                            // Corrected logic: Only add 1 if current > baseline
+                            int diff = player.Prestiges.Value - baselineToday;
+                            prestigesToday = Math.Max(0, diff); // Calculate difference, ensure non-negative
 
-                                // Log the calculation WITHOUT the +1 adjustment for clarity
-                                _logger.LogWarning("Daily prestiges calculation for {PlayerName}: Current={Current} - Baseline={Baseline} = Calculated={Calculated}, Assigned={Assigned}",
-                                    player.PlayerName, player.Prestiges.Value, baselineToday, diff, prestigesToday);
-                            }
+                            // Log the calculation WITHOUT the +1 adjustment for clarity
+                            _logger.LogWarning("Daily prestiges calculation for {PlayerName}: Current={Current} - Baseline={Baseline} = Calculated={Calculated}, Assigned={Assigned}",
+                                player.PlayerName, player.Prestiges.Value, baselineToday, diff, prestigesToday);
                         }
                         else
                         {
@@ -697,13 +680,6 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                     if (prestigesToday.HasValue && (!prestigesThisWeek.HasValue || prestigesThisWeek.Value < prestigesToday.Value))
                     {
                         prestigesThisWeek = prestigesToday;
-                    }
-
-                    // Special case for King Saturday - we know it hasn't prestiged today
-                    if (player.PlayerName == "King Saturday!")
-                    {
-                        prestigesToday = 0;
-                        _logger.LogInformation("Special case for King Saturday: setting prestigesToday to 0");
                     }
 
                     // Log the final calculated values for debugging
