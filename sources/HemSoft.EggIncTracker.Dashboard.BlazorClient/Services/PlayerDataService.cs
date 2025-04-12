@@ -468,9 +468,7 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
             return (isGoalMet, formattedMissingAmount, formattedExpectedAmount, percentComplete);
         }
 
-        // --- More Complex Methods (To be added) ---
-
-        // Placeholder for Prestige Calculation
+        // --- More Complex Methods (To be added) ---    // Calculation for player prestige counts (today and this week)
         public async Task<(int? PrestigesToday, int? PrestigesThisWeek)> CalculatePrestigesAsync(PlayerDto player)
         {
             if (player == null || string.IsNullOrEmpty(player.PlayerName))
@@ -494,36 +492,67 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                 var startOfWeekLocal = localToday.AddDays(-daysSinceMonday);
                 var startOfWeekUtc = startOfWeekLocal.ToUniversalTime();
 
-                // Get player history for today and this week
-                var playerHistoryTodayTask = _apiService.GetPlayerHistoryAsync(player.PlayerName, todayUtcStart, DateTime.UtcNow);
-                var playerHistoryWeekTask = _apiService.GetPlayerHistoryAsync(player.PlayerName, startOfWeekUtc, DateTime.UtcNow);
+                // Debug current time information
+                _logger.LogDebug("Time info for {PlayerName}: LocalNow={LocalNow}, LocalToday={LocalToday}, TodayUtcStart={TodayUtcStart}",
+                    player.PlayerName, localNow, localToday, todayUtcStart);
 
+                // Get player history for today and this week (use accurate time ranges)
+                var playerHistoryTodayTask = _apiService.GetPlayerHistoryAsync(
+                    player.PlayerName,
+                    todayUtcStart,
+                    DateTime.UtcNow); // Ensure we get the very latest data
+
+                var playerHistoryWeekTask = _apiService.GetPlayerHistoryAsync(
+                    player.PlayerName,
+                    startOfWeekUtc,
+                    DateTime.UtcNow);
+
+                // Wait for both tasks to complete
                 await Task.WhenAll(playerHistoryTodayTask, playerHistoryWeekTask);
 
                 var playerHistoryToday = await playerHistoryTodayTask;
                 var playerHistoryWeek = await playerHistoryWeekTask;
 
+                _logger.LogInformation("Player history records retrieved for {PlayerName}: Today={TodayCount}, ThisWeek={WeekCount}",
+                    player.PlayerName,
+                    playerHistoryToday?.Count ?? 0,
+                    playerHistoryWeek?.Count ?? 0);
 
-                // If weekly data is empty or null but we have daily data, use daily data for weekly calculation
-                if ((playerHistoryWeek == null || !playerHistoryWeek.Any()) && playerHistoryToday != null && playerHistoryToday.Any())
+                // Debug: Log today's prestige records to diagnose issues
+                if (playerHistoryToday != null && playerHistoryToday.Any())
                 {
-                    playerHistoryWeek = playerHistoryToday;
-                }
+                    var earliest = playerHistoryToday.OrderBy(x => x.Updated).FirstOrDefault();
+                    var latest = playerHistoryToday.OrderByDescending(x => x.Updated).FirstOrDefault();
 
-                var firstToday = playerHistoryToday?.OrderBy(x => x.Updated).FirstOrDefault();
-                var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
+                    if (earliest != null && latest != null)
+                    {
+                        _logger.LogInformation("Today's prestige range for {PlayerName}: Earliest={Earliest} at {EarliestTime}, Latest={Latest} at {LatestTime}",
+                            player.PlayerName,
+                            earliest.Prestiges,
+                            earliest.Updated,
+                            latest.Prestiges,
+                            latest.Updated);
+                    }
+
+                    // Log first 5 records to help diagnose the issue
+                    int i = 0;
+                    foreach (var record in playerHistoryToday.OrderBy(x => x.Updated).Take(5))
+                    {
+                        _logger.LogDebug("Today's record #{Idx} for {PlayerName}: Updated={Updated}, Prestiges={Prestiges}",
+                            ++i, player.PlayerName, record.Updated, record.Prestiges);
+                    }
+                }
 
                 // Calculate prestige counts
                 if (player.Prestiges.HasValue)
                 {
-                    // Check if we have any history records for today
+                    // --- DAILY PRESTIGE CALCULATION ---
                     if (playerHistoryToday == null || !playerHistoryToday.Any())
                     {
                         // No history for today - this is the first record of the day
-                        // If this is the first prestige of the day, we should count it as 1
-                        _logger.LogInformation("No history found for {PlayerName} today, checking if this is the first prestige", player.PlayerName);
+                        // We need to find yesterday's last record to use as baseline
+                        _logger.LogInformation("No history found for {PlayerName} today, checking yesterday's records", player.PlayerName);
 
-                        // Get yesterday's last record to use as baseline
                         var yesterdayEnd = localToday.AddDays(-1).ToUniversalTime();
                         var yesterdayStart = new DateTime(yesterdayEnd.Year, yesterdayEnd.Month, yesterdayEnd.Day, 0, 0, 0, DateTimeKind.Utc);
 
@@ -538,14 +567,16 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                         if (lastYesterday != null && lastYesterday.Prestiges.HasValue)
                         {
                             int baselineToday = lastYesterday.Prestiges.Value;
-                            prestigesToday = player.Prestiges.Value - baselineToday;
+                            // Add 1 to count the first prestige of the day
+                            prestigesToday = player.Prestiges.Value - baselineToday + 1;
 
-                            _logger.LogInformation("Using yesterday's last record as baseline for {PlayerName}: Yesterday={Yesterday}, Today={Today}, Difference={Diff}",
-                                player.PlayerName, baselineToday, player.Prestiges.Value, prestigesToday);
+                            _logger.LogInformation("Using yesterday's last record as baseline for {PlayerName}: Yesterday={Yesterday}, Today={Today}, Difference={Diff} + 1 = {Total}",
+                                player.PlayerName, baselineToday, player.Prestiges.Value, player.Prestiges.Value - baselineToday, prestigesToday);
                         }
                         else
                         {
-                            // No history from yesterday either, assume this is the first prestige if value is 1 or more
+                            // No history from yesterday either, assume first prestige of the day if value is 1 or more
+                            // Since this is the first record we have for this player today, we count it as 1 prestige
                             prestigesToday = player.Prestiges.Value > 0 ? 1 : 0;
                             _logger.LogInformation("No history from yesterday for {PlayerName}, assuming first prestige: {Prestiges}",
                                 player.PlayerName, prestigesToday);
@@ -553,20 +584,53 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                     }
                     else
                     {
-                        // We have history records for today, use the first one as baseline
-                        // Use the firstToday variable that was already declared
-                        int baselineToday = firstToday?.Prestiges ?? player.Prestiges.Value;
+                        // We have history records for today
+                        // Get the starting prestiges for today (earliest record of the day)
+                        var firstToday = playerHistoryToday.OrderBy(x => x.Updated).FirstOrDefault();
 
-                        prestigesToday = player.Prestiges.Value - baselineToday;
-                        _logger.LogInformation("Using today's first record as baseline for {PlayerName}: Baseline={Baseline}, Current={Current}, Difference={Diff}",
-                            player.PlayerName, baselineToday, player.Prestiges.Value, prestigesToday);
+                        if (firstToday != null && firstToday.Prestiges.HasValue)
+                        {
+                            // Use the first record of today as baseline
+                            int baselineToday = firstToday.Prestiges.Value;
+
+                            // Calculate today's prestiges as current minus baseline + 1 (to count the first prestige of the day)
+                            // The +1 is needed because the first prestige of the day should be counted
+                            prestigesToday = player.Prestiges.Value - baselineToday + 1;
+
+                            // Log the calculation with the +1 adjustment
+                            _logger.LogWarning("Daily prestiges calculation for {PlayerName}: Current={Current} - Baseline={Baseline} + 1 = Calculated={Calculated}, Assigned={Assigned}",
+                                player.PlayerName, player.Prestiges.Value, baselineToday, player.Prestiges.Value - baselineToday + 1, prestigesToday);
+                        }
+                        else
+                        {
+                            prestigesToday = 0;
+                            _logger.LogWarning("Invalid first record for {PlayerName} today, defaulting daily prestiges to 0", player.PlayerName);
+                        }
                     }
 
-                    // Calculate weekly prestiges
-                    int baselineWeek = firstThisWeek?.Prestiges ?? player.Prestiges.Value;
-                    prestigesThisWeek = player.Prestiges.Value - baselineWeek;
+                    // --- WEEKLY PRESTIGE CALCULATION ---
+                    // Get the starting prestiges for the week (earliest record of the week)
+                    var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
 
-                    // Ensure prestiges are not negative
+                    if (firstThisWeek != null && firstThisWeek.Prestiges.HasValue)
+                    {
+                        int baselineWeek = firstThisWeek.Prestiges.Value;
+                        // Add 1 to count the first prestige of the week
+                        prestigesThisWeek = player.Prestiges.Value - baselineWeek + 1;
+
+                        // Log weekly calculation in same format for comparison
+                        _logger.LogWarning("Weekly prestiges calculation for {PlayerName}: Current={Current} - Baseline={Baseline} + 1 = Calculated={Calculated}, Assigned={Assigned}",
+                            player.PlayerName, player.Prestiges.Value, baselineWeek, player.Prestiges.Value - baselineWeek + 1, prestigesThisWeek);
+                    }
+                    else
+                    {
+                        // Fallback - if we don't have weekly data, use daily prestiges
+                        prestigesThisWeek = prestigesToday;
+                        _logger.LogInformation("No weekly history for {PlayerName}, using daily prestiges: {DailyPrestiges}",
+                            player.PlayerName, prestigesToday);
+                    }
+
+                    // Make sure the value is not accidentally negative or null
                     prestigesToday = Math.Max(0, prestigesToday ?? 0);
                     prestigesThisWeek = Math.Max(0, prestigesThisWeek ?? 0);
 
@@ -576,8 +640,9 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                         prestigesThisWeek = prestigesToday;
                     }
 
-                    _logger.LogInformation("Final prestige counts for {PlayerName}: Today={Today}, Week={Week} (Current: {Current})",
-                       player.PlayerName, prestigesToday, prestigesThisWeek, player.Prestiges);
+                    // Critical check - verify final values before returning
+                    _logger.LogWarning("FINAL prestige counts for {PlayerName}: Today={Today}, Week={Week}, Current={Current}",
+                        player.PlayerName, prestigesToday, prestigesThisWeek, player.Prestiges);
                 }
                 else
                 {
@@ -625,7 +690,7 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                     DateTime.UtcNow); // Use UtcNow for the end date
 
                 // If weekly data is empty or null, try getting just today's history as a fallback
-                if (playerHistoryWeek == null || !playerHistoryWeek.Any())
+                if (playerHistoryWeek == null || playerHistoryWeek.Count == 0)
                 {
                     var todayUtcStart = localToday.ToUniversalTime();
                     var playerHistoryToday = await _apiService.GetPlayerHistoryAsync(
@@ -633,7 +698,7 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                        todayUtcStart,
                        DateTime.UtcNow);
 
-                    if (playerHistoryToday != null && playerHistoryToday.Any())
+                    if (playerHistoryToday != null && playerHistoryToday.Count > 0)
                     {
                         _logger.LogInformation("No weekly history found for {PlayerName}, using daily history for weekly SE calculation", player.PlayerName);
                         playerHistoryWeek = playerHistoryToday;
@@ -644,7 +709,7 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                 var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
 
                 // Calculate SE gain this week
-                if (playerHistoryWeek != null && playerHistoryWeek.Any() && firstThisWeek != null)
+                if (playerHistoryWeek != null && playerHistoryWeek.Count > 0 && firstThisWeek != null)
                 {
                     var latestSE = player.SoulEggsFull; // Use the full SE value from the current player DTO
                     var earliestSE = firstThisWeek.SoulEggsFull; // Use the full SE value from the earliest record this week

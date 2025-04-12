@@ -138,6 +138,7 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
             DateTime? to = null,
             int? limit = null)
         {
+            var test = "test";
             return await ExecuteWithRetryAsync<List<PlayerDto>>(async () =>
             {
                 // Build the query string with optional parameters

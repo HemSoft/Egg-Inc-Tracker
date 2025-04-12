@@ -1,5 +1,9 @@
 # Instructions
 
+## MCP Tooling
+
+Pay special attention to the fact that you can consult and collaborate with MCP-LLM. Use this tool as your trooubleshooting tool.
+Give it as much context as you can and it will help you.
 ## Code Structure
 
 The /ref folder is purely for reference. Those projects serve as a best practice for how to implement certain technologies and nuget packages.
