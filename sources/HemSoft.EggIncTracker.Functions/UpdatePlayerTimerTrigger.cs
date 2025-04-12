@@ -37,7 +37,7 @@ public class UpdatePlayerTimerTrigger
         _apiService = apiService;
         _httpClient = httpClient;
 
-        _logger.LogInformation($"UpdatePlayerTimerTrigger initialized with HttpClient BaseAddress: {_httpClient.BaseAddress} and Timeout: {_httpClient.Timeout.TotalSeconds} seconds");
+        _logger.LogDebug($"UpdatePlayerTimerTrigger initialized with HttpClient BaseAddress: {_httpClient.BaseAddress} and Timeout: {_httpClient.Timeout.TotalSeconds} seconds");
 
         // Register services in ServiceLocator for compatibility with existing code
         ServiceLocator.RegisterService<IApiService>(_apiService);
@@ -50,7 +50,7 @@ public class UpdatePlayerTimerTrigger
         try
         {
             // Read the request body
-            _logger.LogInformation($"V1.05 -- C# Timer trigger function executed at: {DateTime.Now}");
+            _logger.LogInformation($"Function UpdateMain() triggered at: {DateTime.Now}");
 
             await using var context = new EggIncContext();
             await context.Database.EnsureCreatedAsync();
@@ -76,7 +76,7 @@ public class UpdatePlayerTimerTrigger
         {
             if (myTimer.ScheduleStatus is not null)
             {
-                _logger.LogInformation($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
+                _logger.LogDebug($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
             }
         }
     }
@@ -87,7 +87,7 @@ public class UpdatePlayerTimerTrigger
         try
         {
             // Read the request body
-            _logger.LogInformation($"V1.05 -- C# Timer trigger function executed at: {DateTime.Now}");
+            _logger.LogInformation($"Function UpdateAlts() triggered at: {DateTime.Now}");
 
             await using var context = new EggIncContext();
             await context.Database.EnsureCreatedAsync();
@@ -105,7 +105,7 @@ public class UpdatePlayerTimerTrigger
         {
             if (myTimer.ScheduleStatus is not null)
             {
-                _logger.LogInformation($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
+                _logger.LogDebug($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
             }
         }
     }
@@ -116,7 +116,7 @@ public class UpdatePlayerTimerTrigger
         try
         {
             // Read the request body
-            _logger.LogInformation($"V1.05 -- C# CheckEvents triggered at: {DateTime.Now}");
+            _logger.LogInformation($"Function CheckEvents() triggered at: {DateTime.Now}");
 
             await using var context = new EggIncContext();
             await context.Database.EnsureCreatedAsync();
@@ -141,7 +141,7 @@ public class UpdatePlayerTimerTrigger
         {
             if (myTimer.ScheduleStatus is not null)
             {
-                _logger.LogInformation($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
+                _logger.LogDebug($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
             }
         }
     }
@@ -152,7 +152,7 @@ public class UpdatePlayerTimerTrigger
         try
         {
             // Read the request body
-            _logger.LogInformation($"V1.05 -- C# CheckPlayerContracts triggered at: {DateTime.Now}");
+            _logger.LogInformation($"Function CheckPlayerContracts() triggered at: {DateTime.Now}");
 
             await using var context = new EggIncContext();
             await context.Database.EnsureCreatedAsync();
@@ -168,19 +168,18 @@ public class UpdatePlayerTimerTrigger
         {
             if (myTimer.ScheduleStatus is not null)
             {
-                _logger.LogInformation($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
+                _logger.LogDebug($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
             }
         }
     }
 
     [Function("CheckMajSEPlayerRankings")]
-    //public async Task CheckMajSEPlayerRankings([TimerTrigger("0 0 * * * *")] TimerInfo myTimer)
-    public async Task CheckMajSEPlayerRankings([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer)
+    public async Task CheckMajSEPlayerRankings([TimerTrigger("0 0 * * * *")] TimerInfo myTimer)
     {
         try
         {
             // Read the request body
-            _logger.LogInformation($"V1.05 -- C# CheckMajSEPlayerRankings triggered at: {DateTime.Now}");
+            _logger.LogInformation($"Function CheckMajSEPlayerRankings() triggered at: {DateTime.Now}");
 
             await using var context = new EggIncContext();
             await context.Database.EnsureCreatedAsync();
@@ -196,7 +195,7 @@ public class UpdatePlayerTimerTrigger
         {
             if (myTimer.ScheduleStatus is not null)
             {
-                _logger.LogInformation($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
+                _logger.LogDebug($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
             }
         }
     }

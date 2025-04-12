@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\HemSoft.AI\HemSoft.AI.csproj" />
+    <ProjectReference Include="..\HemSoft.News.Data\HemSoft.News.Data.csproj" />
   </ItemGroup>
 
 </Project>

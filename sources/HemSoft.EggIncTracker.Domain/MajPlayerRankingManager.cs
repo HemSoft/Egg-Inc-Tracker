@@ -173,12 +173,12 @@ public static class MajPlayerRankingManager
 
             if (response.Success)
             {
-                logger?.LogInformation(response.Message);
+                logger?.LogDebug(response.Message);
                 return (true, response.PreviousRanking);
             }
             else
             {
-                //logger?.LogInformation(response.Message);
+                logger?.LogDebug(response.Message);
                 return (false, null);
             }
         }

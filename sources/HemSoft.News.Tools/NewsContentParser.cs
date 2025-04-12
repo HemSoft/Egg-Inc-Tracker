@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Data.Models;
 using HemSoft.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -49,6 +50,7 @@ public class NewsContentParser
 
             // Add the content as a user message
             nugetChatClient.AddUserMessage($"Parse the following content and extract NuGet package information:\n\n{content}");
+            nugetChatClient.AddUserMessage($"Give me back the exact json that I can deserialize into { typeof(NewsItem) }");
 
             // Create chat options for the request
             var chatOptions = new ChatClientOptions();
