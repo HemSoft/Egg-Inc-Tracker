@@ -2,71 +2,20 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch EggIncTrackerApi",
+            "name": "Launch & Debug News Functions",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build-api",
-            "program": "${workspaceFolder}/EggIncTrackerApi/bin/Debug/net9.0/EggIncTrackerApi.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/EggIncTrackerApi",
-            "stopAtEntry": false,
-            "serverReadyAction": {
-                "action": "openExternally",
-                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
-                "uriFormat": "%s/swagger"
-            },
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        },
-        {
-            "name": "Launch Dashboard",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build-dashboard",
-            "program": "${workspaceFolder}/sources/HemSoft.EggIncTracker.Dashboard.BlazorServer/bin/Debug/net9.0/HemSoft.EggIncTracker.Dashboard.BlazorServer.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/sources/HemSoft.EggIncTracker.Dashboard.BlazorServer",
-            "stopAtEntry": false,
-            "serverReadyAction": {
-                "action": "openExternally",
-                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
-            },
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        },
-        {
-            "name": "Debug UpdatePlayerFunction",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build-func",
-            "program": "func",
+            "preLaunchTask": "build-news-func", // Explicit build task
+            "program": "func", // Use the func CLI
             "args": [
                 "start",
                 "--csharp"
             ],
-            "cwd": "${workspaceFolder}/UpdatePlayerFunction",
+            // Run func start from the build output directory
+            "cwd": "${workspaceFolder}/sources/HemSoft.News.Functions/bin/Debug/net8.0",
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
             }
-        },
-        {
-            "name": "Attach to .NET Functions",
-            "type": "coreclr",
-            "request": "attach",
-            "processId": "${command:azureFunctions.pickProcess}"
-        }
-    ],
-    "compounds": [
-        {
-            "name": "Debug All Projects",
-            "configurations": [
-                "Launch EggIncTrackerApi",
-                "Launch Dashboard",
-                "Debug UpdatePlayerFunction"
-            ],
-            "stopAll": true
         }
     ]
 }

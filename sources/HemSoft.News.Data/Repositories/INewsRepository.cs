@@ -62,6 +62,13 @@ public interface INewsRepository
     Task<bool> DeleteNewsItemAsync(int id);
 
     /// <summary>
+    /// Gets the latest news item by title (case-insensitive)
+    /// </summary>
+    /// <param name="title">The title to search for</param>
+    /// <returns>The latest news item matching the title, or null if not found</returns>
+    Task<NewsItem?> GetLatestNewsItemByTitleAsync(string title);
+
+    /// <summary>
     /// Gets all news sources
     /// </summary>
     /// <returns>A collection of news sources</returns>

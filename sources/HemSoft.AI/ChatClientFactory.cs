@@ -82,6 +82,12 @@ For each package, extract:
 6. Author information (if available)
 
 Return the information in a structured format that can be easily converted to a collection of NewsItem objects.
+
+Do NOT make assumptions about the content. If information is not explicitly present, indicate it as missing.
+Do NOT add any leading or trailing text. Return only the structured data in JSON format.
+Do NOT use markdown or any special newline characters or anything like that. The return string has to be a valid json array.
+
+The return string has to be a JSON array starting with '[' and ending with ']'
 ";
 
         return new ChatClient(configuration, nugetParsingPrompt);

@@ -38,8 +38,8 @@ public class NuGetMonitorFunction
     /// </summary>
     /// <param name="myTimer">Timer information</param>
     [Function("MonitorNewsSources")]
-    //public async Task Run([TimerTrigger("0 */30 * * * *")] TimerInfo myTimer)
-    public async Task Run([TimerTrigger("0 * * * * *")] TimerInfo myTimer)
+    public async Task Run([TimerTrigger("0 */30 * * * *")] TimerInfo myTimer)
+    //public async Task Run([TimerTrigger("0 * * * * *")] TimerInfo myTimer)
     {
         _logger.LogInformation("News monitor function executed at: {Time}", DateTime.Now);
 
@@ -127,62 +127,6 @@ public class NuGetMonitorFunction
             {
                 _logger.LogError(ex, "Error saving news item {Title}: {Message}", item.Title, ex.Message);
             }
-        }
-
-        return newsItems;
-    }
-
-    /// <summary>
-    /// Parse NuGet packages from the scraped content
-    /// </summary>
-    /// <param name="source">The news source</param>
-    /// <param name="content">The scraped content</param>
-    /// <returns>A list of news items</returns>
-    private List<NewsItem> ParseNuGetPackages(NewsSource source, string content)
-    {
-        var newsItems = new List<NewsItem>();
-
-        try
-        {
-            // Extract package information using regex
-            // This is a simple example and might need to be adjusted based on the actual content format
-            var packagePattern = @"\[([^\]]+)\]\(([^\)]+)\)\s*([^\n]+)";
-            var matches = Regex.Matches(content, packagePattern);
-
-            foreach (Match match in matches)
-            {
-                if (match.Groups.Count >= 4)
-                {
-                    var title = match.Groups[1].Value.Trim();
-                    var url = match.Groups[2].Value.Trim();
-                    var description = match.Groups[3].Value.Trim();
-
-                    // Check if the package matches the query
-                    if (!string.IsNullOrEmpty(source.Query) &&
-                        !title.Contains(source.Query, StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    var newsItem = new NewsItem
-                    {
-                        Title = title,
-                        Description = description,
-                        Url = url,
-                        Source = source.Type,
-                        Category = "Package",
-                        PublishedDate = DateTime.UtcNow, // Ideally, extract the actual published date
-                        IsRead = false,
-                        AdditionalData = JsonConvert.SerializeObject(new { PackageId = title })
-                    };
-
-                    newsItems.Add(newsItem);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error parsing NuGet packages: {Message}", ex.Message);
         }
 
         return newsItems;

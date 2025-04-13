@@ -1,126 +1,142 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "clean (functions)",
-			"command": "dotnet",
-			"args": [
-				"clean",
-				"/property:GenerateFullPaths=true",
-				"/consoleloggerparameters:NoSummary"
-			],
-			"type": "process",
-			"problemMatcher": "$msCompile",
-			"options": {
-				"cwd": "${workspaceFolder}/UpdatePlayerFunction"
-			}
-		},
-		{
-			"label": "build (functions)",
-			"command": "dotnet",
-			"args": [
-				"build",
-				"/property:GenerateFullPaths=true",
-				"/consoleloggerparameters:NoSummary"
-			],
-			"type": "process",
-			"dependsOn": "clean (functions)",
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			},
-			"problemMatcher": "$msCompile",
-			"options": {
-				"cwd": "${workspaceFolder}/UpdatePlayerFunction"
-			}
-		},
-		{
-			"label": "build-func",
-			"command": "dotnet",
-			"args": [
-				"build",
-				"/property:GenerateFullPaths=true",
-				"/consoleloggerparameters:NoSummary"
-			],
-			"type": "process",
-			"group": "build",
-			"problemMatcher": "$msCompile",
-			"options": {
-				"cwd": "${workspaceFolder}/UpdatePlayerFunction"
-			}
-		},
-		{
-			"label": "build-api",
-			"command": "dotnet",
-			"args": [
-				"build",
-				"/property:GenerateFullPaths=true",
-				"/consoleloggerparameters:NoSummary"
-			],
-			"type": "process",
-			"group": "build",
-			"problemMatcher": "$msCompile",
-			"options": {
-				"cwd": "${workspaceFolder}/EggIncTrackerApi"
-			}
-		},
-		{
-			"label": "build-dashboard",
-			"command": "dotnet",
-			"args": [
-				"build",
-				"/property:GenerateFullPaths=true",
-				"/consoleloggerparameters:NoSummary"
-			],
-			"type": "process",
-			"group": "build",
-			"problemMatcher": "$msCompile",
-			"options": {
-				"cwd": "${workspaceFolder}/sources/HemSoft.EggIncTracker.Dashboard.BlazorServer"
-			}
-		},
-		{
-			"label": "clean release (functions)",
-			"command": "dotnet",
-			"args": [
-				"clean",
-				"--configuration",
-				"Release",
-				"/property:GenerateFullPaths=true",
-				"/consoleloggerparameters:NoSummary"
-			],
-			"type": "process",
-			"problemMatcher": "$msCompile",
-			"options": {
-				"cwd": "${workspaceFolder}/UpdatePlayerFunction"
-			}
-		},
-		{
-			"label": "publish (functions)",
-			"command": "dotnet",
-			"args": [
-				"publish",
-				"--configuration",
-				"Release",
-				"/property:GenerateFullPaths=true",
-				"/consoleloggerparameters:NoSummary"
-			],
-			"type": "process",
-			"dependsOn": "clean release (functions)",
-			"problemMatcher": "$msCompile",
-			"options": {
-				"cwd": "${workspaceFolder}/UpdatePlayerFunction"
-			}
-		},
-		{
-			"type": "func",
-			"dependsOn": "build (functions)",
-			"options": {
-				"cwd": "${workspaceFolder}/UpdatePlayerFunction/bin/Debug/net8.0"
-			},
-			"command": "host start",
-			"isBackground": true,
-			"problemMatcher": "$func-dotnet-watch"
-		}
-	]
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "clean (functions)",
+            "command": "dotnet",
+            "args": [
+                "clean",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "type": "process",
+            "problemMatcher": "$msCompile",
+            "options": {
+                "cwd": "${workspaceFolder}/UpdatePlayerFunction"
+            }
+        },
+        {
+            "label": "build (functions)",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "type": "process",
+            "dependsOn": "clean (functions)",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$msCompile",
+            "options": {
+                "cwd": "${workspaceFolder}/UpdatePlayerFunction"
+            }
+        },
+        {
+            "label": "build-func",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "type": "process",
+            "group": "build",
+            "problemMatcher": "$msCompile",
+            "options": {
+                "cwd": "${workspaceFolder}/UpdatePlayerFunction"
+            }
+        },
+        {
+            "label": "build-api",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "type": "process",
+            "group": "build",
+            "problemMatcher": "$msCompile",
+            "options": {
+                "cwd": "${workspaceFolder}/EggIncTrackerApi"
+            }
+        },
+        {
+            "label": "build-dashboard",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "type": "process",
+            "group": "build",
+            "problemMatcher": "$msCompile",
+            "options": {
+                "cwd": "${workspaceFolder}/sources/HemSoft.EggIncTracker.Dashboard.BlazorServer"
+            }
+        },
+        {
+            "label": "build-news-func",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "HemSoft.News.Functions.csproj", // Specify the project file explicitly
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "type": "process",
+            "group": "build",
+            "problemMatcher": "$msCompile",
+            "options": {
+                "cwd": "${workspaceFolder}/sources/HemSoft.News.Functions"
+            }
+        },
+        {
+            "label": "clean release (functions)",
+            "command": "dotnet",
+            "args": [
+                "clean",
+                "--configuration",
+                "Release",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "type": "process",
+            "problemMatcher": "$msCompile",
+            "options": {
+                "cwd": "${workspaceFolder}/UpdatePlayerFunction"
+            }
+        },
+        {
+            "label": "publish (functions)",
+            "command": "dotnet",
+            "args": [
+                "publish",
+                "--configuration",
+                "Release",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "type": "process",
+            "dependsOn": "clean release (functions)",
+            "problemMatcher": "$msCompile",
+            "options": {
+                "cwd": "${workspaceFolder}/UpdatePlayerFunction"
+            }
+        },
+        {
+            "type": "func",
+            "dependsOn": "build (functions)",
+            "options": {
+                "cwd": "${workspaceFolder}/UpdatePlayerFunction/bin/Debug/net8.0"
+            },
+            "command": "host start",
+            "isBackground": true,
+            "problemMatcher": "$func-dotnet-watch"
+        }
+    ]
 }

@@ -91,6 +91,15 @@ public class NewsRepository : INewsRepository
     }
 
     /// <inheritdoc/>
+    public async Task<NewsItem?> GetLatestNewsItemByTitleAsync(string title)
+    {
+        return await _context.NewsItems
+            .Where(n => EF.Functions.Like(n.Title, title)) // Case-insensitive comparison depends on DB collation, Like is often used for this
+            .OrderByDescending(n => n.DiscoveredDate)
+            .FirstOrDefaultAsync();
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<NewsSource>> GetAllNewsSourcesAsync()
     {
         return await _context.NewsSources.ToListAsync();
@@ -115,9 +124,7 @@ public class NewsRepository : INewsRepository
     {
         var now = DateTime.UtcNow;
         var newsSourcesToCheck = await _context.NewsSources
-            .Where(s => s.IsActive && 
-                       (s.LastChecked == null || 
-                        s.LastChecked.Value.AddMinutes(s.CheckFrequencyMinutes) <= now))
+            .Where(s => s.IsActive)
             .ToListAsync();
         return newsSourcesToCheck;
     }

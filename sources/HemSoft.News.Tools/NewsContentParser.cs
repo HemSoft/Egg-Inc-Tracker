@@ -33,10 +33,10 @@ public class NewsContentParser
     }
 
     /// <summary>
-    /// Parses NuGet package information from content
+    /// Parses NuGet package information from content using AI.
     /// </summary>
     /// <param name="content">The content to parse</param>
-    /// <returns>A JSON string containing the parsed package information</returns>
+    /// <returns>A JSON string representing a list of PackageInfo objects, or an empty JSON array "[]" if parsing fails or finds nothing.</returns>
     public async Task<string> ParseNuGetPackagesAsync(string content)
     {
         ArgumentException.ThrowIfNullOrEmpty(content);
@@ -49,27 +49,46 @@ public class NewsContentParser
             var nugetChatClient = ChatClientFactory.CreateForNuGetParsing(_configuration);
 
             // Add the content as a user message
-            nugetChatClient.AddUserMessage($"Parse the following content and extract NuGet package information:\n\n{content}");
-            nugetChatClient.AddUserMessage($"Give me back the exact json that I can deserialize into { typeof(NewsItem) }");
+            nugetChatClient.AddUserMessage($"Parse the following content and extract NuGet package information in pure JSON format:\n\n{content}");
+            // Instruct the AI on the desired JSON structure and date format, matching the PackageInfo class properties
+            nugetChatClient.AddUserMessage("Return a JSON array containing objects with the following fields: 'Title' (string), 'Url' (string), 'Description' (string), 'Version' (string, optional), 'ReleaseDate' (string in ISO 8601 format 'YYYY-MM-DD' or null if unknown), 'Author' (string, optional). Ensure the JSON is valid and directly deserializable into a C# List<PackageInfo> where PackageInfo has corresponding properties. The 'ReleaseDate' field MUST be included, even if its value is null.");
 
             // Create chat options for the request
             var chatOptions = new ChatClientOptions();
 
             // Get the response
             var response = await nugetChatClient.GetResponseAsync(chatOptions).ConfigureAwait(false);
+            var trimmedResponse = response.TrimStart('[');
 
-            _logger.LogInformation("Successfully parsed NuGet packages");
-            return response;
+            // Return the raw JSON response from the AI
+            _logger.LogInformation("Successfully received AI response for NuGet packages.");
+            // Basic validation: Check if it looks like a JSON array
+            if (!string.IsNullOrWhiteSpace(response) && response.Trim().StartsWith("[") && response.Trim().EndsWith("]"))
+            {
+                return response;
+            }
+            else
+            {
+                _logger.LogWarning("AI response does not appear to be a valid JSON array. Response: {Response}", response);
+                return "[]"; // Return empty array string if response is invalid
+            }
+        }
+        catch (JsonException jsonEx)
+        {
+            _logger.LogError(jsonEx, "JSON Error parsing NuGet packages AI response: {ErrorMessage}", jsonEx.Message);
+            return "[]"; // Return empty array on JSON error
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error parsing NuGet packages: {ErrorMessage}", ex.Message);
-
-            // Return a fallback response with basic extraction
-            _logger.LogWarning("Using fallback package extraction method");
-            return FallbackParseNuGetPackages(content);
+            _logger.LogError(ex, "General Error parsing NuGet packages: {ErrorMessage}", ex.Message);
+            // Consider if fallback is still desired here, or just return empty
+            // For now, returning empty as fallback might also fail or be inconsistent
+            return "[]";
+            // _logger.LogWarning("Using fallback package extraction method");
+            // return FallbackParseNuGetPackages(content); // Fallback returns string now
         }
     }
+
 
     /// <summary>
     /// Tool function to extract package information
@@ -93,11 +112,8 @@ public class NewsContentParser
         }
     }
 
-    /// <summary>
-    /// Fallback method to parse NuGet packages when AI parsing fails
-    /// </summary>
-    /// <param name="content">The content to parse</param>
-    /// <returns>A string containing the parsed package information</returns>
+    // Fallback method might be removed if not needed after AI reliability is assessed.
+    // Kept for now, but ensure it returns a JSON string representing List<PackageInfo>.
     private string FallbackParseNuGetPackages(string content)
     {
         try
@@ -161,9 +177,9 @@ public class NewsContentParser
         public string? Version { get; set; }
 
         /// <summary>
-        /// Gets or sets the package release date
+        /// Gets or sets the package release date as a string, as AI might return various formats.
         /// </summary>
-        public DateTime? ReleaseDate { get; set; }
+        public string? ReleaseDate { get; set; }
 
         /// <summary>
         /// Gets or sets the package author
