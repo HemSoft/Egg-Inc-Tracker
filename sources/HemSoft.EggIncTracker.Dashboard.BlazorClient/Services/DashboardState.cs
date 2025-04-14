@@ -1,4 +1,4 @@
-﻿using System.Numerics; // Add for BigInteger
+using System.Numerics; // Add for BigInteger
 
 namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services;
 
@@ -61,12 +61,5 @@ public class DashboardState
     public BigInteger? GetPlayerSEThisWeek(string playerName)
     {
         return _playerSEThisWeek.GetValueOrDefault(playerName, null);
-    }
-
-    // Method to set SE This Week for a specific player
-    public void SetPlayerSEThisWeek(string playerName, BigInteger? seThisWeek)
-    {
-        _playerSEThisWeek[playerName] = seThisWeek;
-        OnChange?.Invoke(); // Notify subscribers of the change
     }
 }

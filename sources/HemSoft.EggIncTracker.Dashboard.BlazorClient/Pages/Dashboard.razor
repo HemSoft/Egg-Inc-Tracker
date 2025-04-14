@@ -32,77 +32,73 @@ else
             <!----------------->
             <!-- King Monday -->
             <!----------------->
-            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingMonday?.EID)">
-                <PlayerCard Player="_kingMonday"
-                            PlayerStats="_kingMondayStats"
-                            PlayerGoals="_kingMondayGoals"
-                            SEGoalBegin="_kingMondaySEGoalBegin"
-                            SEGoalEnd="_kingMondaySEGoalEnd"
-                            EBGoalBegin="_kingMondayEBGoalBegin"
-                            EBGoalEnd="_kingMondayEBGoalEnd"
-                            MERGoalBegin="_kingMondayMERGoalBegin"
-                            MERGoalEnd="_kingMondayMERGoalEnd"
-                            JERGoalBegin="_kingMondayJERGoalBegin"
-                            JERGoalEnd="_kingMondayJERGoalEnd"
-                            // PlayerSEThisWeek="@_kingMondaySEThisWeek" // Removed - using DashboardState now
-                            DaysToNextTitle="_kingMondayDaysToNextTitle"
+            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingMondayPlayer.Player?.EID)">
+                <PlayerCard Player="_kingMondayPlayer.Player"
+                            PlayerStats="_kingMondayPlayer.Stats"
+                            PlayerGoals="_kingMondayPlayer.Goals"
+                            SEGoalBegin="_kingMondayPlayer.SEGoalBegin"
+                            SEGoalEnd="_kingMondayPlayer.SEGoalBegin"
+                            EBGoalBegin="_kingMondayPlayer.EBGoalBegin"
+                            EBGoalEnd="_kingMondayPlayer.EBGoalEnd"
+                            MERGoalBegin="_kingMondayPlayer.MERGoalBegin"
+                            MERGoalEnd="_kingMondayPlayer.MERGoalEnd"
+                            JERGoalBegin="_kingMondayPlayer.JERGoalBegin"
+                            JERGoalEnd="_kingMondayPlayer.JERGoalEnd"
+                            DaysToNextTitle="_kingMondayPlayer.DaysToNextTitle"
                             LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Monday!")' />
             </MudItem>
             <!----------------->
             <!-- King Sunday -->
             <!----------------->
-            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingSunday?.EID)">
-                 <PlayerCard Player="_kingSunday"
-                            PlayerStats="_kingSundayStats"
-                            PlayerGoals="_kingSundayGoals"
-                            SEGoalBegin="_kingSundaySEGoalBegin"
-                            SEGoalEnd="_kingSundaySEGoalEnd"
-                            EBGoalBegin="_kingSundayEBGoalBegin"
-                            EBGoalEnd="_kingSundayEBGoalEnd"
-                            MERGoalBegin="_kingSundayMERGoalBegin"
-                            MERGoalEnd="_kingSundayMERGoalEnd"
-                            JERGoalBegin="_kingSundayJERGoalBegin"
-                            JERGoalEnd="_kingSundayJERGoalEnd"
-                            // PlayerSEThisWeek="@_kingSundaySEThisWeek" // Removed - using DashboardState now
-                            DaysToNextTitle="_kingSundayDaysToNextTitle"
+            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingSundayPlayer.Player?.EID)">
+                <PlayerCard Player="_kingSundayPlayer.Player"
+                            PlayerStats="_kingSundayPlayer.Stats"
+                            PlayerGoals="_kingSundayPlayer.Goals"
+                            SEGoalBegin="_kingSundayPlayer.SEGoalBegin"
+                            SEGoalEnd="_kingSundayPlayer.SEGoalBegin"
+                            EBGoalBegin="_kingSundayPlayer.EBGoalBegin"
+                            EBGoalEnd="_kingSundayPlayer.EBGoalEnd"
+                            MERGoalBegin="_kingSundayPlayer.MERGoalBegin"
+                            MERGoalEnd="_kingSundayPlayer.MERGoalEnd"
+                            JERGoalBegin="_kingSundayPlayer.JERGoalBegin"
+                            JERGoalEnd="_kingSundayPlayer.JERGoalEnd"
+                            DaysToNextTitle="_kingSundayPlayer.DaysToNextTitle"
                             LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Sunday!")' />
             </MudItem>
             <!------------------->
             <!-- King Saturday -->
             <!------------------->
-            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingSaturday?.EID)">
-                 <PlayerCard Player="_kingSaturday"
-                            PlayerStats="_kingSaturdayStats"
-                            PlayerGoals="_kingSaturdayGoals"
-                            SEGoalBegin="_kingSaturdaySEGoalBegin"
-                            SEGoalEnd="_kingSaturdaySEGoalEnd"
-                            EBGoalBegin="_kingSaturdayEBGoalBegin"
-                            EBGoalEnd="_kingSaturdayEBGoalEnd"
-                            MERGoalBegin="_kingSaturdayMERGoalBegin"
-                            MERGoalEnd="_kingSaturdayMERGoalEnd"
-                            JERGoalBegin="_kingSaturdayJERGoalBegin"
-                            JERGoalEnd="_kingSaturdayJERGoalEnd"
-                            // PlayerSEThisWeek="@_kingSaturdaySEThisWeek" // Removed - using DashboardState now
-                            DaysToNextTitle="_kingSaturdayDaysToNextTitle"
+            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingSaturdayPlayer.Player?.EID)">
+                <PlayerCard Player="_kingSaturdayPlayer.Player"
+                            PlayerStats="_kingSaturdayPlayer.Stats"
+                            PlayerGoals="_kingSaturdayPlayer.Goals"
+                            SEGoalBegin="_kingSaturdayPlayer.SEGoalBegin"
+                            SEGoalEnd="_kingSaturdayPlayer.SEGoalBegin"
+                            EBGoalBegin="_kingSaturdayPlayer.EBGoalBegin"
+                            EBGoalEnd="_kingSaturdayPlayer.EBGoalEnd"
+                            MERGoalBegin="_kingSaturdayPlayer.MERGoalBegin"
+                            MERGoalEnd="_kingSaturdayPlayer.MERGoalEnd"
+                            JERGoalBegin="_kingSaturdayPlayer.JERGoalBegin"
+                            JERGoalEnd="_kingSaturdayPlayer.JERGoalEnd"
+                            DaysToNextTitle="_kingSaturdayPlayer.DaysToNextTitle"
                             LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Saturday!")' />
             </MudItem>
             <!----------------->
             <!-- King Friday -->
             <!----------------->
-            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingFriday?.EID)">
-                 <PlayerCard Player="_kingFriday"
-                            PlayerStats="_kingFridayStats"
-                            PlayerGoals="_kingFridayGoals"
-                            SEGoalBegin="_kingFridaySEGoalBegin" // Corrected binding
-                            SEGoalEnd="_kingFridaySEGoalEnd"     // Corrected binding
-                            EBGoalBegin="_kingFridayEBGoalBegin" // Corrected binding
-                            EBGoalEnd="_kingFridayEBGoalEnd"     // Corrected binding
-                            MERGoalBegin="_kingFridayMERGoalBegin" // Corrected binding
-                            MERGoalEnd="_kingFridayMERGoalEnd"     // Corrected binding
-                            JERGoalBegin="_kingFridayJERGoalBegin" // Corrected binding
-                            JERGoalEnd="_kingFridayJERGoalEnd"     // Corrected binding
-                            // PlayerSEThisWeek="@_kingFridaySEThisWeek" // Removed - using DashboardState now
-                            DaysToNextTitle="_kingFridayDaysToNextTitle"
+            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingFridayPlayer.Player?.EID)">
+                <PlayerCard Player="_kingFridayPlayer.Player"
+                            PlayerStats="_kingFridayPlayer.Stats"
+                            PlayerGoals="_kingFridayPlayer.Goals"
+                            SEGoalBegin="_kingFridayPlayer.SEGoalBegin"
+                            SEGoalEnd="_kingFridayPlayer.SEGoalBegin"
+                            EBGoalBegin="_kingFridayPlayer.EBGoalBegin"
+                            EBGoalEnd="_kingFridayPlayer.EBGoalEnd"
+                            MERGoalBegin="_kingFridayPlayer.MERGoalBegin"
+                            MERGoalEnd="_kingFridayPlayer.MERGoalEnd"
+                            JERGoalBegin="_kingFridayPlayer.JERGoalBegin"
+                            JERGoalEnd="_kingFridayPlayer.JERGoalEnd"
+                            DaysToNextTitle="_kingFridayPlayer.DaysToNextTitle"
                             LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Friday!")' />
             </MudItem>
 

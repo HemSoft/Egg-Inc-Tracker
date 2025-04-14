@@ -178,7 +178,7 @@ public class MajPlayerRankingsController : ControllerBase
     {
         try
         {
-            var playerSE = (decimal)HemSoft.EggIncTracker.Domain.BigNumberCalculator.ParseBigNumber(soulEggs);
+            var playerSE = (decimal) Domain.BigNumberCalculator.ParseBigNumber(soulEggs);
 
             // Get latest ranking for each player
             var latestRankings = await _context.MajPlayerRankings
@@ -195,21 +195,114 @@ public class MajPlayerRankingsController : ControllerBase
             MajPlayerRankingDto? upperPlayer = null;
             int rank = 0;
 
-            foreach (var ranking in orderedRankings)
+            // Find the player's position in the ordered list
+            var playerIndex = -1;
+            for (int i = 0; i < orderedRankings.Count; i++)
             {
                 rank++;
-                ranking.Ranking = rank; // Update the ranking
+                orderedRankings[i].Ranking = rank; // Update the ranking
 
-                if (ranking.SENumber < playerSE && ranking.IGN != playerName)
+                if (orderedRankings[i].IGN != null && orderedRankings[i].IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
                 {
-                    lowerPlayer = ranking;
+                    playerIndex = i;
                     break;
                 }
+            }
 
-                if (ranking.SENumber > playerSE && ranking.IGN != playerName)
+            // If player found, get surrounding players
+            if (playerIndex >= 0)
+            {
+                // Get upper player (player with higher SE)
+                if (playerIndex > 0)
                 {
-                    upperPlayer = ranking;
+                    upperPlayer = orderedRankings[playerIndex - 1];
                 }
+
+                // Get lower player (player with lower SE)
+                if (playerIndex < orderedRankings.Count - 1)
+                {
+                    lowerPlayer = orderedRankings[playerIndex + 1];
+                }
+
+                _logger.LogWarning($"Found player {playerName} at index {playerIndex} with SE {playerSE}. Upper: {upperPlayer?.IGN}, Lower: {lowerPlayer?.IGN}");
+            }
+            else
+            {
+                _logger.LogWarning($"Player {playerName} not found in rankings. Using value-based comparison.");
+
+                // Fallback to value-based comparison if player not in rankings
+                // Since orderedRankings is sorted by descending SENumber, we need to find:
+                // 1. The first player with SENumber < playerSE (this will be the closest lower player)
+                // 2. The last player with SENumber > playerSE (this will be the closest upper player)
+
+                // Find the closest upper player (player with higher SE but closest to playerSE)
+                var upperPlayers = orderedRankings.Where(r => r.SENumber > playerSE &&
+                    (r.IGN == null || !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
+                if (upperPlayers.Any())
+                {
+                    upperPlayer = upperPlayers.Last(); // Get the closest one (lowest SE among those higher than player)
+                }
+
+                // Find the closest lower player (player with lower SE but closest to playerSE)
+                var lowerPlayers = orderedRankings.Where(r => r.SENumber < playerSE &&
+                    (r.IGN == null || !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
+                if (lowerPlayers.Any())
+                {
+                    lowerPlayer = lowerPlayers.First(); // Get the closest one (highest SE among those lower than player)
+                }
+
+                _logger.LogWarning($"Value-based comparison for {playerName} with SE {playerSE}: Found Upper={upperPlayer?.IGN} ({upperPlayer?.SEString}), Lower={lowerPlayer?.IGN} ({lowerPlayer?.SEString})");
+            }
+
+            // If player is at the top (rank 1), create a synthetic upper player with values slightly higher
+            if (upperPlayer == null && lowerPlayer != null)
+            {
+                _logger.LogWarning($"Player {playerName} is at the top of the rankings. Creating synthetic upper player.");
+                _logger.LogWarning($"Debug info - playerSE: {playerSE}, lowerPlayer: {lowerPlayer?.IGN}, lowerSE: {lowerPlayer?.SEString}");
+
+                upperPlayer = new MajPlayerRankingDto
+                {
+                    IGN = $"Above {playerName}",
+                    SENumber = playerSE * 1.1m, // 10% higher
+                    SEString = playerSE.ToString("0.00") + "s", // Same format but higher value
+                    Ranking = 0 // Rank 0 indicates synthetic player
+                };
+
+                _logger.LogWarning($"Created synthetic upper player: {upperPlayer.IGN}, SE: {upperPlayer.SEString}, Rank: {upperPlayer.Ranking}");
+            }
+
+            // If player is at the bottom, create a synthetic lower player with values slightly lower
+            if (lowerPlayer == null && upperPlayer != null)
+            {
+                _logger.LogWarning($"Player {playerName} is at the bottom of the rankings. Creating synthetic lower player.");
+                lowerPlayer = new MajPlayerRankingDto
+                {
+                    IGN = $"Below {playerName}",
+                    SENumber = playerSE * 0.9m, // 10% lower
+                    SEString = playerSE.ToString("0.00") + "s", // Same format but lower value
+                    Ranking = orderedRankings.Count + 1 // Rank below all existing players
+                };
+            }
+
+            // If both are null (only player in rankings), create synthetic players in both directions
+            if (upperPlayer == null && lowerPlayer == null)
+            {
+                _logger.LogWarning($"Player {playerName} is the only player in the rankings. Creating synthetic upper and lower players.");
+                upperPlayer = new MajPlayerRankingDto
+                {
+                    IGN = $"Above {playerName}",
+                    SENumber = playerSE * 1.1m, // 10% higher
+                    SEString = playerSE.ToString("0.00") + "s", // Same format but higher value
+                    Ranking = 0 // Rank 0 indicates synthetic player
+                };
+
+                lowerPlayer = new MajPlayerRankingDto
+                {
+                    IGN = $"Below {playerName}",
+                    SENumber = playerSE * 0.9m, // 10% lower
+                    SEString = playerSE.ToString("0.00") + "s", // Same format but lower value
+                    Ranking = 2 // Rank 2 (player would be rank 1)
+                };
             }
 
             return Ok(new SurroundingPlayersDto
@@ -257,20 +350,63 @@ public class MajPlayerRankingsController : ControllerBase
             MajPlayerRankingDto? upperPlayer = null;
             int rank = 0;
 
-            foreach (var item in rankingsWithEB)
+            // Find the player's position in the ordered list
+            var playerIndex = -1;
+            for (int i = 0; i < rankingsWithEB.Count; i++)
             {
                 rank++;
-                item.Ranking.Ranking = rank; // Update the ranking
+                rankingsWithEB[i].Ranking.Ranking = rank; // Update the ranking
 
-                if (playerEB > item.EBValue && item.Ranking.IGN != playerName)
+                if (rankingsWithEB[i].Ranking.IGN != null && rankingsWithEB[i].Ranking.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
                 {
-                    lowerPlayer = item.Ranking;
+                    playerIndex = i;
                     break;
                 }
-                else if (item.EBValue >= playerEB && item.Ranking.IGN != playerName)
+            }
+
+            // If player found, get surrounding players
+            if (playerIndex >= 0)
+            {
+                // Get upper player (player with higher EB)
+                if (playerIndex > 0)
                 {
-                    upperPlayer = item.Ranking;
+                    upperPlayer = rankingsWithEB[playerIndex - 1].Ranking;
                 }
+
+                // Get lower player (player with lower EB)
+                if (playerIndex < rankingsWithEB.Count - 1)
+                {
+                    lowerPlayer = rankingsWithEB[playerIndex + 1].Ranking;
+                }
+
+                _logger.LogWarning($"Found player {playerName} at index {playerIndex} with EB {playerEB}. Upper: {upperPlayer?.IGN}, Lower: {lowerPlayer?.IGN}");
+            }
+            else
+            {
+                _logger.LogWarning($"Player {playerName} not found in rankings. Using value-based comparison.");
+
+                // Fallback to value-based comparison if player not in rankings
+                // Since rankingsWithEB is sorted by descending EBValue, we need to find:
+                // 1. The first player with EBValue < playerEB (this will be the closest lower player)
+                // 2. The last player with EBValue > playerEB (this will be the closest upper player)
+
+                // Find the closest upper player (player with higher EB but closest to playerEB)
+                var upperPlayers = rankingsWithEB.Where(r => r.EBValue > playerEB &&
+                    (r.Ranking.IGN == null || !r.Ranking.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
+                if (upperPlayers.Any())
+                {
+                    upperPlayer = upperPlayers.Last().Ranking; // Get the closest one (lowest EB among those higher than player)
+                }
+
+                // Find the closest lower player (player with lower EB but closest to playerEB)
+                var lowerPlayers = rankingsWithEB.Where(r => r.EBValue < playerEB &&
+                    (r.Ranking.IGN == null || !r.Ranking.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
+                if (lowerPlayers.Any())
+                {
+                    lowerPlayer = lowerPlayers.First().Ranking; // Get the closest one (highest EB among those lower than player)
+                }
+
+                _logger.LogWarning($"Value-based comparison for {playerName} with EB {playerEB}: Found Upper={upperPlayer?.IGN} ({upperPlayer?.EBString}), Lower={lowerPlayer?.IGN} ({lowerPlayer?.EBString})");
             }
 
             return Ok(new SurroundingPlayersDto
@@ -311,20 +447,63 @@ public class MajPlayerRankingsController : ControllerBase
             MajPlayerRankingDto? upperPlayer = null;
             int rank = 0;
 
-            foreach (var ranking in orderedRankings)
+            // Find the player's position in the ordered list
+            var playerIndex = -1;
+            for (int i = 0; i < orderedRankings.Count; i++)
             {
                 rank++;
-                ranking.Ranking = rank; // Update the ranking
+                orderedRankings[i].Ranking = rank; // Update the ranking
 
-                if (mer > ranking.MER && ranking.IGN != playerName)
+                if (orderedRankings[i].IGN != null && orderedRankings[i].IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
                 {
-                    lowerPlayer = ranking;
+                    playerIndex = i;
                     break;
                 }
-                else if (ranking.MER >= mer && ranking.IGN != playerName)
+            }
+
+            // If player found, get surrounding players
+            if (playerIndex >= 0)
+            {
+                // Get upper player (player with higher MER)
+                if (playerIndex > 0)
                 {
-                    upperPlayer = ranking;
+                    upperPlayer = orderedRankings[playerIndex - 1];
                 }
+
+                // Get lower player (player with lower MER)
+                if (playerIndex < orderedRankings.Count - 1)
+                {
+                    lowerPlayer = orderedRankings[playerIndex + 1];
+                }
+
+                _logger.LogWarning($"Found player {playerName} at index {playerIndex} with MER {mer}. Upper: {upperPlayer?.IGN}, Lower: {lowerPlayer?.IGN}");
+            }
+            else
+            {
+                _logger.LogWarning($"Player {playerName} not found in rankings. Using value-based comparison.");
+
+                // Fallback to value-based comparison if player not in rankings
+                // Since orderedRankings is sorted by descending MER, we need to find:
+                // 1. The first player with MER < mer (this will be the closest lower player)
+                // 2. The last player with MER > mer (this will be the closest upper player)
+
+                // Find the closest upper player (player with higher MER but closest to mer)
+                var upperPlayers = orderedRankings.Where(r => r.MER > mer &&
+                    (r.IGN == null || !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
+                if (upperPlayers.Any())
+                {
+                    upperPlayer = upperPlayers.Last(); // Get the closest one (lowest MER among those higher than player)
+                }
+
+                // Find the closest lower player (player with lower MER but closest to mer)
+                var lowerPlayers = orderedRankings.Where(r => r.MER < mer &&
+                    (r.IGN == null || !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
+                if (lowerPlayers.Any())
+                {
+                    lowerPlayer = lowerPlayers.First(); // Get the closest one (highest MER among those lower than player)
+                }
+
+                _logger.LogWarning($"Value-based comparison for {playerName} with MER {mer}: Found Upper={upperPlayer?.IGN} ({upperPlayer?.MER}), Lower={lowerPlayer?.IGN} ({lowerPlayer?.MER})");
             }
 
             return Ok(new SurroundingPlayersDto
@@ -365,20 +544,63 @@ public class MajPlayerRankingsController : ControllerBase
             MajPlayerRankingDto? upperPlayer = null;
             int rank = 0;
 
-            foreach (var ranking in orderedRankings)
+            // Find the player's position in the ordered list
+            var playerIndex = -1;
+            for (int i = 0; i < orderedRankings.Count; i++)
             {
                 rank++;
-                ranking.Ranking = rank; // Update the ranking
+                orderedRankings[i].Ranking = rank; // Update the ranking
 
-                if (jer > ranking.JER && ranking.IGN != playerName)
+                if (orderedRankings[i].IGN != null && orderedRankings[i].IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
                 {
-                    lowerPlayer = ranking;
+                    playerIndex = i;
                     break;
                 }
-                else if (ranking.JER >= jer && ranking.IGN != playerName)
+            }
+
+            // If player found, get surrounding players
+            if (playerIndex >= 0)
+            {
+                // Get upper player (player with higher JER)
+                if (playerIndex > 0)
                 {
-                    upperPlayer = ranking;
+                    upperPlayer = orderedRankings[playerIndex - 1];
                 }
+
+                // Get lower player (player with lower JER)
+                if (playerIndex < orderedRankings.Count - 1)
+                {
+                    lowerPlayer = orderedRankings[playerIndex + 1];
+                }
+
+                _logger.LogWarning($"Found player {playerName} at index {playerIndex} with JER {jer}. Upper: {upperPlayer?.IGN}, Lower: {lowerPlayer?.IGN}");
+            }
+            else
+            {
+                _logger.LogWarning($"Player {playerName} not found in rankings. Using value-based comparison.");
+
+                // Fallback to value-based comparison if player not in rankings
+                // Since orderedRankings is sorted by descending JER, we need to find:
+                // 1. The first player with JER < jer (this will be the closest lower player)
+                // 2. The last player with JER > jer (this will be the closest upper player)
+
+                // Find the closest upper player (player with higher JER but closest to jer)
+                var upperPlayers = orderedRankings.Where(r => r.JER > jer &&
+                    (r.IGN == null || !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
+                if (upperPlayers.Any())
+                {
+                    upperPlayer = upperPlayers.Last(); // Get the closest one (lowest JER among those higher than player)
+                }
+
+                // Find the closest lower player (player with lower JER but closest to jer)
+                var lowerPlayers = orderedRankings.Where(r => r.JER < jer &&
+                    (r.IGN == null || !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
+                if (lowerPlayers.Any())
+                {
+                    lowerPlayer = lowerPlayers.First(); // Get the closest one (highest JER among those lower than player)
+                }
+
+                _logger.LogWarning($"Value-based comparison for {playerName} with JER {jer}: Found Upper={upperPlayer?.IGN} ({upperPlayer?.JER}), Lower={lowerPlayer?.IGN} ({lowerPlayer?.JER})");
             }
 
             return Ok(new SurroundingPlayersDto

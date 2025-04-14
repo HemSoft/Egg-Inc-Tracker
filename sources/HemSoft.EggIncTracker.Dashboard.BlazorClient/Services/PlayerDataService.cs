@@ -111,8 +111,6 @@ public class PlayerDataService
 
             // Final clamp: Ensure percentage is strictly between 0 and 100.
             var finalPercentage = Math.Min(Math.Max(percentage, 0.0), 100.0);
-            _logger.LogDebug("Calculated percentage details: Progress={Progress}, Range={Range}, RawPercentage={RawPercentage}, FinalPercentage={FinalPercentage}",
-                progress, range, percentage, finalPercentage);
             return finalPercentage;
         }
         catch (Exception ex)

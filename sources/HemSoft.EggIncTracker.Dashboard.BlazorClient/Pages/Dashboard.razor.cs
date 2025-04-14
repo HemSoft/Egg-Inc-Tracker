@@ -1,23 +1,30 @@
-using HemSoft.EggIncTracker.Domain;
-
 namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Pages;
 
-using System.Globalization;
-using System.Numerics; // Added using statement for BigInteger
-
+using System.Numerics;
 using HemSoft.EggIncTracker.Dashboard.BlazorClient.Services;
 
-using HemSoft.EggIncTracker.Data;
 using HemSoft.EggIncTracker.Data.Dtos;
-// Remove Domain reference and use only API service
-// using HemSoft.EggIncTracker.Domain;
 
 using Microsoft.AspNetCore.Components;
-using Microsoft.EntityFrameworkCore;
-
-using MudBlazor;
 
 using ST = System.Timers;
+
+public class DashboardPlayer
+{
+    public PlayerDto? Player { get; set; }
+    public PlayerStatsDto? Stats { get; set; }
+    public PlayerGoalDto? Goals{ get; set; }
+    public int DaysToNextTitle { get; set; }
+    public MajPlayerRankingDto? SEGoalBegin { get; set; }
+    public MajPlayerRankingDto? SEGoalEnd { get; set; }
+    public MajPlayerRankingDto? EBGoalBegin { get; set; }
+    public MajPlayerRankingDto? EBGoalEnd { get; set; }
+    public MajPlayerRankingDto? MERGoalBegin { get; set; }
+    public MajPlayerRankingDto? MERGoalEnd { get; set; }
+    public MajPlayerRankingDto? JERGoalBegin { get; set; }
+    public MajPlayerRankingDto? JERGoalEnd { get; set; }
+    public BigInteger? SEThisWeek { get; set; }
+}
 
 public partial class Dashboard : IDisposable, IAsyncDisposable
 {
@@ -34,99 +41,18 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
     private NavigationManager NavigationManager { get; set; } = default!;
 
     [Inject]
-    private PlayerDataService PlayerDataService { get; set; } = default!; // Inject the new service
-
-    private const int NameCutOff = 12;
+    private PlayerDataService PlayerDataService { get; set; } = default!;
 
     private ST.Timer? _timer;
-    private ST.Timer? _updateTimer; // Timer for updating the "Last updated" text
+    private ST.Timer? _updateTimer;
     private DateTime _lastUpdated;
     private string _timeSinceLastUpdate = "Never";
-    private bool _isRefreshing = false; // Added flag
+    private bool _isRefreshing;
 
-    // Removed TitleProgressData and TitleProgressLabels fields for all players
-
-    private PlayerDto? _kingFriday;
-    private PlayerStatsDto? _kingFridayStats;
-    private PlayerGoalDto? _kingFridayGoals;
-    private int _kingFridayDaysToNextTitle = 0; // Added
-    private MajPlayerRankingDto? _kingFridaySEGoalBegin; // Declared
-    private MajPlayerRankingDto? _kingFridaySEGoalEnd;   // Declared
-    private MajPlayerRankingDto? _kingFridayEBGoalBegin; // Declared
-    private MajPlayerRankingDto? _kingFridayEBGoalEnd;   // Declared
-    private MajPlayerRankingDto? _kingFridayMERGoalBegin;// Declared
-    private MajPlayerRankingDto? _kingFridayMERGoalEnd;  // Declared
-    private MajPlayerRankingDto? _kingFridayJERGoalBegin;// Declared
-    private MajPlayerRankingDto? _kingFridayJERGoalEnd;  // Declared
-    private MajPlayerRankingDto? _SEGoalBegin; // Note: These seem shared, might need refactoring later if goals differ per player card instance
-    private MajPlayerRankingDto? _SEGoalEnd;
-    private MajPlayerRankingDto? _EBGoalBegin;
-    private MajPlayerRankingDto? _EBGoalEnd;
-    private MajPlayerRankingDto? _MERGoalBegin;
-    private MajPlayerRankingDto? _MERGoalEnd;
-    private MajPlayerRankingDto? _JERGoalBegin;
-    private MajPlayerRankingDto? _JERGoalEnd;
-    // Removed _kingFridaySEThisWeek
-
-    // Removed Progress bar percentage fields for King Friday
-
-    private PlayerDto? _kingSaturday;
-    private PlayerStatsDto? _kingSaturdayStats;
-    private PlayerGoalDto? _kingSaturdayGoals;
-    private int _kingSaturdayDaysToNextTitle = 0; // Added
-    private MajPlayerRankingDto? _kingSaturdaySEGoalBegin;
-    private MajPlayerRankingDto? _kingSaturdaySEGoalEnd;
-    private MajPlayerRankingDto? _kingSaturdayEBGoalBegin;
-    private MajPlayerRankingDto? _kingSaturdayEBGoalEnd;
-    private MajPlayerRankingDto? _kingSaturdayMERGoalBegin;
-    private MajPlayerRankingDto? _kingSaturdayMERGoalEnd;
-    private MajPlayerRankingDto? _kingSaturdayJERGoalBegin;
-    private MajPlayerRankingDto? _kingSaturdayJERGoalEnd;
-    // Removed _kingSaturdaySEThisWeek
-
-    // Removed Progress bar percentage fields for King Saturday
-
-    private PlayerDto? _kingSunday;
-    private PlayerStatsDto? _kingSundayStats;
-    private PlayerGoalDto? _kingSundayGoals;
-    private int _kingSundayDaysToNextTitle = 0; // Added
-    private MajPlayerRankingDto? _kingSundaySEGoalBegin;
-    private MajPlayerRankingDto? _kingSundaySEGoalEnd;
-    private MajPlayerRankingDto? _kingSundayEBGoalBegin;
-    private MajPlayerRankingDto? _kingSundayEBGoalEnd;
-    private MajPlayerRankingDto? _kingSundayMERGoalBegin;
-    private MajPlayerRankingDto? _kingSundayMERGoalEnd;
-    private MajPlayerRankingDto? _kingSundayJERGoalBegin;
-    private MajPlayerRankingDto? _kingSundayJERGoalEnd;
-    // Removed _kingSundaySEThisWeek
-
-    // Removed Progress bar percentage fields for King Sunday
-
-    private PlayerDto? _kingMonday;
-    private PlayerStatsDto? _kingMondayStats;
-    private PlayerGoalDto? _kingMondayGoals;
-    private int _kingMondayDaysToNextTitle = 0; // Added
-    private MajPlayerRankingDto? _kingMondaySEGoalBegin;
-    private MajPlayerRankingDto? _kingMondaySEGoalEnd;
-    private MajPlayerRankingDto? _kingMondayEBGoalBegin;
-    private MajPlayerRankingDto? _kingMondayEBGoalEnd;
-    private MajPlayerRankingDto? _kingMondayMERGoalBegin;
-    private MajPlayerRankingDto? _kingMondayMERGoalEnd;
-    private MajPlayerRankingDto? _kingMondayJERGoalBegin;
-    private MajPlayerRankingDto? _kingMondayJERGoalEnd;
-    // Removed _kingMondaySEThisWeek
-
-    // Removed Progress bar percentage fields for King Monday
-
-    private readonly ChartOptions _options = new() // This seems unused now? Keep for now.
-    {
-        ChartPalette = new[] { "#4CAF50", "#666666" },
-        ShowLegend = false,
-        ShowToolTips = false,
-        ShowLabels = false
-    };
-
-    // Removed fields related to historical chart
+    private DashboardPlayer _kingFridayPlayer = new DashboardPlayer();
+    private DashboardPlayer _kingSaturdayPlayer = new DashboardPlayer();
+    private DashboardPlayer _kingSundayPlayer = new DashboardPlayer();
+    private DashboardPlayer _kingMondayPlayer = new DashboardPlayer();
 
     protected override async Task OnInitializedAsync()
     {
@@ -209,7 +135,10 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
         try
         {
             if (_isRefreshing)
+            {
                 return;
+            }
+
             await InvokeAsync(RefreshData);
         }
         catch (ObjectDisposedException) { _timer?.Stop(); Logger.LogInformation("Refresh timer stopped due to component disposal"); }
@@ -231,22 +160,19 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
 
                 var tasks = new List<Task>
                 {
-                    UpdateKingFriday(),
-                    UpdateKingSaturday(),
-                    UpdateKingSunday(),
-                    UpdateKingMonday()
-                    // Removed LoadKingFridaySEHistory() call
+                    UpdateDashboardPlayer(_kingFridayPlayer,"King Friday!"),
+                    UpdateDashboardPlayer(_kingSaturdayPlayer, "King Saturday!"),
+                    UpdateDashboardPlayer(_kingSundayPlayer, "King Sunday!"),
+                    UpdateDashboardPlayer(_kingMondayPlayer, "King Monday!")
                 };
                 await Task.WhenAll(tasks);
-
-                // Removed UpdateMultiSeriesChart() call
 
                 _lastUpdated = DateTime.Now;
                 _timeSinceLastUpdate = GetTimeSinceLastUpdate();
                 await InvokeAsync(() => DashboardState.SetLastUpdated(DateTime.Now)); // Use InvokeAsync here
 
                 _isRefreshing = false;
-                StateHasChanged(); // Call StateHasChanged after all updates
+                StateHasChanged();
                 Logger.LogInformation("Initial data load completed successfully");
                 return;
             }
@@ -270,12 +196,16 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
     private async Task RefreshData()
     {
         if (_isRefreshing)
+        {
             return;
+        }
 
-        bool isInitialLoad = _lastUpdated == default;
+        var isInitialLoad = _lastUpdated == default;
         _isRefreshing = true;
         if (!isInitialLoad)
+        {
             StateHasChanged();
+        }
 
         try
         {
@@ -286,23 +216,22 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
             {
                 var tasks = new List<Task>
                 {
-                    UpdateKingFriday(),
-                    UpdateKingSaturday(),
-                    UpdateKingSunday(),
-                    UpdateKingMonday()
-                    // Removed LoadKingFridaySEHistory() call
+                    UpdateDashboardPlayer(_kingFridayPlayer,"King Friday!"),
+                    UpdateDashboardPlayer(_kingSaturdayPlayer, "King Saturday!"),
+                    UpdateDashboardPlayer(_kingSundayPlayer, "King Sunday!"),
+                    UpdateDashboardPlayer(_kingMondayPlayer, "King Monday!")
                 };
-                await Task.WhenAll(tasks).WaitAsync(cts.Token); // Use WaitAsync for timeout
+                await Task.WhenAll(tasks).WaitAsync(cts.Token);
                 Logger.LogInformation("All data loaded successfully");
-                // Removed UpdateMultiSeriesChart() call
             }
-            catch (OperationCanceledException) { Logger.LogWarning("Data refresh timed out or was canceled"); }
+            catch (OperationCanceledException)
+            {
+                Logger.LogWarning("Data refresh timed out or was canceled");
+            }
 
             _lastUpdated = DateTime.Now;
             _timeSinceLastUpdate = GetTimeSinceLastUpdate();
             await InvokeAsync(() => DashboardState.SetLastUpdated(DateTime.Now)); // Use InvokeAsync
-
-            // Logger.LogInformation($"Progress bar values after refresh: SE={_kingFridaySEGoalPercentage:F1}%, EB={_kingFridayEBGoalPercentage:F1}%, MER={_kingFridayMERGoalPercentage:F1}%, JER={_kingFridayJERGoalPercentage:F1}%"); // Removed logging of percentages
             Logger.LogInformation("Data refresh completed");
         }
         catch (Exception ex)
@@ -318,205 +247,62 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task UpdateKingFriday()
+    private async Task UpdateDashboardPlayer(DashboardPlayer dashboardPlayer, string playerName)
     {
-        _kingFriday = await ApiService.GetLatestPlayerAsync("King Friday!");
-        _kingFridayStats = await ApiService.GetRankedPlayerAsync("King Friday!", 1, 30);
-        Logger.LogInformation($"Loaded King Friday with EID: {_kingFriday?.EID}");
+        dashboardPlayer.Player = await ApiService.GetLatestPlayerAsync(playerName);
+        dashboardPlayer.Stats = await ApiService.GetRankedPlayerAsync(playerName, 1, 30);
+        Logger.LogInformation($"Loaded {playerName} with EID: {_kingFridayPlayer.Player?.EID}");
 
-        if (_kingFriday != null)
+        if (dashboardPlayer.Player != null)
         {
-            await InvokeAsync(() => DashboardState.SetPlayerLastUpdated("King Friday!", _kingFriday.Updated));
-            var seThisWeek = await PlayerDataService.CalculateSEThisWeekAsync(_kingFriday);
-            DashboardState.SetPlayerSEThisWeek("King Friday!", seThisWeek); // Store in state
-            var (prestigesToday, prestigesThisWeek) = await PlayerDataService.CalculatePrestigesAsync(_kingFriday);
-            _kingFriday.PrestigesToday = prestigesToday;
-            _kingFriday.PrestigesThisWeek = prestigesThisWeek;
+            await InvokeAsync(() => DashboardState.SetPlayerLastUpdated(playerName, dashboardPlayer.Player.Updated));
+            dashboardPlayer.SEThisWeek = await PlayerDataService.CalculateSEThisWeekAsync(dashboardPlayer.Player);
+            var (prestigesToday, prestigesThisWeek) = await PlayerDataService.CalculatePrestigesAsync(dashboardPlayer.Player);
+            dashboardPlayer.Player.PrestigesToday = prestigesToday;
+            dashboardPlayer.Player.PrestigesThisWeek = prestigesThisWeek;
 
             // Calculate DaysToNextTitle
-            string? projectedDateString = (await ApiService.GetTitleInfoAsync("King Friday!"))?.ProjectedTitleChange ?? _kingFridayStats?.ProjectedTitleChange;
-            _kingFridayDaysToNextTitle = CalculateDaysToNextTitle(projectedDateString);
-            // Removed setting TitleProgressData and TitleProgressLabels
+            var projectedDateString = (await ApiService.GetTitleInfoAsync(playerName))?.ProjectedTitleChange ?? dashboardPlayer.Stats?.ProjectedTitleChange;
+            dashboardPlayer.DaysToNextTitle = CalculateDaysToNextTitle(projectedDateString);
+            dashboardPlayer.Goals = await ApiService.GetPlayerGoalsAsync(playerName);
 
-            _kingFridayGoals = await ApiService.GetPlayerGoalsAsync("King Friday!");
+            var sePlayers = await ApiService.GetSurroundingSEPlayersAsync(playerName, dashboardPlayer.Player.SoulEggs);
+            var ebPlayers = await ApiService.GetSurroundingEBPlayersAsync(playerName, dashboardPlayer.Player.EarningsBonusPercentage);
+            var merPlayers = await ApiService.GetSurroundingMERPlayersAsync(playerName, (decimal)dashboardPlayer.Player.MER);
+            var jerPlayers = await ApiService.GetSurroundingJERPlayersAsync(playerName, (decimal)dashboardPlayer.Player.JER);
 
-            var sePlayers = await ApiService.GetSurroundingSEPlayersAsync("King Friday!", _kingFriday.SoulEggs);
-            Logger.LogWarning($"King Friday SE Players: Lower={sePlayers?.LowerPlayer?.IGN}, Upper={sePlayers?.UpperPlayer?.IGN}");
+            // Always ensure we have valid values for King Friday's progress bars
+            dashboardPlayer.SEGoalBegin = sePlayers?.LowerPlayer == null ? new MajPlayerRankingDto { IGN = "Lower SE Player", SEString = "50.000s", Ranking = 2, SENumber = 50.000m } : sePlayers.LowerPlayer;
+            dashboardPlayer.SEGoalEnd = sePlayers?.UpperPlayer == null ? new MajPlayerRankingDto { IGN = "Upper SE Player", SEString = "60.000s", Ranking = 0, SENumber = 60.000m } : sePlayers.UpperPlayer;
+            dashboardPlayer.EBGoalBegin = ebPlayers?.LowerPlayer == null ? new MajPlayerRankingDto { IGN = "Lower EB Player", EBString = "10.000d%", Ranking = 2 } : ebPlayers.LowerPlayer;
+            dashboardPlayer.EBGoalEnd = ebPlayers?.UpperPlayer == null ? new MajPlayerRankingDto { IGN = "Upper EB Player", EBString = "15.000d%", Ranking = 0 } : ebPlayers.UpperPlayer;
 
-            var ebPlayers = await ApiService.GetSurroundingEBPlayersAsync("King Friday!", _kingFriday.EarningsBonusPercentage);
-            Logger.LogWarning($"King Friday EB Players: Lower={ebPlayers?.LowerPlayer?.IGN}, Upper={ebPlayers?.UpperPlayer?.IGN}");
+            if (merPlayers?.LowerPlayer == null || merPlayers?.UpperPlayer == null)
+            {
+                dashboardPlayer.MERGoalBegin = new MajPlayerRankingDto { IGN = "Lower MER Player", MER = 40, Ranking = 2 };
+                dashboardPlayer.MERGoalEnd = new MajPlayerRankingDto { IGN = "Upper MER Player", MER = 45, Ranking = 0 };
+            }
+            else
+            {
+                dashboardPlayer.MERGoalBegin = merPlayers.LowerPlayer;
+                dashboardPlayer.MERGoalEnd = merPlayers.UpperPlayer;
+            }
 
-            var merPlayers = await ApiService.GetSurroundingMERPlayersAsync("King Friday!", (decimal)_kingFriday.MER);
-            Logger.LogWarning($"King Friday MER Players: Lower={merPlayers?.LowerPlayer?.IGN}, Upper={merPlayers?.UpperPlayer?.IGN}");
-
-            var jerPlayers = await ApiService.GetSurroundingJERPlayersAsync("King Friday!", (decimal)_kingFriday.JER);
-            Logger.LogWarning($"King Friday JER Players: Lower={jerPlayers?.LowerPlayer?.IGN}, Upper={jerPlayers?.UpperPlayer?.IGN}");
-
-            // Set goal values with fallbacks if API returns null
-            _kingFridaySEGoalBegin = sePlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Default", SEString = "50.000s", Ranking = 2 };
-            _kingFridaySEGoalEnd = sePlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Default", SEString = "60.000s", Ranking = 0 };
-
-            _kingFridayEBGoalBegin = ebPlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Default", EBString = "10.000d%", Ranking = 2 };
-            _kingFridayEBGoalEnd = ebPlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Default", EBString = "15.000d%", Ranking = 0 };
-
-            _kingFridayMERGoalBegin = merPlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Default", MER = 40, Ranking = 2 };
-            _kingFridayMERGoalEnd = merPlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Default", MER = 45, Ranking = 0 };
-
-            _kingFridayJERGoalBegin = jerPlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Default", JER = 80, Ranking = 2 };
-            _kingFridayJERGoalEnd = jerPlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Default", JER = 90, Ranking = 0 };
-
-            // Log the values for debugging
-            Logger.LogWarning($"Final King Friday SE Goal Values: Begin={_kingFridaySEGoalBegin?.SEString}, End={_kingFridaySEGoalEnd?.SEString}");
-            Logger.LogWarning($"Final King Friday EB Goal Values: Begin={_kingFridayEBGoalBegin?.EBString}, End={_kingFridayEBGoalEnd?.EBString}");
-            Logger.LogWarning($"Final King Friday MER Goal Values: Begin={_kingFridayMERGoalBegin?.MER}, End={_kingFridayMERGoalEnd?.MER}");
-            Logger.LogWarning($"Final King Friday JER Goal Values: Begin={_kingFridayJERGoalBegin?.JER}, End={_kingFridayJERGoalEnd?.JER}");
-
-            // Set shared goal values with fallbacks if API returns null
-            _SEGoalBegin = sePlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Default", SEString = "50.000s", Ranking = 2 };
-            _SEGoalEnd = sePlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Default", SEString = "60.000s", Ranking = 0 };
-            _EBGoalBegin = ebPlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Default", EBString = "10.000d%", Ranking = 2 };
-            _EBGoalEnd = ebPlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Default", EBString = "15.000d%", Ranking = 0 };
-            _MERGoalBegin = merPlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Default", MER = 40, Ranking = 2 };
-            _MERGoalEnd = merPlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Default", MER = 45, Ranking = 0 };
-            _JERGoalBegin = jerPlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Default", JER = 80, Ranking = 2 };
-            _JERGoalEnd = jerPlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Default", JER = 90, Ranking = 0 };
-
-            // Removed percentage calculations and 50% default logic
+            if (jerPlayers?.LowerPlayer == null || jerPlayers?.UpperPlayer == null)
+            {
+                dashboardPlayer.JERGoalBegin = new MajPlayerRankingDto { IGN = "Lower JER Player", JER = 80, Ranking = 2 };
+                dashboardPlayer.JERGoalEnd = new MajPlayerRankingDto { IGN = "Upper JER Player", JER = 90, Ranking = 0 };
+            }
+            else
+            {
+                dashboardPlayer.JERGoalBegin = jerPlayers.LowerPlayer;
+                dashboardPlayer.JERGoalEnd = jerPlayers.UpperPlayer;
+            }
 
             StateHasChanged();
             await InvokeAsync(StateHasChanged);
         }
     }
-
-    // Removed ParseBigNumberWrapper method
-
-    private async Task UpdateKingSaturday()
-    {
-        _kingSaturday = await ApiService.GetLatestPlayerAsync("King Saturday!");
-        _kingSaturdayStats = await ApiService.GetRankedPlayerAsync("King Saturday!", 1, 30);
-        Logger.LogInformation($"Loaded King Saturday with EID: {_kingSaturday?.EID}");
-
-        if (_kingSaturday != null)
-        {
-            await InvokeAsync(() => DashboardState.SetPlayerLastUpdated("King Saturday!", _kingSaturday.Updated));
-            var seThisWeek = await PlayerDataService.CalculateSEThisWeekAsync(_kingSaturday);
-            DashboardState.SetPlayerSEThisWeek("King Saturday!", seThisWeek); // Store in state
-            var (prestigesToday, prestigesThisWeek) = await PlayerDataService.CalculatePrestigesAsync(_kingSaturday);
-            _kingSaturday.PrestigesToday = prestigesToday;
-            _kingSaturday.PrestigesThisWeek = prestigesThisWeek;
-
-            // Calculate DaysToNextTitle
-            string? projectedDateStringSat = (await ApiService.GetTitleInfoAsync("King Saturday!"))?.ProjectedTitleChange ?? _kingSaturdayStats?.ProjectedTitleChange;
-            _kingSaturdayDaysToNextTitle = CalculateDaysToNextTitle(projectedDateStringSat);
-            // Removed setting TitleProgressData and TitleProgressLabels
-
-            _kingSaturdayGoals = await ApiService.GetPlayerGoalsAsync("King Saturday!");
-
-            var sePlayers = await ApiService.GetSurroundingSEPlayersAsync("King Saturday!", _kingSaturday.SoulEggs);
-            var ebPlayers = await ApiService.GetSurroundingEBPlayersAsync("King Saturday!", _kingSaturday.EarningsBonusPercentage);
-            var merPlayers = await ApiService.GetSurroundingMERPlayersAsync("King Saturday!", (decimal)_kingSaturday.MER);
-            var jerPlayers = await ApiService.GetSurroundingJERPlayersAsync("King Saturday!", (decimal)_kingSaturday.JER);
-
-            _kingSaturdaySEGoalBegin = sePlayers?.LowerPlayer;
-            _kingSaturdaySEGoalEnd = sePlayers?.UpperPlayer;
-            _kingSaturdayEBGoalBegin = ebPlayers?.LowerPlayer;
-            _kingSaturdayEBGoalEnd = ebPlayers?.UpperPlayer;
-            _kingSaturdayMERGoalBegin = merPlayers?.LowerPlayer;
-            _kingSaturdayMERGoalEnd = merPlayers?.UpperPlayer;
-            _kingSaturdayJERGoalBegin = jerPlayers?.LowerPlayer;
-            _kingSaturdayJERGoalEnd = jerPlayers?.UpperPlayer;
-
-            // Removed percentage calculations and 50% default logic
-
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task UpdateKingSunday()
-    {
-        _kingSunday = await ApiService.GetLatestPlayerAsync("King Sunday!");
-        _kingSundayStats = await ApiService.GetRankedPlayerAsync("King Sunday!", 1, 30);
-        Logger.LogInformation($"Loaded King Sunday with EID: {_kingSunday?.EID}");
-
-        if (_kingSunday != null)
-        {
-            await InvokeAsync(() => DashboardState.SetPlayerLastUpdated("King Sunday!", _kingSunday.Updated));
-            var seThisWeek = await PlayerDataService.CalculateSEThisWeekAsync(_kingSunday);
-            DashboardState.SetPlayerSEThisWeek("King Sunday!", seThisWeek); // Store in state
-            var (prestigesToday, prestigesThisWeek) = await PlayerDataService.CalculatePrestigesAsync(_kingSunday);
-            _kingSunday.PrestigesToday = prestigesToday;
-            _kingSunday.PrestigesThisWeek = prestigesThisWeek;
-
-            // Calculate DaysToNextTitle
-            string? projectedDateStringSun = (await ApiService.GetTitleInfoAsync("King Sunday!"))?.ProjectedTitleChange ?? _kingSundayStats?.ProjectedTitleChange;
-            _kingSundayDaysToNextTitle = CalculateDaysToNextTitle(projectedDateStringSun);
-            // Removed setting TitleProgressData and TitleProgressLabels
-
-            _kingSundayGoals = await ApiService.GetPlayerGoalsAsync("King Sunday!");
-
-            var sePlayers = await ApiService.GetSurroundingSEPlayersAsync("King Sunday!", _kingSunday.SoulEggs);
-            var ebPlayers = await ApiService.GetSurroundingEBPlayersAsync("King Sunday!", _kingSunday.EarningsBonusPercentage);
-            var merPlayers = await ApiService.GetSurroundingMERPlayersAsync("King Sunday!", (decimal)_kingSunday.MER);
-            var jerPlayers = await ApiService.GetSurroundingJERPlayersAsync("King Sunday!", (decimal)_kingSunday.JER);
-
-            _kingSundaySEGoalBegin = sePlayers?.LowerPlayer;
-            _kingSundaySEGoalEnd = sePlayers?.UpperPlayer;
-            _kingSundayEBGoalBegin = ebPlayers?.LowerPlayer;
-            _kingSundayEBGoalEnd = ebPlayers?.UpperPlayer;
-            _kingSundayMERGoalBegin = merPlayers?.LowerPlayer;
-            _kingSundayMERGoalEnd = merPlayers?.UpperPlayer;
-            _kingSundayJERGoalBegin = jerPlayers?.LowerPlayer;
-            _kingSundayJERGoalEnd = jerPlayers?.UpperPlayer;
-
-            // Removed percentage calculations and 50% default logic
-
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task UpdateKingMonday()
-    {
-        _kingMonday = await ApiService.GetLatestPlayerAsync("King Monday!");
-        _kingMondayStats = await ApiService.GetRankedPlayerAsync("King Monday!", 1, 30);
-        Logger.LogInformation($"Loaded King Monday with EID: {_kingMonday?.EID}");
-
-        if (_kingMonday != null)
-        {
-            await InvokeAsync(() => DashboardState.SetPlayerLastUpdated("King Monday!", _kingMonday.Updated));
-            var seThisWeek = await PlayerDataService.CalculateSEThisWeekAsync(_kingMonday);
-            DashboardState.SetPlayerSEThisWeek("King Monday!", seThisWeek); // Store in state
-            var (prestigesToday, prestigesThisWeek) = await PlayerDataService.CalculatePrestigesAsync(_kingMonday);
-            _kingMonday.PrestigesToday = prestigesToday;
-            _kingMonday.PrestigesThisWeek = prestigesThisWeek;
-
-            // Calculate DaysToNextTitle
-            string? projectedDateStringMon = (await ApiService.GetTitleInfoAsync("King Monday!"))?.ProjectedTitleChange ?? _kingMondayStats?.ProjectedTitleChange;
-            _kingMondayDaysToNextTitle = CalculateDaysToNextTitle(projectedDateStringMon);
-            // Removed setting TitleProgressData and TitleProgressLabels
-
-            _kingMondayGoals = await ApiService.GetPlayerGoalsAsync("King Monday!");
-
-            var sePlayers = await ApiService.GetSurroundingSEPlayersAsync("King Monday!", _kingMonday.SoulEggs);
-            var ebPlayers = await ApiService.GetSurroundingEBPlayersAsync("King Monday!", _kingMonday.EarningsBonusPercentage);
-            var merPlayers = await ApiService.GetSurroundingMERPlayersAsync("King Monday!", (decimal)_kingMonday.MER);
-            var jerPlayers = await ApiService.GetSurroundingJERPlayersAsync("King Monday!", (decimal)_kingMonday.JER);
-
-            _kingMondaySEGoalBegin = sePlayers?.LowerPlayer;
-            _kingMondaySEGoalEnd = sePlayers?.UpperPlayer;
-            _kingMondayEBGoalBegin = ebPlayers?.LowerPlayer;
-            _kingMondayEBGoalEnd = ebPlayers?.UpperPlayer;
-            _kingMondayMERGoalBegin = merPlayers?.LowerPlayer;
-            _kingMondayMERGoalEnd = merPlayers?.UpperPlayer;
-            _kingMondayJERGoalBegin = jerPlayers?.LowerPlayer;
-            _kingMondayJERGoalEnd = jerPlayers?.UpperPlayer;
-
-            // Removed percentage calculations and 50% default logic
-
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    // Removed LoadKingFridaySEHistory method
 
     private string GetTimeSinceLastUpdate()
     {
@@ -532,50 +318,6 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
         return $"{timeSince.Days:D} days, {timeSince.Hours:D} hours ago";
     }
 
-    private string FormatTitleChangeLabel(DateTime projectedDate)
-    {
-        var timeSpan = projectedDate - DateTime.Now;
-        if (timeSpan.Days < 0)
-            return "Title change overdue";
-        if (timeSpan.Days == 0)
-            return "Title change today";
-        if (timeSpan.Days == 1)
-            return "Next title tomorrow";
-        return $"Next title in {timeSpan.Days} days";
-    }
-
-    // Removed InitializeTestData method
-    // Removed UpdateMultiSeriesChart method
-    // Removed OnDaysSliderChanged method
-
-    private string GetLocalTimeString(DateTime utcTime)
-    {
-        DateTime localTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, TimeZoneInfo.Local);
-        if (localTime.Date == DateTime.Today)
-            return $"Today {localTime:HH:mm}";
-        if (localTime.Date == DateTime.Today.AddDays(-1))
-            return $"Yesterday {localTime:HH:mm}";
-        return localTime.ToString("MM/dd HH:mm");
-    }
-
-    private MudBlazor.Color CalculateProgressColor(int? actual, int goal)
-    {
-        if (actual == null || goal <= 0)
-            return MudBlazor.Color.Default;
-        double percentage = (double)actual.Value / goal * 100;
-        if (percentage >= 100)
-            return MudBlazor.Color.Success;
-        if (percentage >= 75)
-            return MudBlazor.Color.Info;
-        if (percentage >= 50)
-            return MudBlazor.Color.Warning;
-        if (percentage >= 25)
-            return MudBlazor.Color.Error;
-        return MudBlazor.Color.Dark;
-    }
-
-    // Removed GetProgressColorStyle method
-
     private int CalculateDaysToNextTitle(string? projectedDateString)
     {
         if (string.IsNullOrEmpty(projectedDateString))
@@ -589,7 +331,6 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
         Logger.LogWarning($"Could not parse projected title change date: {projectedDateString}");
         return 0;
     }
-
 
     private void NavigateToPlayerDetail(string? eid)
     {
@@ -615,13 +356,7 @@ public partial class Dashboard : IDisposable, IAsyncDisposable
             DashboardState.OnChange -= StateHasChanged; // Unsubscribe
 
             // Clear references
-            _kingFriday = _kingSaturday = _kingSunday = _kingMonday = null;
-            _kingFridayStats = _kingSaturdayStats = _kingSundayStats = _kingMondayStats = null;
-            _kingFridayGoals = _kingSaturdayGoals = _kingSundayGoals = _kingMondayGoals = null;
-            _SEGoalBegin = _SEGoalEnd = _EBGoalBegin = _EBGoalEnd = _MERGoalBegin = _MERGoalEnd = _JERGoalBegin = _JERGoalEnd = null;
-            _kingSaturdaySEGoalBegin = _kingSaturdaySEGoalEnd = _kingSaturdayEBGoalBegin = _kingSaturdayEBGoalEnd = _kingSaturdayMERGoalBegin = _kingSaturdayMERGoalEnd = _kingSaturdayJERGoalBegin = _kingSaturdayJERGoalEnd = null;
-            _kingSundaySEGoalBegin = _kingSundaySEGoalEnd = _kingSundayEBGoalBegin = _kingSundayEBGoalEnd = _kingSundayMERGoalBegin = _kingSundayMERGoalEnd = _kingSundayJERGoalBegin = _kingSundayJERGoalEnd = null;
-            _kingMondaySEGoalBegin = _kingMondaySEGoalEnd = _kingMondayEBGoalBegin = _kingMondayEBGoalEnd = _kingMondayMERGoalBegin = _kingMondayMERGoalEnd = _kingMondayJERGoalBegin = _kingMondayJERGoalEnd = null;
+            _kingFridayPlayer = _kingSaturdayPlayer = _kingSundayPlayer = _kingMondayPlayer = null;
 
             GC.Collect();
             GC.WaitForPendingFinalizers();

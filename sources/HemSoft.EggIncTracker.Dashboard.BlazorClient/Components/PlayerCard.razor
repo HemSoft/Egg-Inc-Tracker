@@ -170,7 +170,18 @@
             @{
                 var playerSEGoalPercentage = CalculateProgressPercentage(
                 Player?.SoulEggs, SEGoalEnd?.SEString, SEGoalBegin?.SEString);
-                Logger.LogDebug($"SE Progress calculation for {Player?.PlayerName}: Current={Player?.SoulEggs}, Target={SEGoalEnd?.SEString}, Previous={SEGoalBegin?.SEString}, Result={playerSEGoalPercentage}");
+
+                // Display debug info directly in UI for King Friday
+                if (Player?.PlayerName == "King Friday!")
+                {
+                    <div class="debug-info" style="background-color: rgba(0,0,0,0.7); color: white; padding: 5px; margin-bottom: 5px; font-size: 10px; border-radius: 4px;">
+                        <div><strong>SE Debug Info:</strong></div>
+                        <div>Current: @Player?.SoulEggs</div>
+                        <div>Target: @SEGoalEnd?.SEString (Rank: @SEGoalEnd?.Ranking - @SEGoalEnd?.IGN)</div>
+                        <div>Previous: @SEGoalBegin?.SEString (Rank: @SEGoalBegin?.Ranking - @SEGoalBegin?.IGN)</div>
+                        <div>Result: @playerSEGoalPercentage.ToString("F2")%</div>
+                    </div>
+                }
             }
             <MudProgressLinear Color="Color.Success" Value="@playerSEGoalPercentage" Max="100" Striped="false"
                 Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
@@ -199,7 +210,18 @@
         @{
                 var playerEBGoalPercentage = CalculateProgressPercentage(
                 PlayerStats?.EB, EBGoalEnd?.EBString, EBGoalBegin?.EBString);
-                Logger.LogDebug($"EB Progress calculation for {Player?.PlayerName}: Current={PlayerStats?.EB}, Target={EBGoalEnd?.EBString}, Previous={EBGoalBegin?.EBString}, Result={playerEBGoalPercentage}");
+
+                // Display debug info directly in UI for King Friday
+                if (Player?.PlayerName == "King Friday!")
+                {
+                    <div class="debug-info" style="background-color: rgba(0,0,0,0.7); color: white; padding: 5px; margin-bottom: 5px; font-size: 10px; border-radius: 4px;">
+                        <div><strong>EB Debug Info:</strong></div>
+                        <div>Current: @PlayerStats?.EB</div>
+                        <div>Target: @EBGoalEnd?.EBString (Rank: @EBGoalEnd?.Ranking - @EBGoalEnd?.IGN)</div>
+                        <div>Previous: @EBGoalBegin?.EBString (Rank: @EBGoalBegin?.Ranking - @EBGoalBegin?.IGN)</div>
+                        <div>Result: @playerEBGoalPercentage.ToString("F2")%</div>
+                    </div>
+                }
             }
             <MudProgressLinear Color="Color.Success" Value="@playerEBGoalPercentage" Max="100" Striped="false"
                 Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
@@ -228,7 +250,18 @@
         @{
                 var playerMERGoalPercentage = CalculateProgressPercentage(PlayerStats?.MER.ToString(),
                 MERGoalEnd?.MER.ToString(), MERGoalBegin?.MER.ToString());
-                Logger.LogDebug($"MER Progress calculation for {Player?.PlayerName}: Current={PlayerStats?.MER}, Target={MERGoalEnd?.MER}, Previous={MERGoalBegin?.MER}, Result={playerMERGoalPercentage}");
+
+                // Display debug info directly in UI for King Friday
+                if (Player?.PlayerName == "King Friday!")
+                {
+                    <div class="debug-info" style="background-color: rgba(0,0,0,0.7); color: white; padding: 5px; margin-bottom: 5px; font-size: 10px; border-radius: 4px;">
+                        <div><strong>MER Debug Info:</strong></div>
+                        <div>Current: @PlayerStats?.MER</div>
+                        <div>Target: @MERGoalEnd?.MER (Rank: @MERGoalEnd?.Ranking - @MERGoalEnd?.IGN)</div>
+                        <div>Previous: @MERGoalBegin?.MER (Rank: @MERGoalBegin?.Ranking - @MERGoalBegin?.IGN)</div>
+                        <div>Result: @playerMERGoalPercentage.ToString("F2")%</div>
+                    </div>
+                }
             }
             <MudProgressLinear Color="Color.Success" Value="@playerMERGoalPercentage" Max="100" Striped="false"
                 Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
@@ -257,7 +290,18 @@
         @{
                 var playerJERGoalPercentage = CalculateProgressPercentage(PlayerStats?.JER.ToString(),
                 JERGoalEnd?.JER.ToString(), JERGoalBegin?.JER.ToString());
-                Logger.LogDebug($"JER Progress calculation for {Player?.PlayerName}: Current={PlayerStats?.JER}, Target={JERGoalEnd?.JER}, Previous={JERGoalBegin?.JER}, Result={playerJERGoalPercentage}");
+
+                // Display debug info directly in UI for King Friday
+                if (Player?.PlayerName == "King Friday!")
+                {
+                    <div class="debug-info" style="background-color: rgba(0,0,0,0.7); color: white; padding: 5px; margin-bottom: 5px; font-size: 10px; border-radius: 4px;">
+                        <div><strong>JER Debug Info:</strong></div>
+                        <div>Current: @PlayerStats?.JER</div>
+                        <div>Target: @JERGoalEnd?.JER (Rank: @JERGoalEnd?.Ranking - @JERGoalEnd?.IGN)</div>
+                        <div>Previous: @JERGoalBegin?.JER (Rank: @JERGoalBegin?.Ranking - @JERGoalBegin?.IGN)</div>
+                        <div>Result: @playerJERGoalPercentage.ToString("F2")%</div>
+                    </div>
+                }
             }
             <MudProgressLinear Color="Color.Success" Value="@playerJERGoalPercentage" Max="100" Striped="false"
                 Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
