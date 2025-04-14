@@ -247,15 +247,24 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
                 var encodedPlayerName = Uri.EscapeDataString(playerName);
                 var encodedSoulEggs = Uri.EscapeDataString(soulEggs);
 
-                var response = await _httpClient.GetAsync($"api/v1/majplayerrankings/surrounding/se/{encodedPlayerName}?soulEggs={encodedSoulEggs}");
+                var url = $"api/v1/majplayerrankings/surrounding/se/{encodedPlayerName}?soulEggs={encodedSoulEggs}";
+                _logger.LogWarning($"Calling API: {url}");
+
+                var response = await _httpClient.GetAsync(url);
 
                 if (response.IsSuccessStatusCode)
                 {
+                    var content = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning($"API response for {playerName} SE: {content}");
+
                     var result = await response.Content.ReadFromJsonAsync<SurroundingPlayersDto>();
+                    _logger.LogWarning($"Parsed result for {playerName} SE: Lower={result?.LowerPlayer?.IGN}, Upper={result?.UpperPlayer?.IGN}");
                     return result;
                 }
 
                 _logger.LogError($"Error fetching surrounding SE players: {response.StatusCode}");
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError($"Error response: {errorContent}");
                 return null;
             }
             catch (Exception ex)

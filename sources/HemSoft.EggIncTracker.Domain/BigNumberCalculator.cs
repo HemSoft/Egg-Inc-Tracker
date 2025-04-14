@@ -103,7 +103,8 @@ public static class BigNumberCalculator
 
     private static string FormatBigNumber(BigInteger value)
     {
-        if (value == 0) return "0";
+        if (value == 0)
+            return "0";
 
         // Start from the largest suffix and work backwards
         var orderedSuffixes = SuffixRanks.OrderByDescending(x => x.Value);
@@ -118,10 +119,10 @@ public static class BigNumberCalculator
                 // Round to 3 decimal places
                 scaledValue = Math.Round(scaledValue, 3);
 
-                // Remove trailing zeros after decimal point
-                string formatted = scaledValue.ToString("F3", CultureInfo.InvariantCulture)
-                    .TrimEnd('0')
-                    .TrimEnd('.');
+                // Format to 3 decimal places, keeping trailing zeros
+                string formatted = scaledValue.ToString("F3", CultureInfo.InvariantCulture);
+                // // Remove trailing zeros after decimal point -- Keep trailing zeros for consistency
+                // formatted = formatted.TrimEnd('0').TrimEnd('.');
 
                 return $"{formatted}{suffix.Key}";
             }

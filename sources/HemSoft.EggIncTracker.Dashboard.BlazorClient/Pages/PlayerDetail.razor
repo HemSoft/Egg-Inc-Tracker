@@ -2,6 +2,8 @@
 @using Microsoft.AspNetCore.Components
 @using MudBlazor
 @using HemSoft.EggIncTracker.Dashboard.BlazorClient.Components
+@using System.Numerics // Added for BigInteger
+@using System.Globalization // Added for CultureInfo
 
 <PageTitle>Player Details - @(_player?.PlayerName ?? "Loading...")</PageTitle>
 
@@ -46,8 +48,8 @@
                 <PlayerCard Player="_player" PlayerStats="_playerStats" PlayerGoals="_playerGoals"
                     SEGoalBegin="_SEGoalBegin" SEGoalEnd="_SEGoalEnd" EBGoalBegin="_EBGoalBegin" EBGoalEnd="_EBGoalEnd"
                     MERGoalBegin="_MERGoalBegin" MERGoalEnd="_MERGoalEnd" JERGoalBegin="_JERGoalBegin"
-                    JERGoalEnd="_JERGoalEnd" PlayerSEThisWeek="@currentPlayerSEThisWeek" DaysToNextTitle="_daysToNextTitle"
-                    LastUpdatedTimestamp="_player?.Updated" />
+                    JERGoalEnd="_JERGoalEnd" PlayerSEThisWeek="(BigInteger?)currentPlayerSEThisWeek"
+                    DaysToNextTitle="_daysToNextTitle" @* Explicit cast *@ LastUpdatedTimestamp="_player?.Updated" />
             </MudItem>
 
             <!-- Player History Chart -->

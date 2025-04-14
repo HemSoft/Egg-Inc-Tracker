@@ -1,6 +1,7 @@
 namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Pages;
 
 using System.Globalization;
+using System.Numerics; // Added for BigInteger
 
 using HemSoft.EggIncTracker.Dashboard.BlazorClient.Services;
 // using HemSoft.EggIncTracker.Data; // Removed Utils using
@@ -39,7 +40,7 @@ public partial class PlayerDetail
     private MajPlayerRankingDto _JERGoalBegin = new();
     private MajPlayerRankingDto _JERGoalEnd = new();
     private PlayerGoalDto? _playerGoals; // Added field for player goals
-    private string currentPlayerSEThisWeek = string.Empty; // Renamed field
+    private BigInteger? currentPlayerSEThisWeek; // Changed type to BigInteger?
     private int _daysToNextTitle = 0;
     private bool isLoading = true;
     private const int NameCutOff = 10;
@@ -228,11 +229,11 @@ public partial class PlayerDetail
         // Calculate SE This Week using the service
         if (_player != null)
         {
-            currentPlayerSEThisWeek = await PlayerDataService.CalculateSEThisWeekAsync(_player); // Assign to renamed field
+            currentPlayerSEThisWeek = await PlayerDataService.CalculateSEThisWeekAsync(_player); // Assignment is now correct type
         }
         else
         {
-            currentPlayerSEThisWeek = "0"; // Default if player is null
+            currentPlayerSEThisWeek = BigInteger.Zero; // Default if player is null
         }
     }
 

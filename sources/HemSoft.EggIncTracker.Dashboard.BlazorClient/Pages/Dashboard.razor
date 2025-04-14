@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @page "/dashboard"
 @using Microsoft.AspNetCore.Components
 @using HemSoft.EggIncTracker.Dashboard.BlazorClient.Components
@@ -44,7 +44,7 @@ else
                             MERGoalEnd="_kingMondayMERGoalEnd"
                             JERGoalBegin="_kingMondayJERGoalBegin"
                             JERGoalEnd="_kingMondayJERGoalEnd"
-                            PlayerSEThisWeek="@_kingMondaySEThisWeek"
+                            // PlayerSEThisWeek="@_kingMondaySEThisWeek" // Removed - using DashboardState now
                             DaysToNextTitle="_kingMondayDaysToNextTitle"
                             LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Monday!")' />
             </MudItem>
@@ -63,7 +63,7 @@ else
                             MERGoalEnd="_kingSundayMERGoalEnd"
                             JERGoalBegin="_kingSundayJERGoalBegin"
                             JERGoalEnd="_kingSundayJERGoalEnd"
-                            PlayerSEThisWeek="@_kingSundaySEThisWeek"
+                            // PlayerSEThisWeek="@_kingSundaySEThisWeek" // Removed - using DashboardState now
                             DaysToNextTitle="_kingSundayDaysToNextTitle"
                             LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Sunday!")' />
             </MudItem>
@@ -82,7 +82,7 @@ else
                             MERGoalEnd="_kingSaturdayMERGoalEnd"
                             JERGoalBegin="_kingSaturdayJERGoalBegin"
                             JERGoalEnd="_kingSaturdayJERGoalEnd"
-                            PlayerSEThisWeek="@_kingSaturdaySEThisWeek"
+                            // PlayerSEThisWeek="@_kingSaturdaySEThisWeek" // Removed - using DashboardState now
                             DaysToNextTitle="_kingSaturdayDaysToNextTitle"
                             LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Saturday!")' />
             </MudItem>
@@ -93,15 +93,15 @@ else
                  <PlayerCard Player="_kingFriday"
                             PlayerStats="_kingFridayStats"
                             PlayerGoals="_kingFridayGoals"
-                            SEGoalBegin="_SEGoalBegin"
-                            SEGoalEnd="_SEGoalEnd"
-                            EBGoalBegin="_EBGoalBegin"
-                            EBGoalEnd="_EBGoalEnd"
-                            MERGoalBegin="_MERGoalBegin"
-                            MERGoalEnd="_MERGoalEnd"
-                            JERGoalBegin="_JERGoalBegin"
-                            JERGoalEnd="_JERGoalEnd"
-                            PlayerSEThisWeek="@_kingFridaySEThisWeek"
+                            SEGoalBegin="_kingFridaySEGoalBegin" // Corrected binding
+                            SEGoalEnd="_kingFridaySEGoalEnd"     // Corrected binding
+                            EBGoalBegin="_kingFridayEBGoalBegin" // Corrected binding
+                            EBGoalEnd="_kingFridayEBGoalEnd"     // Corrected binding
+                            MERGoalBegin="_kingFridayMERGoalBegin" // Corrected binding
+                            MERGoalEnd="_kingFridayMERGoalEnd"     // Corrected binding
+                            JERGoalBegin="_kingFridayJERGoalBegin" // Corrected binding
+                            JERGoalEnd="_kingFridayJERGoalEnd"     // Corrected binding
+                            // PlayerSEThisWeek="@_kingFridaySEThisWeek" // Removed - using DashboardState now
                             DaysToNextTitle="_kingFridayDaysToNextTitle"
                             LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Friday!")' />
             </MudItem>

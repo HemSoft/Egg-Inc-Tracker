@@ -3,8 +3,10 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Numerics; // Added using statement for BigInteger
 using System.Linq;
 using System.Threading.Tasks;
+using HemSoft.EggIncTracker.Data; // Added using statement for Utils
 using HemSoft.EggIncTracker.Data.Dtos;
 using HemSoft.EggIncTracker.Domain;
 using Microsoft.Extensions.Logging;
@@ -67,6 +69,7 @@ public class PlayerDataService
     {
         if (string.IsNullOrEmpty(current) || string.IsNullOrEmpty(target) || string.IsNullOrEmpty(previous))
         {
+            _logger.LogWarning($"CalculateProgressPercentage received null or empty values: Current={current}, Target={target}, Previous={previous}");
             return 0;
         }
 
@@ -115,6 +118,27 @@ public class PlayerDataService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error calculating progress percentage for Current={Current}, Target={Target}, Previous={Previous}", current, target, previous);
+
+            // Try to provide a fallback calculation if possible
+            try
+            {
+                // If we can parse the current and target values, we can still provide a simple percentage
+                double currentValue = ParseBigNumber(current);
+                double targetValue = ParseBigNumber(target);
+
+                if (targetValue > 0 && currentValue > 0)
+                {
+                    // Simple percentage calculation as fallback
+                    double simplePercentage = Math.Min((currentValue / targetValue) * 100.0, 100.0);
+                    _logger.LogWarning("Using fallback percentage calculation: {Percentage}%", simplePercentage);
+                    return simplePercentage;
+                }
+            }
+            catch (Exception fallbackEx)
+            {
+                _logger.LogError(fallbackEx, "Fallback calculation also failed");
+            }
+
             return 0; // Return 0 on error
         }
     }
@@ -126,7 +150,10 @@ public class PlayerDataService
         _logger.LogDebug("ParseBigNumber received value: {Value}", value); // Log input
 
         if (string.IsNullOrEmpty(value))
+        {
+            _logger.LogWarning("ParseBigNumber received null or empty value");
             return 0;
+        }
 
         // Remove any non-numeric characters except for decimal points and scientific notation
         // Also remove trailing '%' specifically for EB values
@@ -209,9 +236,12 @@ public class PlayerDataService
     /// <summary>
     /// Gets the color style for SE This Week based on progress toward the daily portion of the weekly goal
     /// </summary>
-    public string GetSEProgressColorStyle(string? seThisWeek, string? weeklySEGainGoal)
+    /// <param name="seThisWeekValue">The actual SE gained this week as a BigInteger.</param>
+    /// <param name="weeklySEGainGoalStr">The weekly SE gain goal as a string (e.g., "3.000s").</param>
+    public string GetSEProgressColorStyle(BigInteger? seThisWeekValue, string? weeklySEGainGoalStr)
     {
-        if (string.IsNullOrEmpty(seThisWeek) || string.IsNullOrEmpty(weeklySEGainGoal))
+        // Use BigInteger directly, parse the goal string
+        if (!seThisWeekValue.HasValue || string.IsNullOrEmpty(weeklySEGainGoalStr))
             return "color: white"; // Default color if no goal or data
 
         // Get the current day of the week (1 = Monday, 7 = Sunday)
@@ -220,20 +250,44 @@ public class PlayerDataService
         // Convert to 1-based with Monday as 1
         int daysSinceMonday = dayOfWeek == 0 ? 7 : dayOfWeek;
 
-        // Parse the SE values
-        double currentSEGain = ParseBigNumber(seThisWeek);
-        double weeklySEGoal = ParseBigNumber(weeklySEGainGoal);
+        BigInteger currentSEGain = seThisWeekValue.Value;
+        BigInteger weeklySEGoal;
+        BigInteger expectedSEGain;
+        double percentage = 0; // Use double for percentage calculation
 
-        if (weeklySEGoal <= 0)
-            return "color: white";
+        try
+        {
+            weeklySEGoal = BigNumberCalculator.ParseBigNumber(weeklySEGainGoalStr);
 
-        // Calculate the expected SE gain for the current day (proportional to days passed)
-        double expectedSEGain = (weeklySEGoal / 7.0) * daysSinceMonday;
+            if (weeklySEGoal <= BigInteger.Zero)
+                return "color: white";
 
-        // Calculate percentage of daily goal achieved
-        double percentage = Math.Min((currentSEGain / expectedSEGain) * 100, 100);
+            // Calculate expected gain using BigInteger arithmetic
+            expectedSEGain = (weeklySEGoal * daysSinceMonday) / 7;
+
+            // Calculate percentage using BigInteger, convert to double at the end
+            if (expectedSEGain > BigInteger.Zero)
+            {
+                // Use decimal for intermediate percentage calculation for better precision than double
+                decimal currentDecimal = (decimal)currentSEGain;
+                decimal expectedDecimal = (decimal)expectedSEGain;
+                percentage = Math.Min((double)(currentDecimal / expectedDecimal * 100m), 100.0);
+            }
+            else
+            {
+                percentage = (currentSEGain > BigInteger.Zero) ? 100.0 : 0.0; // 100% if any gain, else 0%
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error parsing or calculating SE gain goal for color style. Goal string: {GoalString}", weeklySEGainGoalStr);
+            return "color: white"; // Default color on error
+        }
+
 
         // Calculate RGB values for the gradient from red to green
+        // Ensure percentage is clamped between 0 and 100 before color calculation
+        percentage = Math.Max(0.0, Math.Min(percentage, 100.0));
         // Red component decreases from 255 to 0 as percentage increases
         int red = (int)(255 * (1 - percentage / 100.0));
         // Green component increases from 0 to 255 as percentage increases
@@ -360,10 +414,13 @@ public class PlayerDataService
     /// <summary>
     /// Calculates how much SE gain is missing to reach the daily portion of the weekly goal
     /// </summary>
+    /// <param name="seThisWeekValue">The actual SE gained this week as a BigInteger.</param>
+    /// <param name="weeklySEGainGoalStr">The weekly SE gain goal as a string (e.g., "3.000s").</param>
     /// <returns>A tuple with (bool IsGoalMet, string MissingAmount, string ExpectedAmount, int PercentComplete)</returns>
-    public (bool IsGoalMet, string MissingAmount, string ExpectedAmount, int PercentComplete) CalculateMissingSEGain(string? seThisWeek, string? weeklySEGainGoal)
+    public (bool IsGoalMet, string MissingAmount, string ExpectedAmount, int PercentComplete) CalculateMissingSEGain(BigInteger? seThisWeekValue, string? weeklySEGainGoalStr)
     {
-        if (string.IsNullOrEmpty(seThisWeek) || string.IsNullOrEmpty(weeklySEGainGoal))
+        // Use BigInteger directly, parse the goal string
+        if (!seThisWeekValue.HasValue || string.IsNullOrEmpty(weeklySEGainGoalStr))
             return (false, "0", "0", 0);
 
         // Get the current day of the week (1 = Monday, 7 = Sunday)
@@ -372,97 +429,57 @@ public class PlayerDataService
         // Convert to 1-based with Monday as 1
         int daysSinceMonday = dayOfWeek == 0 ? 7 : dayOfWeek;
 
-        // Parse the SE values
-        double currentSEGain = ParseBigNumber(seThisWeek);
-        double weeklySEGoal = ParseBigNumber(weeklySEGainGoal);
+        BigInteger currentSEGain = seThisWeekValue.Value;
+        BigInteger weeklySEGoal;
+        BigInteger expectedSEGain;
+        BigInteger missingAmount;
+        int percentComplete = 0;
+        bool isGoalMet = false;
 
-        if (weeklySEGoal <= 0)
-            return (false, "0", "0", 0);
-
-        // Calculate the expected SE gain for the current day (proportional to days passed)
-        double expectedSEGain = (weeklySEGoal / 7.0) * daysSinceMonday;
-
-        bool isGoalMet = currentSEGain >= expectedSEGain;
-        double missingAmount = Math.Max(0, expectedSEGain - currentSEGain);
-
-        // Calculate percentage complete (capped at 100%)
-        int percentComplete = expectedSEGain > 0
-            ? (int)Math.Min(Math.Round((currentSEGain / expectedSEGain) * 100), 100)
-            : 0;
-
-        // Format the missing amount in the same format as the current SE This Week value
-        string formattedMissingAmount;
-        string formattedExpectedAmount;
-
-        // For scientific notation (values with 's' suffix), we need to convert to the same scale
-        if (seThisWeek.EndsWith('s') && weeklySEGainGoal.EndsWith('s'))
+        try
         {
-            // Extract the numeric parts
-            if (double.TryParse(seThisWeek.TrimEnd('s'), NumberStyles.Float, CultureInfo.InvariantCulture, out double currentValue) &&
-                double.TryParse(weeklySEGainGoal.TrimEnd('s'), NumberStyles.Float, CultureInfo.InvariantCulture, out double goalValue))
+            weeklySEGoal = BigNumberCalculator.ParseBigNumber(weeklySEGainGoalStr);
+
+            if (weeklySEGoal <= BigInteger.Zero)
+                return (false, "0", "0", 0);
+
+            // Calculate expected gain using BigInteger arithmetic to maintain precision
+            // Multiply first to avoid potential truncation with integer division
+            expectedSEGain = (weeklySEGoal * daysSinceMonday) / 7;
+
+            isGoalMet = currentSEGain >= expectedSEGain;
+            missingAmount = BigInteger.Max(BigInteger.Zero, expectedSEGain - currentSEGain);
+
+            // Calculate percentage complete using BigInteger
+            if (expectedSEGain > BigInteger.Zero)
             {
-                // Calculate in the same scale as the displayed values
-                double expectedValueInSScale = (goalValue / 7.0) * daysSinceMonday;
-                double missingValueInSScale = Math.Max(0, expectedValueInSScale - currentValue);
-
-                // Format with 3 decimal places to match the game's format
-                formattedMissingAmount = $"{missingValueInSScale:0.000}s";
-                formattedExpectedAmount = $"{expectedValueInSScale:0.000}s";
-
-                _logger.LogDebug("Scientific notation calculation: Current={Current}s, Expected={Expected}s, Missing={Missing}s",
-                    currentValue, expectedValueInSScale, missingValueInSScale);
+                // Multiply by 10000 for 2 decimal places in percentage before dividing
+                BigInteger scaledCurrent = currentSEGain * 10000;
+                BigInteger percentageScaled = scaledCurrent / expectedSEGain;
+                // Clamp between 0 and 10000 (representing 0% to 100.00%)
+                percentageScaled = BigInteger.Min(BigInteger.Max(percentageScaled, BigInteger.Zero), 10000);
+                // Convert back to integer percentage (0-100)
+                percentComplete = (int)(percentageScaled / 100);
             }
             else
             {
-                // Fallback if parsing fails
-                formattedMissingAmount = $"{missingAmount:0.000}s";
-                formattedExpectedAmount = $"{expectedSEGain:0.000}s";
+                percentComplete = (currentSEGain > BigInteger.Zero) ? 100 : 0; // If goal is 0, 100% if any gain, else 0%
             }
+
         }
-        else
+        catch (Exception ex)
         {
-            // Try to determine the suffix used in the current SE This Week value
-            string suffix = "";
-            foreach (var suffixPair in Suffixes)
-            {
-                if (seThisWeek.EndsWith(suffixPair.Key, StringComparison.OrdinalIgnoreCase))
-                {
-                    suffix = suffixPair.Key;
-                    break;
-                }
-            }
-
-            if (!string.IsNullOrEmpty(suffix))
-            {
-                // Extract the numeric part and scale
-                var numericPart = seThisWeek.Substring(0, seThisWeek.Length - suffix.Length);
-                if (double.TryParse(numericPart, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
-                {
-                    // Calculate the scale factor based on the suffix
-                    double scale = 1.0;
-                    if (Suffixes.TryGetValue(suffix, out var suffixValue))
-                    {
-                        scale = 1.0 / suffixValue;
-                    }
-
-                    // Format with the same suffix
-                    formattedMissingAmount = $"{missingAmount * scale:0.000}{suffix}";
-                    formattedExpectedAmount = $"{expectedSEGain * scale:0.000}{suffix}";
-                }
-                else
-                {
-                    // Fallback to simple formatting
-                    formattedMissingAmount = missingAmount.ToString("0.000");
-                    formattedExpectedAmount = expectedSEGain.ToString("0.000");
-                }
-            }
-            else
-            {
-                // No suffix found, use simple formatting
-                formattedMissingAmount = missingAmount.ToString("0.000");
-                formattedExpectedAmount = expectedSEGain.ToString("0.000");
-            }
+            _logger.LogError(ex, "Error parsing or calculating SE gain goal. Goal string: {GoalString}", weeklySEGainGoalStr);
+            return (false, "Error", "Error", 0); // Indicate error in formatting
         }
+
+        // Format the BigInteger results using Utils.FormatBigInteger
+        string formattedMissingAmount = Utils.FormatBigInteger(missingAmount.ToString(CultureInfo.InvariantCulture), false, false);
+        string formattedExpectedAmount = Utils.FormatBigInteger(expectedSEGain.ToString(CultureInfo.InvariantCulture), false, false);
+
+        // Corrected LogDebug call again: Placeholders match parameters exactly now.
+        _logger.LogDebug("Formatted SE Gain Tooltip Values (BigInt): Missing='{FormattedMissingAmount}', Expected='{FormattedExpectedAmount}' (Raw Missing={MissingAmount}, Raw Expected={ExpectedSEGain})", // Corrected placeholder names
+            formattedMissingAmount, formattedExpectedAmount, missingAmount, expectedSEGain);
 
         return (isGoalMet, formattedMissingAmount, formattedExpectedAmount, percentComplete);
     }
@@ -608,8 +625,9 @@ public class PlayerDataService
                             // We cannot assume a prestige happened just because the record was updated.
                             prestigesToday = 0;
 
-                            _logger.LogDebug("No history from yesterday for {PlayerName}, setting prestigesToday to 0. Last update: {LastUpdate}, today start: {TodayStart}, updated today: {UpdatedToday}",
-                                player.PlayerName, lastUpdate, todayStart, updatedToday, prestigesToday);
+                            // Corrected LogDebug call: Matched placeholder {updatedToday} and removed extra argument prestigesToday
+                            _logger.LogDebug("No history from yesterday for {PlayerName}, setting prestigesToday to 0. Last update: {LastUpdate}, today start: {TodayStart}, updated today: {updatedToday}",
+                                player.PlayerName, lastUpdate, todayStart, updatedToday);
                         }
                         else
                         {
@@ -706,16 +724,16 @@ public class PlayerDataService
     }
 
 
-    // Placeholder for SE This Week Calculation
-    public async Task<string> CalculateSEThisWeekAsync(PlayerDto player)
+    // Calculation for SE This Week
+    public async Task<BigInteger?> CalculateSEThisWeekAsync(PlayerDto player) // Return BigInteger?
     {
         if (player == null || string.IsNullOrEmpty(player.PlayerName))
         {
             _logger.LogWarning("CalculateSEThisWeekAsync called with null or invalid player.");
-            return "0"; // Return default value
+            return null; // Return null for invalid input
         }
 
-        string seThisWeek = "0";
+        BigInteger? seDifference = null; // Initialize result as null BigInteger
         try
         {
             // Get the current time in local time instead of UTC to match the user's day
@@ -726,6 +744,9 @@ public class PlayerDataService
             int daysSinceMonday = ((int)localToday.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7; // Monday as start
             var startOfWeekLocal = localToday.AddDays(-daysSinceMonday);
             var startOfWeekUtc = startOfWeekLocal.ToUniversalTime();
+
+            // Log the time range for debugging
+            _logger.LogDebug("[PlayerDataService] Requesting player history for {PlayerName} from {From} to {To} (startOfWeekUtc to UtcNow)", player.PlayerName, startOfWeekUtc, DateTime.UtcNow);
 
             // Get player history for this week
             var playerHistoryWeek = await _apiService.GetPlayerHistoryAsync(
@@ -751,39 +772,46 @@ public class PlayerDataService
 
 
             var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
+            var lastThisWeek = playerHistoryWeek?.OrderByDescending(x => x.Updated).FirstOrDefault();
 
             // Calculate SE gain this week
-            if (playerHistoryWeek != null && playerHistoryWeek.Count > 0 && firstThisWeek != null)
+            if (playerHistoryWeek != null && playerHistoryWeek.Count > 0 && firstThisWeek != null && lastThisWeek != null)
             {
-                var latestSE = player.SoulEggsFull; // Use the full SE value from the current player DTO
-                var earliestSE = firstThisWeek.SoulEggsFull; // Use the full SE value from the earliest record this week
+                var earliestSEStr = firstThisWeek.SoulEggsFull; // Use the full SE value from the earliest record this week
+                var latestSEStr = lastThisWeek.SoulEggsFull;    // Use the full SE value from the latest record this week
 
                 _logger.LogDebug("[PlayerDataService] Calculating SE gain for {PlayerName}: LatestSE='{LatestSE}', EarliestSE='{EarliestSE}' (from {Timestamp})",
-                    player.PlayerName, latestSE, earliestSE, firstThisWeek.Updated); // Added quotes and tag
+                    player.PlayerName, latestSEStr, earliestSEStr, firstThisWeek.Updated);
 
                 try
                 {
-                    // Use BigNumberCalculator to calculate the difference
-                    seThisWeek = BigNumberCalculator.CalculateDifference(earliestSE, latestSE);
-                    _logger.LogDebug("[PlayerDataService] Calculated SE gain this week for {PlayerName}: Result='{SEGain}'", player.PlayerName, seThisWeek); // Added quotes and tag
+                    // Parse strings to BigInteger
+                    BigInteger latestSE = BigNumberCalculator.ParseBigNumber(latestSEStr);
+                    BigInteger earliestSE = BigNumberCalculator.ParseBigNumber(earliestSEStr);
+
+                    _logger.LogDebug("[PlayerDataService] Parsed SE values for {PlayerName}: LatestSE={LatestSE}, EarliestSE={EarliestSE}", player.PlayerName, latestSE, earliestSE);
+
+                    // Calculate the difference directly as BigInteger
+                    seDifference = BigInteger.Abs(latestSE - earliestSE);
+                    _logger.LogDebug("[PlayerDataService] Calculated SE gain this week for {PlayerName}: Result={SEGain}", player.PlayerName, seDifference);
                 }
-                catch (Exception calcEx)
+                catch (Exception parseEx)
                 {
-                    _logger.LogError(calcEx, "[PlayerDataService] Error using BigNumberCalculator for SE gain for {PlayerName}. Earliest='{EarliestSE}', Latest='{LatestSE}'", player.PlayerName, earliestSE, latestSE); // Added tag and values
-                    seThisWeek = "0"; // Default on calculation error
+                    _logger.LogError(parseEx, "[PlayerDataService] Error parsing SE values for BigInteger calculation for {PlayerName}. Earliest='{EarliestSE}', Latest='{LatestSE}'", player.PlayerName, earliestSEStr, latestSEStr);
+                    seDifference = BigInteger.Zero; // Default on parsing/calculation error
                 }
             }
             else
             {
-                _logger.LogWarning("[PlayerDataService] No player history found for {PlayerName} this week, setting SE gain to 0", player.PlayerName); // Added tag
-                seThisWeek = "0";
+                _logger.LogWarning("[PlayerDataService] No player history found for {PlayerName} this week, returning null for SE gain", player.PlayerName);
+                return null; // Return null if no history is found, so UI can display "N/A"
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[PlayerDataService] Error calculating SE this week for {PlayerName}", player.PlayerName); // Added tag
-            seThisWeek = "0"; // Default to 0 on error
+            _logger.LogError(ex, "[PlayerDataService] Error calculating SE this week for {PlayerName}", player.PlayerName);
+            return null; // Return null on error
         }
-        return seThisWeek;
+        return seDifference; // Return the BigInteger difference (or null if input was invalid)
     }
 }

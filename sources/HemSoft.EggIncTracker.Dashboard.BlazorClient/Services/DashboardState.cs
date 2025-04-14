@@ -1,4 +1,6 @@
-﻿namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services;
+﻿using System.Numerics; // Add for BigInteger
+
+namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Services;
 
 public class DashboardState
 {
@@ -50,5 +52,21 @@ public class DashboardState
     public void SetPlayerLastUpdated(DateTime playerLastUpdated)
     {
         SetPlayerLastUpdated("King Friday!", playerLastUpdated);
+    }
+
+    // Store SE This Week for each player
+    private Dictionary<string, BigInteger?> _playerSEThisWeek = new Dictionary<string, BigInteger?>();
+
+    // Method to get SE This Week for a specific player
+    public BigInteger? GetPlayerSEThisWeek(string playerName)
+    {
+        return _playerSEThisWeek.GetValueOrDefault(playerName, null);
+    }
+
+    // Method to set SE This Week for a specific player
+    public void SetPlayerSEThisWeek(string playerName, BigInteger? seThisWeek)
+    {
+        _playerSEThisWeek[playerName] = seThisWeek;
+        OnChange?.Invoke(); // Notify subscribers of the change
     }
 }
