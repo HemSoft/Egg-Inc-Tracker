@@ -1,36 +1,39 @@
-using HemSoft.EggIncTracker.Dashboard.BlazorClient.Services;
+// Removed client services using
 using MudBlazor.Services;
 using HemSoft.EggIncTracker.Dashboard.BlazorServer.Components;
 using HemSoft.EggIncTracker.Data;
-using Microsoft.AspNetCore.Components.Server; // Keep this using statement
+using Microsoft.AspNetCore.Components.Server;
+using HemSoft.EggIncTracker.Domain; // Add Domain using for static managers
+using HemSoft.EggIncTracker.Dashboard.BlazorServer.Services; // Add Server services using
+using Microsoft.EntityFrameworkCore; // Add EF Core using
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add MudBlazor services
-builder.Services.AddMudServices();
+// Add MudBlazor services with custom configuration
+builder.Services.AddMudServices(config =>
+{
+    config.PopoverOptions.ThrowOnDuplicateProvider = false; // Prevent errors with duplicate providers
+});
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents()
-    .AddInteractiveWebAssemblyComponents();
+    .AddInteractiveServerComponents(); // Removed AddInteractiveWebAssemblyComponents()
 
-// Register DbContext
-builder.Services.AddDbContext<EggIncContext>();
+// Register DbContext with explicit connection string from configuration
+builder.Services.AddDbContext<EggIncContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? "Data Source=localhost;Initial Catalog=db-egginc;Integrated Security=True;Encrypt=False;Trust Server Certificate=True;Connection Timeout=30"));
 
-builder.Services.AddSingleton<DashboardState>();
+// Register DashboardState as Scoped for Blazor Server
+builder.Services.AddScoped<DashboardState>();
 
-// Register HttpClient with extended timeout
-builder.Services.AddHttpClient<ApiService>(client =>
-{
-    client.Timeout = TimeSpan.FromSeconds(30); // Increase timeout to 30 seconds
-});
+// Removed HttpClient, ApiService, IApiService registrations as we use direct domain access
 
-// Register ApiService
-builder.Services.AddScoped<ApiService>();
-builder.Services.AddScoped<HemSoft.EggIncTracker.Dashboard.BlazorClient.Services.IApiService>(sp => sp.GetRequiredService<ApiService>());
-
-// Register the new PlayerDataService for server-side rendering
+// Register PlayerDataService (Scoped is appropriate)
 builder.Services.AddScoped<PlayerDataService>();
+
+// NOTE: Static Domain Managers (PlayerManager, etc.) are not registered via DI
+// They instantiate their own DbContext, which is not ideal but kept for now.
 
 // Configure CircuitOptions
 builder.Services.Configure<CircuitOptions>(options =>
@@ -43,7 +46,7 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseWebAssemblyDebugging();
+    // app.UseWebAssemblyDebugging(); // Removed as we are no longer using WebAssembly
 }
 else
 {
@@ -60,8 +63,6 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode()
-    .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(HemSoft.EggIncTracker.Dashboard.BlazorClient._Imports).Assembly);
+    .AddInteractiveServerRenderMode(); // Removed AddInteractiveWebAssemblyRenderMode and AddAdditionalAssemblies
 
 app.Run();

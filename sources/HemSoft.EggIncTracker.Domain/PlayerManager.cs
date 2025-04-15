@@ -1,4 +1,4 @@
-﻿namespace HemSoft.EggIncTracker.Domain;
+namespace HemSoft.EggIncTracker.Domain;
 
 using System.Linq;
 using System.Numerics;
@@ -10,9 +10,71 @@ using HemSoft.EggIncTracker.Data.Dtos;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic; // Added for List<>
 
 public static class PlayerManager
 {
+    // Added method to get player history from the database
+    public static async Task<List<PlayerDto>?> GetPlayerHistoryAsync(string playerName, DateTime from, ILogger? logger = null)
+    {
+        try
+        {
+            await using var context = new EggIncContext();
+            var history = await context.Players
+                .Where(p => p.PlayerName == playerName && p.Updated >= from)
+                .OrderBy(p => p.Updated)
+                .ToListAsync();
+            return history;
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Failed to retrieve player history for {PlayerName}", playerName);
+            return null;
+        }
+    }
+
+    // Added method to get the latest player record by EID from the database
+    public static async Task<PlayerDto?> GetPlayerByEIDAsync(string eid, ILogger? logger = null)
+    {
+        try
+        {
+            await using var context = new EggIncContext();
+            var player = await context.Players
+                .Where(p => p.EID == eid)
+                .OrderByDescending(p => p.Updated) // Get the most recent record for that EID
+                .FirstOrDefaultAsync();
+
+            logger?.LogInformation("Successfully retrieved latest record for EID {EID}", eid);
+            return player;
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Failed to retrieve latest player record for EID {EID}", eid);
+            return null;
+        }
+    }
+
+    // Added method to get the latest player record by Name from the database
+    public static async Task<PlayerDto?> GetLatestPlayerByNameAsync(string playerName, ILogger? logger = null)
+    {
+        try
+        {
+            await using var context = new EggIncContext();
+            var player = await context.Players
+                .Where(p => p.PlayerName == playerName)
+                .OrderByDescending(p => p.Updated)
+                .FirstOrDefaultAsync();
+
+            logger?.LogInformation("Successfully retrieved latest record for player {PlayerName}", playerName);
+            return player;
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Failed to retrieve latest player record for {PlayerName}", playerName);
+            return null;
+        }
+    }
+
     public static async Task<PlayerStatsDto?> GetRankedPlayersAsync(string playerName, int recordLimit, int sampleDaysBack, ILogger? logger)
     {
         try
@@ -34,7 +96,7 @@ public static class PlayerManager
         }
     }
 
-    public static (bool, PlayerDto) SavePlayer(PlayerDto player, JsonPlayerRoot fullPlayerInfo, ILogger ?logger)
+    public static (bool, PlayerDto) SavePlayer(PlayerDto player, JsonPlayerRoot fullPlayerInfo, ILogger? logger)
     {
         var context = new EggIncContext();
         var getLatestEntry = context.Players
@@ -172,7 +234,7 @@ public static class PlayerManager
         }
 
         var hoursNeeded = BigInteger.Divide(ebNeeded, ebProgressPerHour);
-        var projectedTime = DateTime.Now.AddHours((double) hoursNeeded);
+        var projectedTime = DateTime.Now.AddHours((double)hoursNeeded);
 
 
         var returnTime = exponentialRegressionProjection;
@@ -238,11 +300,11 @@ public static class PlayerManager
         var totalProgress = finalEB - initEB;
         var totalHours = (finalRecord.Updated - initialRecord.Updated).TotalHours;
 
-        if ((BigInteger) totalHours <= 0 || totalProgress == 0)
+        if ((BigInteger)totalHours <= 0 || totalProgress == 0)
         {
             return 0;
         }
 
-        return BigInteger.Divide(totalProgress, (BigInteger) totalHours);
+        return BigInteger.Divide(totalProgress, (BigInteger)totalHours);
     }
 }

@@ -1,8 +1,9 @@
 @using HemSoft.EggIncTracker.Data.Dtos
-@using HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
-@using HemSoft.EggIncTracker.Dashboard.BlazorClient.Extensions
+@using HemSoft.EggIncTracker.Dashboard.BlazorServer.Services @* Updated namespace *@
+@using HemSoft.EggIncTracker.Dashboard.BlazorServer.Extensions @* Updated namespace *@
 @using MudBlazor
 @using Microsoft.Extensions.Logging
+@using HemSoft.EggIncTracker.Domain // Added for EventManager
 @implements IDisposable
 
 <div class="event-carousel @(_isDarkMode ? "dark-mode" : "light-mode")"
@@ -56,7 +57,8 @@
 </style>
 
 @code {
-    [Inject] private IApiService ApiService { get; set; } = default!;
+    // Removed IApiService injection
+    // [Inject] private HemSoft.EggIncTracker.Dashboard.BlazorServer.Services.IApiService ApiService { get; set; } = default!;
     [Inject] private ILogger<EventCarousel> Logger { get; set; } = default!;
     [Parameter] public bool IsDarkMode { get; set; }
 
@@ -111,7 +113,6 @@
         {
             Logger.LogInformation($"EventCarousel: Dark mode changed to {IsDarkMode}");
             _isDarkMode = IsDarkMode;
-            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -123,21 +124,23 @@
             _isLoading = true;
             _errorMessage = null;
 
-            var events = await ApiService.GetActiveEventsAsync();
+            // --- Use static EventManager ---
+            // Assuming EventManager has a static GetActiveEventsAsync method
+            var events = await EventManager.GetActiveEventsAsync(Logger); // Pass logger
 
             if (events == null || !events.Any())
             {
                 Logger.LogInformation("EventCarousel: No active events found");
                 _events = new List<CurrentEventDto>();
                 _currentEvent = null;
-                return;
             }
-
-            _events = events;
-            _currentIndex = 0;
-            _currentEvent = _events.FirstOrDefault();
-
-            Logger.LogInformation($"EventCarousel: Loaded {_events.Count} events");
+            else
+            {
+                _events = events;
+                _currentIndex = 0;
+                _currentEvent = _events.FirstOrDefault();
+                Logger.LogInformation($"EventCarousel: Loaded {_events.Count} events");
+            }
         }
         catch (Exception ex)
         {
@@ -149,7 +152,6 @@
         finally
         {
             _isLoading = false;
-            StateHasChanged();
         }
     }
 
@@ -178,7 +180,6 @@
             await InvokeAsync(async () =>
             {
                 _transitionClass = "fade-out";
-                StateHasChanged();
 
                 // Wait for fade-out animation to complete
                 await Task.Delay(300);
@@ -189,22 +190,19 @@
 
                 // Start fade-in transition
                 _transitionClass = "fade-in";
-                StateHasChanged();
 
                 // Wait for fade-in animation to complete
                 await Task.Delay(300);
 
                 // Reset transition class
                 _transitionClass = "";
-                StateHasChanged();
-
                 _isTransitioning = false;
             });
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error in rotation timer");
-            _isTransitioning = false;
+            _isTransitioning = false; // Ensure flag is reset on error
         }
     }
 
@@ -268,6 +266,7 @@
         if (eventDto.EndTime.HasValue)
         {
             var timeRemaining = eventDto.EndTime.Value - DateTime.Now;
+            if (timeRemaining.TotalSeconds <= 0) return "Expired"; // Handle expired events
             if (timeRemaining.TotalDays >= 1)
             {
                 return $"{Math.Floor(timeRemaining.TotalDays)}d {timeRemaining.Hours}h remaining";

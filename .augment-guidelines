@@ -31,6 +31,7 @@ Remember that MCP-LLM is a powerful collaboration tool that can help with:
 - Explaining complex concepts
 - Providing code examples
 - Analyzing error messages
+
 ## Code Structure
 
 The /ref folder is purely for reference. Those projects serve as a best practice for how to implement certain technologies and nuget packages.

@@ -1,11 +1,12 @@
-@using HemSoft.EggIncTracker.Data.Dtos
-@using HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
+@using HemSoft.EggIncTracker.Dashboard.BlazorServer.Components.Pages
+@using HemSoft.EggIncTracker.Data.Dtos @* Ensure DTOs using is present *@
+@using HemSoft.EggIncTracker.Dashboard.BlazorServer.Services @* Updated namespace *@
 @using System.Timers
 @using System.Numerics
 @using System.Globalization
-@implements IDisposable // Already implements IDisposable
+@implements IDisposable
 
-@inject DashboardState DashboardState // Inject DashboardState
+@inject HemSoft.EggIncTracker.Dashboard.BlazorServer.Services.DashboardState DashboardState
 
 @if (Player != null && PlayerStats != null)
 {
@@ -40,7 +41,7 @@
             </div>
         }
         <div class="mb-4 text-center">
-            <MudText Typo="Typo.h4" Align="Align.Center">@Player.PlayerName</MudText> @* Removed exclamation mark for consistency *@
+            <MudText Typo="Typo.h4" Align="Align.Center">@Player.PlayerName</MudText>
             <MudText Typo="Typo.body1" Align="Align.Center">
                 <MudText Inline="true" Class="ml-2 align-bottom">
                     (@Player?.Title
@@ -71,22 +72,18 @@
                     SE/Week: (@PlayerStats?.SEPerWeek)
                 </span>
                 <span class="d-inline-flex align-center mr-2">
-                    @* Use the local field _localPlayerSEThisWeek (BigInteger?) consistently *@
-                    @if (PlayerGoals != null && !string.IsNullOrEmpty(PlayerGoals.WeeklySEGainGoal) && _localPlayerSEThisWeek.HasValue)
+                    @* Use null-conditional access for PlayerGoals properties *@
+                    @if (PlayerGoals?.WeeklySEGainGoal != null && !string.IsNullOrEmpty(PlayerGoals.WeeklySEGainGoal) && _localPlayerSEThisWeek.HasValue)
                     {
-                        // Format the BigInteger for display
                         string formattedSEThisWeek = FormatBigIntegerDisplay(_localPlayerSEThisWeek);
-
-                        // Pass the BigInteger? directly to CalculateMissingSEGain and GetSEProgressColorStyle
                         var (isGoalMet, missingAmount, expectedAmount, percentComplete) = PlayerDataService.CalculateMissingSEGain(_localPlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal);
                         string tooltipText = isGoalMet
-                            ? $"Goal met! Current progress: {formattedSEThisWeek} / Expected: {expectedAmount} ({percentComplete}%)" // Tooltip uses formatted values
-                            : $"Missing {missingAmount} to reach today's goal of {expectedAmount} ({percentComplete}%)"; // Tooltip uses formatted values from CalculateMissingSEGain
+                            ? $"Goal met! Current progress: {formattedSEThisWeek} / Expected: {expectedAmount} ({percentComplete}%)"
+                            : $"Missing {missingAmount} to reach today's goal of {expectedAmount} ({percentComplete}%)";
 
                         <MudTooltip Text="@tooltipText" Arrow="true" Placement="Placement.Top">
                             <span>
-                                @* Pass the BigInteger? directly to GetSEProgressColorStyle *@
-                                SE This Week: <span style="@PlayerDataService.GetSEProgressColorStyle(_localPlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal)">@formattedSEThisWeek</span> @* Corrected: Pass BigInteger? to GetSEProgressColorStyle *@
+                                SE This Week: <span style="@PlayerDataService.GetSEProgressColorStyle(_localPlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal)">@formattedSEThisWeek</span>
                                 @if (isGoalMet)
                                 {
                                     <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" Color="Color.Success" Class="ml-1"></MudIcon>
@@ -96,12 +93,13 @@
                     }
                     else
                     {
-                        <span>SE This Week: @(_localPlayerSEThisWeek.HasValue ? FormatBigIntegerDisplay(_localPlayerSEThisWeek) : "N/A")</span> @* Format for display, show N/A if null *@
+                        <span>SE This Week: @(_localPlayerSEThisWeek.HasValue ? FormatBigIntegerDisplay(_localPlayerSEThisWeek) : "N/A")</span>
                     }
                 </span>
                 <span class="d-inline-flex align-center mr-2">
                     Prestiges Today/Week:
-                    @if (PlayerGoals is { DailyPrestigeGoal: > 0 })
+                     @* Use null-conditional access for PlayerGoals properties *@
+                    @if (PlayerGoals?.DailyPrestigeGoal > 0)
                     {
                         var (isDailyGoalMet, missingDailyPrestiges, expectedDailyPrestiges, dailyPercentComplete) = PlayerDataService.CalculateMissingDailyPrestiges(Player?.PrestigesToday, PlayerGoals.DailyPrestigeGoal);
                         string dailyTooltipText = isDailyGoalMet
@@ -120,7 +118,8 @@
                             </span>
                         </MudTooltip>
                         <span> / </span>
-                        var (isWeeklyGoalMet, missingWeeklyPrestiges, expectedWeeklyPrestiges, weeklyPercentComplete) = PlayerDataService.CalculateMissingPrestiges(Player?.PrestigesThisWeek, PlayerGoals.DailyPrestigeGoal);
+                         @* Use null-conditional access for PlayerGoals properties *@
+                        var (isWeeklyGoalMet, missingWeeklyPrestiges, expectedWeeklyPrestiges, weeklyPercentComplete) = PlayerDataService.CalculateMissingPrestiges(Player?.PrestigesThisWeek, PlayerGoals?.DailyPrestigeGoal ?? 0);
                         string weeklyTooltipText = isWeeklyGoalMet
                             ? $"Goal met! Current progress: {Player?.PrestigesThisWeek} / Expected: {expectedWeeklyPrestiges} ({weeklyPercentComplete}%)"
                             : $"Missing {missingWeeklyPrestiges} prestiges to reach today's goal of {expectedWeeklyPrestiges} ({weeklyPercentComplete}%)";
@@ -541,26 +540,28 @@ else
 </style>
 
 @code {
-    [Parameter] public PlayerDto? Player { get; set; }
-    [Parameter] public PlayerStatsDto? PlayerStats { get; set; }
-    [Parameter] public PlayerGoalDto? PlayerGoals { get; set; }
-    [Parameter] public MajPlayerRankingDto? SEGoalBegin { get; set; }
-    [Parameter] public MajPlayerRankingDto? SEGoalEnd { get; set; }
-    [Parameter] public MajPlayerRankingDto? EBGoalBegin { get; set; }
-    [Parameter] public MajPlayerRankingDto? EBGoalEnd { get; set; }
-    [Parameter] public MajPlayerRankingDto? MERGoalBegin { get; set; }
-    [Parameter] public MajPlayerRankingDto? MERGoalEnd { get; set; }
-    [Parameter] public MajPlayerRankingDto? JERGoalBegin { get; set; }
-    [Parameter] public MajPlayerRankingDto? JERGoalEnd { get; set; }
-    // Removed PlayerSEThisWeek parameter
-    [Parameter] public int DaysToNextTitle { get; set; }
+    [Parameter] public DashboardPlayer? DashboardPlayer { get; set; }
     [Parameter] public DateTime? LastUpdatedTimestamp { get; set; }
+
+    // Properties to access the DashboardPlayer data
+    private PlayerDto? Player => DashboardPlayer?.Player;
+    private PlayerStatsDto? PlayerStats => DashboardPlayer?.Stats;
+    private GoalDto? PlayerGoals => DashboardPlayer?.Goals;
+    private MajPlayerRankingDto? SEGoalBegin => DashboardPlayer?.SEGoalBegin;
+    private MajPlayerRankingDto? SEGoalEnd => DashboardPlayer?.SEGoalEnd;
+    private MajPlayerRankingDto? EBGoalBegin => DashboardPlayer?.EBGoalBegin;
+    private MajPlayerRankingDto? EBGoalEnd => DashboardPlayer?.EBGoalEnd;
+    private MajPlayerRankingDto? MERGoalBegin => DashboardPlayer?.MERGoalBegin;
+    private MajPlayerRankingDto? MERGoalEnd => DashboardPlayer?.MERGoalEnd;
+    private MajPlayerRankingDto? JERGoalBegin => DashboardPlayer?.JERGoalBegin;
+    private MajPlayerRankingDto? JERGoalEnd => DashboardPlayer?.JERGoalEnd;
+    private int DaysToNextTitle => DashboardPlayer?.DaysToNextTitle ?? 0;
 
     private BigInteger? _localPlayerSEThisWeek; // Use this to store the value from DashboardState
     private const int NameCutOff = 10; // Or get from config/parameter if needed
     private bool _showFireworks = false;
     private bool _allGoalsAchieved = false;
-    private System.Timers.Timer? _fireworksTimer;
+    private Timer? _fireworksTimer;
 
     // Inject PlayerDataService to use its methods
     [Inject] private PlayerDataService PlayerDataService { get; set; } = default!;
@@ -572,8 +573,7 @@ else
     // Helper method to format BigInteger? for display using Utils
     private string FormatBigIntegerDisplay(BigInteger? value)
     {
-        if (!value.HasValue) return "0"; // Or "N/A", or ""
-        // Convert BigInteger to string in a way Utils.FormatBigInteger can handle (e.g., simple string or scientific notation)
+        if (!value.HasValue) return "0";
         string valueStr = value.Value.ToString(CultureInfo.InvariantCulture);
         return HemSoft.EggIncTracker.Data.Utils.FormatBigInteger(valueStr, false, false); // Call static Utils method
     }
@@ -619,8 +619,8 @@ else
     // Check if all goals are met
     private bool AreAllGoalsMet()
     {
-        // Use the local field for checks
-        if (PlayerGoals == null || string.IsNullOrEmpty(PlayerGoals.WeeklySEGainGoal) || !_localPlayerSEThisWeek.HasValue)
+        // Use null-conditional access and null checks
+        if (PlayerGoals?.WeeklySEGainGoal == null || string.IsNullOrEmpty(PlayerGoals.WeeklySEGainGoal) || !_localPlayerSEThisWeek.HasValue)
             return false;
 
         // Format the BigInteger for display
@@ -629,18 +629,18 @@ else
         // Check SE This Week goal using BigInteger? for CalculateMissingSEGain
         var (isSEGoalMet, _, _, _) = PlayerDataService.CalculateMissingSEGain(_localPlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal);
 
-        // Check Prestiges Today goal
-        var (isDailyPrestigeGoalMet, _, _, _) = PlayerDataService.CalculateMissingDailyPrestiges(Player?.PrestigesToday, PlayerGoals.DailyPrestigeGoal);
+        // Check Prestiges Today goal (use ?? 0 for goal if PlayerGoals is null)
+        var (isDailyPrestigeGoalMet, _, _, _) = PlayerDataService.CalculateMissingDailyPrestiges(Player?.PrestigesToday, PlayerGoals?.DailyPrestigeGoal ?? 0);
 
-        // Check Prestiges This Week goal
-        var (isWeeklyPrestigeGoalMet, _, _, _) = PlayerDataService.CalculateMissingPrestiges(Player?.PrestigesThisWeek, PlayerGoals.DailyPrestigeGoal);
+        // Check Prestiges This Week goal (use ?? 0 for goal if PlayerGoals is null)
+        var (isWeeklyPrestigeGoalMet, _, _, _) = PlayerDataService.CalculateMissingPrestiges(Player?.PrestigesThisWeek, PlayerGoals?.DailyPrestigeGoal ?? 0);
 
         return isSEGoalMet && isDailyPrestigeGoalMet && isWeeklyPrestigeGoalMet;
     }
 
     protected override void OnInitialized()
     {
-        // Subscribe to the state change event
+        // Subscribe to the state change event using the instance variable
         DashboardState.OnChange += HandleStateChange;
         // Initial check for fireworks
         CheckGoalsAndShowFireworks();
@@ -649,7 +649,7 @@ else
 
     protected override void OnParametersSet()
     {
-        // Get the initial value from DashboardState when parameters are set
+        // Get the initial value from DashboardState using the instance variable
         if (Player != null && !string.IsNullOrEmpty(Player.PlayerName))
         {
             _localPlayerSEThisWeek = DashboardState.GetPlayerSEThisWeek(Player.PlayerName);
@@ -666,13 +666,13 @@ else
     {
         if (Player != null && !string.IsNullOrEmpty(Player.PlayerName))
         {
+             // Access GetPlayerSEThisWeek via the instance variable
             var newStateValue = DashboardState.GetPlayerSEThisWeek(Player.PlayerName);
             if (_localPlayerSEThisWeek != newStateValue)
             {
                 _localPlayerSEThisWeek = newStateValue;
                 Logger.LogDebug("PlayerCard HandleStateChange for {PlayerName}: _localPlayerSEThisWeek updated from DashboardState.", Player.PlayerName);
                 CheckGoalsAndShowFireworks(); // Re-check goals if SE value changed
-                InvokeAsync(StateHasChanged); // Trigger UI update
             }
         }
     }
@@ -696,7 +696,6 @@ else
                 _fireworksTimer?.Stop();
                 _fireworksTimer?.Dispose();
                 _fireworksTimer = null;
-                StateHasChanged();
             };
             _fireworksTimer.AutoReset = false;
             _fireworksTimer.Start();
@@ -707,7 +706,7 @@ else
 
     public void Dispose()
     {
-        // Unsubscribe from the event when the component is disposed
+        // Unsubscribe from the event using the instance variable
         DashboardState.OnChange -= HandleStateChange;
         _fireworksTimer?.Stop();
         _fireworksTimer?.Dispose();

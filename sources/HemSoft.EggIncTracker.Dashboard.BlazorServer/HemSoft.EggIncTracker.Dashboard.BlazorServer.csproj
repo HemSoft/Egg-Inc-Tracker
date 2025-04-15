@@ -8,8 +8,9 @@
 
 
   <ItemGroup>
-    <ProjectReference Include="..\HemSoft.EggIncTracker.Dashboard.BlazorClient\HemSoft.EggIncTracker.Dashboard.BlazorClient.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.*" />
+    <ProjectReference Include="..\HemSoft.EggIncTracker.Data\HemSoft.EggIncTracker.Data.csproj" />
+    <ProjectReference Include="..\HemSoft.EggIncTracker.Domain\HemSoft.EggIncTracker.Domain.csproj" />
+    <PackageReference Include="MudBlazor" Version="6.*" />
   </ItemGroup>
 
 </Project>

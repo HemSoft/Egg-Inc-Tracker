@@ -1,0 +1,77 @@
+@page "/"
+@page "/dashboard"
+@using Microsoft.AspNetCore.Components
+@using HemSoft.EggIncTracker.Dashboard.BlazorServer.Components @* Updated namespace *@
+@implements IDisposable
+@implements IAsyncDisposable
+
+<PageTitle>Dashboard</PageTitle>
+
+<div class="dashboard-container mt-4 px-3">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.body2">Last updated: @_timeSinceLastUpdate</MudText>
+        <div class="d-flex align-center" style="visibility: @(_isRefreshing ? "visible" : "hidden")">
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2"/>
+            <MudText Typo="Typo.body2">Refreshing...</MudText>
+        </div>
+    </div>
+
+@if (_isRefreshing && _lastUpdated == default)
+{
+        <!-- Initial loading state - show a loading indicator for the entire dashboard -->
+        <div class="d-flex flex-column justify-center align-center" style="height: 400px;">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h6" Class="mt-4">Loading dashboard data...</MudText>
+            <MudText Typo="Typo.body2" Class="mt-2">This may take a few moments</MudText>
+        </div>
+}
+else
+{
+        <MudGrid Spacing="2" Class="fill-grid">
+
+            <!----------------->
+            <!-- King Monday -->
+            <!----------------->
+            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingMondayPlayer.Player?.EID)">
+                <PlayerCard DashboardPlayer="_kingMondayPlayer"
+                            LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Monday!")' />
+            </MudItem>
+            <!----------------->
+            <!-- King Sunday -->
+            <!----------------->
+            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingSundayPlayer.Player?.EID)">
+                <PlayerCard DashboardPlayer="_kingSundayPlayer"
+                            LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Sunday!")' />
+            </MudItem>
+            <!------------------->
+            <!-- King Saturday -->
+            <!------------------->
+            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingSaturdayPlayer.Player?.EID)">
+                <PlayerCard DashboardPlayer="_kingSaturdayPlayer"
+                            LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Saturday!")' />
+            </MudItem>
+            <!----------------->
+            <!-- King Friday -->
+            <!----------------->
+            <MudItem xs="3" Style="cursor: pointer;" @onclick="() => NavigateToPlayerDetail(_kingFridayPlayer.Player?.EID)">
+                <PlayerCard DashboardPlayer="_kingFridayPlayer"
+                            LastUpdatedTimestamp='DashboardState.GetPlayerLastUpdated("King Friday!")' />
+            </MudItem>
+
+        </MudGrid>
+    }
+</div>
+
+@code {
+    // Lifecycle methods for component cleanup
+    void IDisposable.Dispose()
+    {
+        // This will call the Dispose method in the code-behind file
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        // This will call the DisposeAsync method in the code-behind file
+        await DisposeAsync();
+    }
+}

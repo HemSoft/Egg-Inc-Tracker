@@ -17,7 +17,7 @@ public class UpdatePlayerTimerTrigger
 {
     private readonly ILogger _logger;
     private readonly HttpClient _httpClient;
-    private readonly IApiService _apiService;
+    // private readonly IApiService _apiService; // Commented out
     //private const string DiscordWebhookUrl = "https://discord.com/api/webhooks/1257956380875161680/1RuZ7b8i2JzpW_E4NUkWLgSF2t_JBjgfqar5h7kLmJavZ6tXH_VT8PIUr8R6zcGlAlRP";
 
     private const string DiscordWebhookUrl =
@@ -31,17 +31,17 @@ public class UpdatePlayerTimerTrigger
     private const string KingMondayEid = "EI6725967592947712";
     private const string KingMondayPlayerName = "King Monday!";
 
-    public UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory, IApiService apiService, HttpClient httpClient)
+    // Updated constructor to remove IApiService injection
+    public UpdatePlayerTimerTrigger(ILoggerFactory loggerFactory, HttpClient httpClient)
     {
         _logger = loggerFactory.CreateLogger<UpdatePlayerTimerTrigger>();
-        _apiService = apiService;
+        // _apiService = apiService; // Removed assignment
         _httpClient = httpClient;
 
         _logger.LogDebug($"UpdatePlayerTimerTrigger initialized with HttpClient BaseAddress: {_httpClient.BaseAddress} and Timeout: {_httpClient.Timeout.TotalSeconds} seconds");
 
-        // Register services in ServiceLocator for compatibility with existing code
-        ServiceLocator.RegisterService<IApiService>(_apiService);
-        ServiceLocator.RegisterService(_logger); // Register as non-generic ILogger for compatibility
+        // Removed ServiceLocator registration as it's no longer used here or defined elsewhere
+        // ServiceLocator.RegisterService(_logger);
     }
 
     [Function("UpdateMain")]
@@ -207,7 +207,9 @@ public class UpdatePlayerTimerTrigger
         var playerMajSERankings = await Api.CallMajSEPlayerRankingsApi();
         foreach (var p in playerMajSERankings)
         {
-            var result = await MajPlayerRankingManager.SaveMajPlayerRanking(p, _logger);
+            // Commented out call as SaveMajPlayerRanking uses ServiceLocator which no longer has IApiService
+            // var result = await MajPlayerRankingManager.SaveMajPlayerRanking(p, _logger);
+            _logger.LogWarning("Skipping SaveMajPlayerRanking for {PlayerIGN} as it requires refactoring.", p.IGN); // Added warning
         }
     }
 

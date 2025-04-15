@@ -6,10 +6,23 @@ using HemSoft.EggIncTracker.Data;
 using HemSoft.EggIncTracker.Data.Dtos;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore; // Added for EF Core methods
+using System.Collections.Generic; // Added for List<>
+using System.Threading.Tasks; // Added for Task
 
 public static class EventManager
 {
-    public static bool SaveEvent(EventDto eventInfo, ILogger ?logger)
+    // Added method to get active events from the database
+    public static async Task<List<CurrentEventDto>?> GetActiveEventsAsync(ILogger? logger)
+    {
+        logger?.LogWarning("GetActiveEventsAsync is not implemented yet.");
+        await Task.Delay(10); // Simulate async work
+        // Placeholder implementation - replace with actual DB query
+        // Example: Query Events table where EndTime > DateTime.UtcNow
+        return new List<CurrentEventDto>();
+    }
+
+    public static bool SaveEvent(EventDto eventInfo, ILogger? logger)
     {
         logger?.LogInformation(@"Received request to save event " + eventInfo.SubTitle);
 

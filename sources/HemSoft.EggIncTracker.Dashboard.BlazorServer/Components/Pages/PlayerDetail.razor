@@ -1,7 +1,7 @@
 @page "/player/{EID}"
 @using Microsoft.AspNetCore.Components
 @using MudBlazor
-@using HemSoft.EggIncTracker.Dashboard.BlazorClient.Components
+@using HemSoft.EggIncTracker.Dashboard.BlazorServer.Components @* Updated namespace *@
 @using System.Numerics // Added for BigInteger
 @using System.Globalization // Added for CultureInfo
 
@@ -34,7 +34,7 @@
                 </MudPaper>
             </MudItem>
         }
-        else if (_player == null)
+        else if (_dashboardPlayer.Player == null)
         {
             <MudItem xs="12">
                 <MudAlert Severity="Severity.Error">Player not found</MudAlert>
@@ -45,11 +45,7 @@
         {
             <!-- Player Card Row -->
             <MudItem xs="3">
-                <PlayerCard Player="_player" PlayerStats="_playerStats" PlayerGoals="_playerGoals"
-                    SEGoalBegin="_SEGoalBegin" SEGoalEnd="_SEGoalEnd" EBGoalBegin="_EBGoalBegin" EBGoalEnd="_EBGoalEnd"
-                    MERGoalBegin="_MERGoalBegin" MERGoalEnd="_MERGoalEnd" JERGoalBegin="_JERGoalBegin"
-                    JERGoalEnd="_JERGoalEnd" PlayerSEThisWeek="(BigInteger?)currentPlayerSEThisWeek"
-                    DaysToNextTitle="_daysToNextTitle" @* Explicit cast *@ LastUpdatedTimestamp="_player?.Updated" />
+                <PlayerCard DashboardPlayer="_dashboardPlayer" LastUpdatedTimestamp="_dashboardPlayer.Player?.Updated" />
             </MudItem>
 
             <!-- Player History Chart -->
@@ -83,23 +79,6 @@
                     }
                 </MudPaper>
             </MudItem>
-
-            <!-- Placeholder Cards - Removed as chart takes remaining space -->
-            @* <MudItem xs="3">
-                 <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
-                     <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100%" Width="100%" />
-                 </MudPaper>
-             </MudItem>
-             <MudItem xs="3">
-                 <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
-                     <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100%" Width="100%" />
-                 </MudPaper>
-             </MudItem>
-             <MudItem xs="3">
-                 <MudPaper Class="dashboard-tile d-flex flex-column align-center" Style="height: 100%;">
-                     <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100%" Width="100%" />
-                 </MudPaper>
-             </MudItem> *@
         }
     </MudGrid>
 </div>

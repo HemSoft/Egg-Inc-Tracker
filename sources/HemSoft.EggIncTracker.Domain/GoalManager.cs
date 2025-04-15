@@ -47,7 +47,8 @@ public static class GoalManager
         }
     }
 
-    public static async Task<GoalDto?> GetPlayerGoalAsync(string playerName, ILogger? logger)
+    // Renamed method to match usage (plural)
+    public static async Task<GoalDto?> GetPlayerGoalsAsync(string playerName, ILogger? logger)
     {
         try
         {

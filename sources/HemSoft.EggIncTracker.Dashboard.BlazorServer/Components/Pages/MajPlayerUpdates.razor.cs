@@ -1,28 +1,33 @@
-namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Pages;
+// Updated namespace for Blazor Server project
+namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Components.Pages;
 
 using System.Globalization;
 
-using HemSoft.EggIncTracker.Dashboard.BlazorClient.Services;
+// Updated namespace for Blazor Server services
+using HemSoft.EggIncTracker.Dashboard.BlazorServer.Services;
 
 using HemSoft.EggIncTracker.Data.Dtos;
-using HemSoft.EggIncTracker.Domain;
+using HemSoft.EggIncTracker.Domain; // Keep Domain for potential future use
 
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging; // Added missing using for ILogger
 
 using MudBlazor;
 
 using ST = System.Timers;
 
+// Ensure the partial class matches the file name and namespace
 public partial class MajPlayerUpdates : IDisposable
 {
-    [Inject]
-    private ApiService ApiService { get; set; } = default!;
+    // Removed IApiService injection
+    // [Inject]
+    // private HemSoft.EggIncTracker.Dashboard.BlazorServer.Services.IApiService ApiService { get; set; } = default!;
 
     [Inject]
     private ILogger<MajPlayerUpdates> Logger { get; set; } = default!;
 
     [Inject]
-    private DashboardState DashboardState { get; set; } = default!;
+    private DashboardState DashboardState { get; set; } = default!; // Uses updated namespace
 
     private List<MajPlayerRankingDto> playerUpdates = new();
     private bool isLoading = true;
@@ -76,6 +81,7 @@ public partial class MajPlayerUpdates : IDisposable
             {
                 try
                 {
+                    // Use InvokeAsync for UI updates from timer threads
                     await InvokeAsync(() =>
                     {
                         try
@@ -127,13 +133,14 @@ public partial class MajPlayerUpdates : IDisposable
     private async Task LoadPlayerUpdates()
     {
         isLoading = true;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged); // Ensure UI update on UI thread
 
         try
         {
-            Logger.LogInformation("Fetching player updates from API...");
-            // Get player updates from API - limit to 100 for better performance
-            var rankings = await ApiService.GetLatestMajPlayerRankingsAsync(100);
+            Logger.LogInformation("Fetching player updates from Domain Manager...");
+            // --- Use static MajPlayerRankingManager ---
+            var rankings = await MajPlayerRankingManager.GetLatestMajPlayerRankingsAsync(100, Logger); // Pass logger
+            // ----------------------------------------
 
             if (rankings != null)
             {
@@ -149,7 +156,7 @@ public partial class MajPlayerUpdates : IDisposable
                 playerUpdates = latestByPlayer;
 
                 // Debug: Check if we have King Friday data - do this once outside of loops
-                var kingFridayEntry = latestByPlayer.FirstOrDefault(r => r.IGN.Contains("King Friday"));
+                var kingFridayEntry = latestByPlayer.FirstOrDefault(r => r.IGN != null && r.IGN.Contains("King Friday"));
                 if (kingFridayEntry != null)
                 {
                     Logger.LogInformation($"King Friday latest entry: {kingFridayEntry.Updated}, SE: {kingFridayEntry.SEString}, SEGainsWeek: {kingFridayEntry.SEGainsWeek}");
@@ -168,12 +175,12 @@ public partial class MajPlayerUpdates : IDisposable
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading player updates");
-            playerUpdates = new List<MajPlayerRankingDto>();
+            playerUpdates = new List<MajPlayerRankingDto>(); // Ensure list is initialized on error
         }
         finally
         {
             isLoading = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged); // Ensure UI update on UI thread
         }
     }
 
@@ -190,7 +197,7 @@ public partial class MajPlayerUpdates : IDisposable
         // Log when we find a match for debugging
         if (matchesIGN || matchesDiscord)
         {
-            Logger.LogInformation($"Filter match found: {player.IGN} (Discord: {player.DiscordName})");
+            // Logger.LogInformation($"Filter match found: {player.IGN} (Discord: {player.DiscordName})"); // Reduce log noise
         }
 
         return matchesIGN || matchesDiscord;
@@ -209,8 +216,8 @@ public partial class MajPlayerUpdates : IDisposable
                 _updateTimer = null;
             }
 
-            // Remove any event handlers from shared state
-            DashboardState.OnChange -= StateHasChanged;
+            // Remove any event handlers from shared state if subscribed
+            // DashboardState?.OnChange -= StateHasChanged; // Example if it were subscribed
 
             Logger.LogInformation("MajPlayerUpdates component disposed");
         }
@@ -220,4 +227,3 @@ public partial class MajPlayerUpdates : IDisposable
         }
     }
 }
-

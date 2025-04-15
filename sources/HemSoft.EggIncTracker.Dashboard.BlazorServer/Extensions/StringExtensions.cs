@@ -1,6 +1,7 @@
 using System.Globalization;
 
-namespace HemSoft.EggIncTracker.Dashboard.BlazorClient.Extensions
+// Updated namespace for Blazor Server project
+namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Extensions
 {
     public static class StringExtensions
     {

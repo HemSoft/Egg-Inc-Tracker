@@ -1,9 +1,10 @@
 @inherits LayoutComponentBase
 
-@inject IJSRuntime JSRuntime
-@inject HemSoft.EggIncTracker.Dashboard.BlazorClient.Services.DashboardState DashboardState
+@* Removed IJSRuntime injection *@
+@* @inject IJSRuntime JSRuntime *@
+@inject HemSoft.EggIncTracker.Dashboard.BlazorServer.Services.DashboardState DashboardState
 @using System.Text.Json
-@using HemSoft.EggIncTracker.Dashboard.BlazorClient.Services
+@using HemSoft.EggIncTracker.Dashboard.BlazorServer.Services
 @implements IDisposable
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
@@ -58,7 +59,7 @@
         <!-- Event Carousel -->
         <div
             style="width: 400px; z-index: 1000; height: 100%; display: flex; align-items: center; justify-content: center;">
-            <HemSoft.EggIncTracker.Dashboard.BlazorClient.Components.EventCarousel IsDarkMode="_isDarkMode" />
+            <HemSoft.EggIncTracker.Dashboard.BlazorServer.Components.EventCarousel IsDarkMode="_isDarkMode" /> @* Updated namespace *@
         </div>
 
         <MudSpacer />
@@ -78,14 +79,8 @@
             <MudStack Style="min-width: 160px;" Spacing="0">
                 <div class="d-flex justify-center mb-1">
                     <MudText Typo="Typo.h6" Style="font-family: monospace; line-height: 1;" Class="mb-1">
-                        @if (_isLoading)
-                        {
-                            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Small" />
-                        }
-                        else
-                        {
-                            @GetFormattedTime()
-                        }
+                        @* Removed loading indicator related to localStorage *@
+                        @GetFormattedTime()
                     </MudText>
                 </div>
                 <div @onclick="ResetMinuteProgress"
@@ -137,11 +132,12 @@
     </MudMainContent>
 </MudLayout>
 
-<div id="blazor-error-ui" data-nosnippet>
+@* Removed Blazor WASM error UI *@
+@* <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
-</div>
+</div> *@
 
 @code {
     private DateTime _minuteStartTime = DateTime.Now;
@@ -149,16 +145,7 @@
     private int _legCount = 0;
     private List<double> _lapMarkers = new List<double>();
 
-    private class StopwatchState
-    {
-        public bool IsRunning { get; set; }
-        public DateTime StartTime { get; set; }
-        public TimeSpan Elapsed { get; set; }
-        public int LegCount { get; set; }
-        public List<double> LapMarkers { get; set; } = new List<double>();
-        public DateTime MinuteStartTime { get; set; }
-        public DateTime TwentyFiveMinStartTime { get; set; }
-    }
+    // Removed StopwatchState inner class
 
     private bool _drawerOpen = true;
     private bool _isDarkMode = true;
@@ -169,10 +156,7 @@
     private TimeSpan _elapsed = TimeSpan.Zero;
     private System.Timers.Timer? _timer;
 
-
-
-    private bool _initialized;
-    private bool _isLoading;
+    // Removed _initialized and _isLoading fields
 
     protected override Task OnInitializedAsync()
     {
@@ -182,48 +166,30 @@
             if (_isRunning)
             {
                 _elapsed = DateTime.Now - _startTime;
-                await InvokeAsync(async () =>
-        {
-            await SaveStopwatchState();
-            StateHasChanged();
-        });
+                // Removed SaveStopwatchState call
+                await InvokeAsync(StateHasChanged); // Directly call StateHasChanged
             }
         };
 
-
-
         _theme = new()
         {
-            PaletteLight = _lightPalette,
+            // PaletteLight = _lightPalette, // Commented out - might not exist or be assignable this way
             PaletteDark = _darkPalette,
             LayoutProperties = new LayoutProperties()
         };
 
         DashboardState.OnChange += StateHasChanged;
 
+        // Removed RestoreStopwatchState call
         return Task.CompletedTask;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && !_initialized)
-        {
-            _initialized = true;
-            _isLoading = true;
-            StateHasChanged();
-
-            await RestoreStopwatchState();
-
-            _isLoading = false;
-            StateHasChanged();
-        }
-    }
+    // Removed OnAfterRenderAsync which was used for localStorage restore
 
     private double GetProgressValue(double currentSeconds, double maxSeconds, DateTime? startTime = null)
     {
         if (startTime.HasValue)
         {
-            // Calculate elapsed time since the specific start time
             var elapsed = (DateTime.Now - startTime.Value).TotalSeconds;
             return Math.Min((elapsed / maxSeconds) * 100, 100);
         }
@@ -236,15 +202,9 @@
         ? (DateTime.Now - startTime.Value).TotalSeconds / maxSeconds
         : currentSeconds / maxSeconds;
 
-        // Calculate percentage, clamping between 0 and 100
         double percentage = Math.Clamp(progress * 100, 0, 100);
-
-        // Calculate RGB values for the gradient
-        // Red component decreases from 255 to 0 as percentage increases
         int red = (int)(255 * (1 - percentage / 100.0));
-        // Green component increases from 0 to 255 as percentage increases
         int green = (int)(255 * (percentage / 100.0));
-        // Blue component remains 0
         int blue = 0;
 
         return $"background-color: rgb({red}, {green}, {blue})";
@@ -262,77 +222,10 @@
         StateHasChanged();
     }
 
-    private async Task SaveStopwatchState()
-    {
-        try
-        {
-            var state = new StopwatchState
-            {
-                IsRunning = _isRunning,
-                StartTime = _startTime,
-                Elapsed = _elapsed,
-                LegCount = _legCount,
-                LapMarkers = _lapMarkers,
-                MinuteStartTime = _minuteStartTime,
-                TwentyFiveMinStartTime = _25minStartTime
-            };
+    // Removed SaveStopwatchState method
+    // Removed RestoreStopwatchState method
 
-            await JSRuntime.InvokeVoidAsync(
-            "localStorage.setItem",
-            "stopwatchState",
-            JsonSerializer.Serialize(state)
-            );
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error saving stopwatch state: {ex.Message}");
-        }
-    }
-
-    private async Task RestoreStopwatchState()
-    {
-        try
-        {
-            var json = await JSRuntime.InvokeAsync<string>(
-            "localStorage.getItem",
-            "stopwatchState"
-            );
-
-            if (!string.IsNullOrEmpty(json))
-            {
-                var state = JsonSerializer.Deserialize<StopwatchState>(json);
-                if (state != null)
-                {
-                    _isRunning = state.IsRunning;
-                    _startTime = state.StartTime;
-                    _elapsed = state.Elapsed;
-                    _legCount = state.LegCount;
-                    _lapMarkers = state.LapMarkers ?? new List<double>();
-
-                    // Restore timer start times if they exist
-                    if (state.MinuteStartTime != default)
-                        _minuteStartTime = state.MinuteStartTime;
-                    if (state.TwentyFiveMinStartTime != default)
-                        _25minStartTime = state.TwentyFiveMinStartTime;
-
-                    if (_isRunning)
-                    {
-                        // Adjust the start time based on the current time
-                        _elapsed = DateTime.Now - _startTime;
-                        _startTime = DateTime.Now - _elapsed;
-                        _timer?.Start();
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error restoring stopwatch state: {ex.Message}");
-            await ResetStopwatch();
-        }
-    }
-
-    private async Task ToggleStopwatch()
+    private void ToggleStopwatch() // Removed async Task
     {
         if (_isRunning)
         {
@@ -344,38 +237,36 @@
             _startTime = DateTime.Now - _elapsed;
             _timer?.Start();
 
-            // Initialize leg count to 1 when starting from zero
             if (_elapsed.TotalSeconds < 0.1 && _legCount == 0)
             {
                 _legCount = 1;
             }
         }
         _isRunning = !_isRunning;
-        await SaveStopwatchState();
+        // Removed SaveStopwatchState call
+        StateHasChanged(); // Ensure UI updates
     }
 
-    private async Task ResetStopwatch()
+    private void ResetStopwatch() // Removed async Task
     {
         _timer?.Stop();
         _isRunning = false;
         _elapsed = TimeSpan.Zero;
         _startTime = DateTime.Now;
         _legCount = 0;
-        _lapMarkers.Clear(); // Clear all lap markers
+        _lapMarkers.Clear();
 
-        // Reset the progress bars when stopwatch is reset
         _minuteStartTime = DateTime.Now;
         _25minStartTime = DateTime.Now;
 
         StateHasChanged();
-        await SaveStopwatchState();
+        // Removed SaveStopwatchState call
     }
 
     public void Dispose()
     {
         DashboardState.OnChange -= StateHasChanged;
         _timer?.Dispose();
-
     }
 
     private void DrawerToggle()
@@ -393,21 +284,19 @@
         return $"{(int)_elapsed.TotalHours:D2}:{_elapsed.Minutes:D2}:{_elapsed.Seconds:D2}";
     }
 
-    private async Task IncrementLegs()
+    private void IncrementLegs() // Removed async Task
     {
         if (_isRunning)
         {
             _legCount++;
             _minuteStartTime = DateTime.Now;
 
-            // Add a marker at the current position on the progress bar
-            // Calculate the percentage based on elapsed time since the 25min timer started
             var elapsedSince25MinStart = (DateTime.Now - _25minStartTime).TotalSeconds;
             double progressValue = Math.Min((elapsedSince25MinStart / 1510) * 100, 100);
             _lapMarkers.Add(progressValue);
 
             StateHasChanged();
-            await SaveStopwatchState();
+            // Removed SaveStopwatchState call
         }
     }
 
@@ -426,7 +315,7 @@
         Primary = "#7e6fff",
         Surface = "#1e1e2d",
         Background = "#1a1a27",
-        BackgroundGray = "#151521",
+        // BackgroundGray = "#151521", // Commented out - might not exist in this MudBlazor version
         AppbarText = "#92929f",
         AppbarBackground = "rgba(26,26,39,0.8)",
         DrawerBackground = "#1a1a27",
