@@ -171,7 +171,6 @@ public partial class PlayerCard : IDisposable
 
                 // Force UI update
                 InvokeAsync(StateHasChanged);
-                Logger.LogDebug("PlayerCard updated from refresh event for {PlayerName}", playerName);
             }
         }
         catch (Exception ex)
@@ -179,16 +178,6 @@ public partial class PlayerCard : IDisposable
             Logger.LogError(ex, "Error handling player data refresh for {PlayerName}", playerName);
         }
     }
-
-    // Removed SetupAutoRefreshTimer - now handled by PlayerCardService
-
-    // Removed OnUpdateTimerElapsed - now handled by PlayerCardService
-
-    // Removed OnRefreshTimerElapsed - now handled by PlayerCardService
-
-    // Removed RefreshPlayerData - now handled by PlayerCardService
-
-    // Removed InitialDataLoad - now handled by PlayerCardService
 
     protected override void OnParametersSet()
     {

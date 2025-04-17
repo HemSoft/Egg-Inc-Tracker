@@ -31,9 +31,9 @@
             }
             else if (playerUpdates.Any())
             {
-                <MudTable Items="@playerUpdates" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@isLoading"
+                <MudTable Items="@playerUpdates" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@isLoading"
                     LoadingProgressColor="Color.Primary" T="MajPlayerRankingDto" HeaderClass="table-header"
-                    Filter="FilterFunc">
+                    Filter="FilterFunc" RowsPerPage="100">
                     <HeaderContent>
                         <MudTh
                             Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">

@@ -1,4 +1,4 @@
-﻿namespace HemSoft.AI;
+namespace HemSoft.AI;
 
 using System;
 using System.Collections.Generic;

@@ -292,7 +292,7 @@ public static class MajPlayerRankingManager
                 logger?.LogInformation("Successfully saved major player ranking for {PlayerName}: {Message}",
                     majPlayerRanking.IGN, result?.Message);
 
-                return (result?.Success ?? false, result?.PreviousRanking);
+                return (true, result?.PreviousRanking);
             }
             else
             {
