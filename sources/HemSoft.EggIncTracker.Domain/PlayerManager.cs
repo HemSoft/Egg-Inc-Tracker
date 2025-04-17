@@ -20,10 +20,34 @@ public static class PlayerManager
         try
         {
             await using var context = new EggIncContext();
-            var history = await context.Players
+
+            // First, get the earliest date in the current range
+            var earliestInRange = await context.Players
+                .Where(p => p.PlayerName == playerName && p.Updated >= from)
+                .OrderBy(p => p.Updated)
+                .Select(p => p.Updated)
+                .FirstOrDefaultAsync();
+
+            // Then get the record immediately before that date
+            var previousRecord = await context.Players
+                .Where(p => p.PlayerName == playerName && p.Updated < earliestInRange)
+                .OrderByDescending(p => p.Updated)
+                .FirstOrDefaultAsync();
+
+            // Get the main history records
+            var mainHistory = await context.Players
                 .Where(p => p.PlayerName == playerName && p.Updated >= from)
                 .OrderBy(p => p.Updated)
                 .ToListAsync();
+
+            // Combine the results if a previous record exists
+            var history = new List<PlayerDto>();
+            if (previousRecord != null)
+            {
+                history.Add(previousRecord);
+            }
+            history.AddRange(mainHistory);
+
             return history;
         }
         catch (Exception ex)

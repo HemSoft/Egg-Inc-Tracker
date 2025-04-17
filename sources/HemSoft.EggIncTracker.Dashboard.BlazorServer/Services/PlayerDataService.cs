@@ -356,39 +356,26 @@ public class PlayerDataService
             var startOfWeekLocal = localToday.AddDays(-daysSinceMonday);
             var startOfWeekUtc = startOfWeekLocal.ToUniversalTime();
 
+            // Calculate Prestiges Today:
             var playerHistoryToday = await PlayerManager.GetPlayerHistoryAsync(player.PlayerName, todayUtcStart, _logger);
-            var playerHistoryWeek = await PlayerManager.GetPlayerHistoryAsync(player.PlayerName, startOfWeekUtc, _logger);
-
-            if (player.Prestiges.HasValue)
+            if (playerHistoryToday == null || playerHistoryToday.Count < 2)
             {
-                var firstToday = playerHistoryToday.OrderBy(x => x.Updated).FirstOrDefault();
-                if (firstToday is { Prestiges: not null })
-                {
-                    var baselineToday = firstToday.Prestiges.Value;
-                    var diff = player.Prestiges.Value - baselineToday + 1;
-                    prestigesToday = Math.Max(0, diff);
-                }
-                else
-                {
-                    prestigesToday = 0;
-                }
-
-                var firstThisWeek = playerHistoryWeek?.OrderBy(x => x.Updated).FirstOrDefault();
-                if (firstThisWeek != null && firstThisWeek.Prestiges.HasValue)
-                {
-                    var baselineWeek = firstThisWeek.Prestiges.Value;
-                    var diffWeek = player.Prestiges.Value - baselineWeek + 1;
-                    prestigesThisWeek = Math.Max(0, diffWeek);
-                }
-                else
-                {
-                    prestigesThisWeek = prestigesToday;
-                }
+                prestigesToday = 0;
             }
             else
             {
-                prestigesToday = 0;
+                prestigesToday = playerHistoryToday[playerHistoryToday.Count - 1].Prestiges - playerHistoryToday[0].Prestiges;
+            }
+
+            // Calculate Prestiges This Week:
+            var playerHistoryWeek = await PlayerManager.GetPlayerHistoryAsync(player.PlayerName, startOfWeekUtc, _logger);
+            if (playerHistoryWeek == null || playerHistoryWeek.Count < 2)
+            {
                 prestigesThisWeek = 0;
+            }
+            else
+            {
+                prestigesThisWeek = playerHistoryWeek[playerHistoryWeek.Count - 1].Prestiges - playerHistoryWeek[0].Prestiges;
             }
         }
         catch (Exception ex)
