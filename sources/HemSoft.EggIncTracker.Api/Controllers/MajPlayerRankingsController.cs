@@ -178,7 +178,7 @@ public class MajPlayerRankingsController : ControllerBase
     {
         try
         {
-            var playerSE = (decimal) Domain.BigNumberCalculator.ParseBigNumber(soulEggs);
+            var playerSE = (decimal)Domain.BigNumberCalculator.ParseBigNumber(soulEggs);
 
             // Get latest ranking for each player
             var latestRankings = await _context.MajPlayerRankings
@@ -191,41 +191,13 @@ public class MajPlayerRankingsController : ControllerBase
                 .OrderByDescending(r => r.SENumber)
                 .ToList();
 
-            MajPlayerRankingDto? lowerPlayer = null;
-            MajPlayerRankingDto? upperPlayer = null;
-            int rank = 0;
+            var upperPlayers = orderedRankings
+                .Where(r => r.SENumber > playerSE && !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+            var upperPlayer = upperPlayers.Any() ? upperPlayers.Last() : null;
 
-            // Find the player's position in the ordered list
-            var playerIndex = -1;
-            for (int i = 0; i < orderedRankings.Count; i++)
-            {
-                rank++;
-                orderedRankings[i].Ranking = rank; // Update the ranking
-
-                if (orderedRankings[i].IGN != null && orderedRankings[i].IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
-                {
-                    playerIndex = i;
-                    break;
-                }
-            }
-
-            // If player found, get surrounding players
-            if (playerIndex >= 0)
-            {
-                // Get upper player (player with higher SE)
-                if (playerIndex > 0)
-                {
-                    upperPlayer = orderedRankings[playerIndex - 1];
-                }
-
-                // Get lower player (player with lower SE)
-                if (playerIndex < orderedRankings.Count - 1)
-                {
-                    lowerPlayer = orderedRankings[playerIndex + 1];
-                }
-
-                _logger.LogWarning($"Found player {playerName} at index {playerIndex} with SE {playerSE}. Upper: {upperPlayer?.IGN}, Lower: {lowerPlayer?.IGN}");
-            }
+            var lowerPlayers = orderedRankings
+                .Where(r => r.SENumber < playerSE && !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+            var lowerPlayer = lowerPlayers.Any() ? lowerPlayers.First() : null;
 
             return Ok(new SurroundingPlayersDto
             {
