@@ -1,1 +1,0 @@
-# Egg-Inc-Tracker

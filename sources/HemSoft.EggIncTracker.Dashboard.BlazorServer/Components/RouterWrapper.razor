@@ -1,0 +1,15 @@
+@using HemSoft.EggIncTracker.Dashboard.BlazorServer.Components.Layout @* Updated namespace *@
+@namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Components
+
+<Router AppAssembly="@typeof(Program).Assembly"> @* Removed AdditionalAssemblies *@
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" /> @* MainLayout is now in the Server project's Layout namespace *@
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p role="alert">Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>

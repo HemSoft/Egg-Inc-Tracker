@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\HemSoft.EggIncTracker.Data\HemSoft.EggIncTracker.Data.csproj" />
+    <ProjectReference Include="..\HemSoft.EggIncTracker.Domain\HemSoft.EggIncTracker.Domain.csproj" />
+    <PackageReference Include="MudBlazor" Version="6.*" />
+  </ItemGroup>
+
+</Project>
