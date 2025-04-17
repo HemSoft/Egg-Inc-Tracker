@@ -10,13 +10,13 @@
 <div class="dashboard-container mt-4 px-3">
     <div class="d-flex justify-space-between align-center mb-4">
         <MudText Typo="Typo.body2">Last updated: @_timeSinceLastUpdate</MudText>
-        <div class="d-flex align-center" style="visibility: @(_isRefreshing ? "visible" : "hidden")">
+        <div class="d-flex align-center" style="visibility: @(isLoading ? "visible" : "hidden")">
             <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2"/>
             <MudText Typo="Typo.body2">Refreshing...</MudText>
         </div>
     </div>
 
-@if (_isRefreshing && _lastUpdated == default)
+@if (isLoading && _lastUpdated == default)
 {
         <!-- Initial loading state - show a loading indicator for the entire dashboard -->
         <div class="d-flex flex-column justify-center align-center" style="height: 400px;">

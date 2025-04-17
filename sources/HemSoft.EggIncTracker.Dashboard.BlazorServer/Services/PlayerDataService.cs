@@ -14,17 +14,8 @@ using Microsoft.Extensions.Logging;
 
 public class PlayerDataService
 {
-    // Commented out ApiService dependency - will be replaced by Domain/Data services
-    // private readonly IApiService _apiService;
     private readonly ILogger<PlayerDataService> _logger;
 
-    // Removed fields for static Domain Managers - they will be called directly
-    // private readonly PlayerManager _playerManager;
-    // private readonly MajPlayerRankingManager _majPlayerRankingManager;
-    // private readonly PlayerContractManager _playerContractManager;
-    // private readonly EventManager _eventManager;
-
-    // Lazy initialization for the suffixes dictionary
     private static readonly Lazy<Dictionary<string, double>> SuffixesLazy = new Lazy<Dictionary<string, double>>(() =>
     {
         var suffixes = new Dictionary<string, double>(); // Removed StringComparer.OrdinalIgnoreCase
@@ -61,17 +52,12 @@ public class PlayerDataService
         return suffixes;
     });
 
-    // Access the dictionary via the Value property
     private static Dictionary<string, double> Suffixes => SuffixesLazy.Value;
 
-    // Updated constructor signature - Only inject Logger (and potentially DbContextFactory if needed)
     public PlayerDataService(ILogger<PlayerDataService> logger)
     {
         _logger = logger;
-        // Domain managers are static, no need to assign injected instances
     }
-
-    // --- Common Calculation Methods (Keep for now, might be useful) ---
 
     public double CalculateProgressPercentage(string? current, string? target, string? previous)
     {
@@ -88,38 +74,50 @@ public class PlayerDataService
             double targetValue = ParseBigNumber(target);
             double previousValue = ParseBigNumber(previous);
 
-            _logger.LogDebug("Parsed values for percentage calc: Current={CurrentVal}, Target={TargetVal}, Previous={PreviousVal} (Input: C={CurrentIn}, T={TargetIn}, P={PreviousIn})",
-                currentValue, targetValue, previousValue, current, target, previous);
-
-            // --- Double Calculation ---
             if (targetValue <= previousValue)
             {
+                _logger.LogWarning("Target value {Target} is less than or equal to previous value {Previous}", targetValue, previousValue);
                 return currentValue >= targetValue ? 100.0 : 0.0;
             }
 
-            double range = targetValue - previousValue;
-            if (range <= 0)
+            if (currentValue >= targetValue)
             {
-                return currentValue >= targetValue ? 100.0 : 0.0;
+                return 100.0;
             }
 
+            // Handle case where current is below previous
+            if (currentValue <= previousValue)
+            {
+                return 0.0;
+            }
+
+            // Normal case: current is between previous and target
+            double range = targetValue - previousValue;
             double progress = currentValue - previousValue;
-            progress = Math.Max(0.0, Math.Min(progress, range));
             double percentage = (progress / range) * 100.0;
+
+            // Ensure percentage is between 0 and 100
             var finalPercentage = Math.Min(Math.Max(percentage, 0.0), 100.0);
             return finalPercentage;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error calculating progress percentage for Current={Current}, Target={Target}, Previous={Previous}", current, target, previous);
-            // Fallback logic remains the same
             try
             {
                 double currentValue = ParseBigNumber(current);
                 double targetValue = ParseBigNumber(target);
                 if (targetValue > 0 && currentValue > 0)
                 {
-                    double simplePercentage = Math.Min((currentValue / targetValue) * 100.0, 100.0);
+                    // Simple percentage calculation as fallback
+                    if (currentValue >= targetValue)
+                    {
+                        _logger.LogWarning("Fallback: Current value {Current} is at or beyond target {Target}, returning 100%", currentValue, targetValue);
+                        return 100.0;
+                    }
+
+                    double simplePercentage = (currentValue / targetValue) * 100.0;
+                    simplePercentage = Math.Min(Math.Max(simplePercentage, 0.0), 100.0);
                     _logger.LogWarning("Using fallback percentage calculation: {Percentage}%", simplePercentage);
                     return simplePercentage;
                 }
@@ -132,12 +130,8 @@ public class PlayerDataService
         }
     }
 
-
-    // Make ParseBigNumber public so it can be called from components
-    public double ParseBigNumber(string? value) // Changed to public and nullable string
+    public double ParseBigNumber(string? value)
     {
-        _logger.LogDebug("ParseBigNumber received value: {Value}", value); // Log input
-
         if (string.IsNullOrEmpty(value))
         {
             _logger.LogWarning("ParseBigNumber received null or empty value");
@@ -145,8 +139,6 @@ public class PlayerDataService
         }
 
         var cleanValue = value.Trim().TrimEnd('%');
-        _logger.LogDebug("ParseBigNumber cleanValue: {CleanValue}", cleanValue); // Log cleaned value
-
         if (cleanValue.Contains('e', StringComparison.OrdinalIgnoreCase))
         {
             if (double.TryParse(cleanValue, NumberStyles.Float, CultureInfo.InvariantCulture, out double sciResult))
@@ -174,12 +166,11 @@ public class PlayerDataService
             }
         }
 
-        double result = 0;
+        double result;
         try
         {
             if (double.TryParse(cleanValue, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out result))
             {
-                _logger.LogDebug("ParseBigNumber parsed as plain number: {Result}", result); // Log result
                 return result;
             }
         }
@@ -340,9 +331,6 @@ public class PlayerDataService
 
         string formattedMissingAmount = Utils.FormatBigInteger(missingAmount.ToString(CultureInfo.InvariantCulture), false, false);
         string formattedExpectedAmount = Utils.FormatBigInteger(expectedSEGain.ToString(CultureInfo.InvariantCulture), false, false);
-
-        _logger.LogDebug("Formatted SE Gain Tooltip Values (BigInt): Missing='{FormattedMissingAmount}', Expected='{FormattedExpectedAmount}' (Raw Missing={MissingAmount}, Raw Expected={ExpectedSEGain})",
-            formattedMissingAmount, formattedExpectedAmount, missingAmount, expectedSEGain);
 
         return (isGoalMet, formattedMissingAmount, formattedExpectedAmount, percentComplete);
     }

@@ -1,12 +1,4 @@
-@using HemSoft.EggIncTracker.Dashboard.BlazorServer.Components.Pages
-@using HemSoft.EggIncTracker.Data.Dtos @* Ensure DTOs using is present *@
-@using HemSoft.EggIncTracker.Dashboard.BlazorServer.Services @* Updated namespace *@
-@using System.Timers
-@using System.Numerics
-@using System.Globalization
-@implements IDisposable
-
-@inject HemSoft.EggIncTracker.Dashboard.BlazorServer.Services.DashboardState DashboardState
+@namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Components
 
 @if (Player != null && PlayerStats != null)
 {
@@ -166,26 +158,10 @@
             <MudText Typo="Typo.subtitle2" Class="mb-0">
                 SE (@PlayerStats?.SE) -- Rank: @((SEGoalEnd?.Ranking ?? 0) + 1)
             </MudText>
-            @{
-                var playerSEGoalPercentage = CalculateProgressPercentage(
-                Player?.SoulEggs, SEGoalEnd?.SEString, SEGoalBegin?.SEString);
-
-                // Display debug info directly in UI for King Friday
-                if (Player?.PlayerName == "King Friday!")
-                {
-                    <div class="debug-info" style="background-color: rgba(0,0,0,0.7); color: white; padding: 5px; margin-bottom: 5px; font-size: 10px; border-radius: 4px;">
-                        <div><strong>SE Debug Info:</strong></div>
-                        <div>Current: @Player?.SoulEggs</div>
-                        <div>Target: @SEGoalEnd?.SEString (Rank: @SEGoalEnd?.Ranking - @SEGoalEnd?.IGN)</div>
-                        <div>Previous: @SEGoalBegin?.SEString (Rank: @SEGoalBegin?.Ranking - @SEGoalBegin?.IGN)</div>
-                        <div>Result: @playerSEGoalPercentage.ToString("F2")%</div>
-                    </div>
-                }
-            }
-            <MudProgressLinear Color="Color.Success" Value="@playerSEGoalPercentage" Max="100" Striped="false"
+            <MudProgressLinear Color="Color.Success" Value="@PlayerSEGoalPercentage" Max="100" Striped="false"
                 Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
                 <MudText Typo="Typo.caption" Style="color: white;">
-                    @playerSEGoalPercentage.ToString("F1")%
+                    @PlayerSEGoalPercentage.ToString("F1")%
                 </MudText>
             </MudProgressLinear>
             <div class="d-flex justify-space-between mt-n1">
@@ -206,26 +182,10 @@
         <MudText Typo="Typo.subtitle2" Class="mb-0">
             EB (@PlayerStats?.EB) -- Rank: @(EBGoalEnd?.Ranking + 1)
         </MudText>
-        @{
-                var playerEBGoalPercentage = CalculateProgressPercentage(
-                PlayerStats?.EB, EBGoalEnd?.EBString, EBGoalBegin?.EBString);
-
-                // Display debug info directly in UI for King Friday
-                if (Player?.PlayerName == "King Friday!")
-                {
-                    <div class="debug-info" style="background-color: rgba(0,0,0,0.7); color: white; padding: 5px; margin-bottom: 5px; font-size: 10px; border-radius: 4px;">
-                        <div><strong>EB Debug Info:</strong></div>
-                        <div>Current: @PlayerStats?.EB</div>
-                        <div>Target: @EBGoalEnd?.EBString (Rank: @EBGoalEnd?.Ranking - @EBGoalEnd?.IGN)</div>
-                        <div>Previous: @EBGoalBegin?.EBString (Rank: @EBGoalBegin?.Ranking - @EBGoalBegin?.IGN)</div>
-                        <div>Result: @playerEBGoalPercentage.ToString("F2")%</div>
-                    </div>
-                }
-            }
-            <MudProgressLinear Color="Color.Success" Value="@playerEBGoalPercentage" Max="100" Striped="false"
+            <MudProgressLinear Color="Color.Success" Value="@PlayerEBGoalPercentage" Max="100" Striped="false"
                 Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
                 <MudText Typo="Typo.caption" Style="color: white;">
-                    @playerEBGoalPercentage.ToString("F1")%
+                    @PlayerEBGoalPercentage.ToString("F1")%
                 </MudText>
             </MudProgressLinear>
             <div class="d-flex justify-space-between mt-n1">
@@ -246,26 +206,10 @@
         <MudText Typo="Typo.subtitle2" Class="mb-0">
             MER (@PlayerStats?.MER) -- Rank: @MERGoalEnd?.Ranking
         </MudText>
-        @{
-                var playerMERGoalPercentage = CalculateProgressPercentage(PlayerStats?.MER.ToString(),
-                MERGoalEnd?.MER.ToString(), MERGoalBegin?.MER.ToString());
-
-                // Display debug info directly in UI for King Friday
-                if (Player?.PlayerName == "King Friday!")
-                {
-                    <div class="debug-info" style="background-color: rgba(0,0,0,0.7); color: white; padding: 5px; margin-bottom: 5px; font-size: 10px; border-radius: 4px;">
-                        <div><strong>MER Debug Info:</strong></div>
-                        <div>Current: @PlayerStats?.MER</div>
-                        <div>Target: @MERGoalEnd?.MER (Rank: @MERGoalEnd?.Ranking - @MERGoalEnd?.IGN)</div>
-                        <div>Previous: @MERGoalBegin?.MER (Rank: @MERGoalBegin?.Ranking - @MERGoalBegin?.IGN)</div>
-                        <div>Result: @playerMERGoalPercentage.ToString("F2")%</div>
-                    </div>
-                }
-            }
-            <MudProgressLinear Color="Color.Success" Value="@playerMERGoalPercentage" Max="100" Striped="false"
+            <MudProgressLinear Color="Color.Success" Value="@PlayerMERGoalPercentage" Max="100" Striped="false"
                 Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
                 <MudText Typo="Typo.caption" Style="color: white;">
-                    @playerMERGoalPercentage.ToString("F1")%
+                    @PlayerMERGoalPercentage.ToString("F1")%
                 </MudText>
             </MudProgressLinear>
             <div class="d-flex justify-space-between mt-n1">
@@ -286,26 +230,10 @@
         <MudText Typo="Typo.subtitle2" Class="mb-0">
             JER (@PlayerStats?.JER) -- Rank: @JERGoalEnd?.Ranking
         </MudText>
-        @{
-                var playerJERGoalPercentage = CalculateProgressPercentage(PlayerStats?.JER.ToString(),
-                JERGoalEnd?.JER.ToString(), JERGoalBegin?.JER.ToString());
-
-                // Display debug info directly in UI for King Friday
-                if (Player?.PlayerName == "King Friday!")
-                {
-                    <div class="debug-info" style="background-color: rgba(0,0,0,0.7); color: white; padding: 5px; margin-bottom: 5px; font-size: 10px; border-radius: 4px;">
-                        <div><strong>JER Debug Info:</strong></div>
-                        <div>Current: @PlayerStats?.JER</div>
-                        <div>Target: @JERGoalEnd?.JER (Rank: @JERGoalEnd?.Ranking - @JERGoalEnd?.IGN)</div>
-                        <div>Previous: @JERGoalBegin?.JER (Rank: @JERGoalBegin?.Ranking - @JERGoalBegin?.IGN)</div>
-                        <div>Result: @playerJERGoalPercentage.ToString("F2")%</div>
-                    </div>
-                }
-            }
-            <MudProgressLinear Color="Color.Success" Value="@playerJERGoalPercentage" Max="100" Striped="false"
+            <MudProgressLinear Color="Color.Success" Value="@PlayerJERGoalPercentage" Max="100" Striped="false"
                 Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
                 <MudText Typo="Typo.caption" Style="color: white;">
-                    @playerJERGoalPercentage.ToString("F1")%
+                    @PlayerJERGoalPercentage.ToString("F1")%
                 </MudText>
             </MudProgressLinear>
             <div class="d-flex justify-space-between mt-n1">
@@ -538,177 +466,3 @@ else
         }
     }
 </style>
-
-@code {
-    [Parameter] public DashboardPlayer? DashboardPlayer { get; set; }
-    [Parameter] public DateTime? LastUpdatedTimestamp { get; set; }
-
-    // Properties to access the DashboardPlayer data
-    private PlayerDto? Player => DashboardPlayer?.Player;
-    private PlayerStatsDto? PlayerStats => DashboardPlayer?.Stats;
-    private GoalDto? PlayerGoals => DashboardPlayer?.Goals;
-    private MajPlayerRankingDto? SEGoalBegin => DashboardPlayer?.SEGoalBegin;
-    private MajPlayerRankingDto? SEGoalEnd => DashboardPlayer?.SEGoalEnd;
-    private MajPlayerRankingDto? EBGoalBegin => DashboardPlayer?.EBGoalBegin;
-    private MajPlayerRankingDto? EBGoalEnd => DashboardPlayer?.EBGoalEnd;
-    private MajPlayerRankingDto? MERGoalBegin => DashboardPlayer?.MERGoalBegin;
-    private MajPlayerRankingDto? MERGoalEnd => DashboardPlayer?.MERGoalEnd;
-    private MajPlayerRankingDto? JERGoalBegin => DashboardPlayer?.JERGoalBegin;
-    private MajPlayerRankingDto? JERGoalEnd => DashboardPlayer?.JERGoalEnd;
-    private int DaysToNextTitle => DashboardPlayer?.DaysToNextTitle ?? 0;
-
-    private BigInteger? _localPlayerSEThisWeek; // Use this to store the value from DashboardState
-    private const int NameCutOff = 10; // Or get from config/parameter if needed
-    private bool _showFireworks = false;
-    private bool _allGoalsAchieved = false;
-    private Timer? _fireworksTimer;
-
-    // Inject PlayerDataService to use its methods
-    [Inject] private PlayerDataService PlayerDataService { get; set; } = default!;
-    [Inject] private ILogger<PlayerCard> Logger { get; set; } = default!;
-    // Removed incorrect injection of static Utils class
-
-    // Removed duplicated SuffixesLazy and ParseBigNumber
-
-    // Helper method to format BigInteger? for display using Utils
-    private string FormatBigIntegerDisplay(BigInteger? value)
-    {
-        if (!value.HasValue) return "0";
-        string valueStr = value.Value.ToString(CultureInfo.InvariantCulture);
-        return HemSoft.EggIncTracker.Data.Utils.FormatBigInteger(valueStr, false, false); // Call static Utils method
-    }
-
-    private double CalculateProgressPercentage(string? current, string? target, string? previous)
-    {
-        // Use the injected service's method
-        return PlayerDataService.CalculateProgressPercentage(current, target, previous);
-    }
-
-    // Calculates a gradient color from red (0%) to green (100%)
-    private string GetProgressColorStyle(int? actual, int goal)
-    {
-        if (actual == null || goal <= 0)
-            return "color: rgb(255, 0, 0)"; // Default to red if no goal or actual value
-
-        // Calculate percentage, clamping between 0 and 100
-        double percentage = Math.Clamp((double)actual.Value / goal * 100, 0, 100);
-
-        // Calculate RGB values for the gradient
-        // Red component decreases from 255 to 0 as percentage increases
-        int red = (int)(255 * (1 - percentage / 100.0));
-        // Green component increases from 0 to 255 as percentage increases
-        int green = (int)(255 * (percentage / 100.0));
-        // Blue component remains 0
-        int blue = 0;
-
-        return $"color: rgb({red}, {green}, {blue})";
-    }
-
-    // Helper to format the timestamp for display
-    private string GetLocalTimeString(DateTime? utcTime)
-    {
-        if (!utcTime.HasValue || utcTime.Value == DateTime.MinValue)
-            return string.Empty; // Don't display if no valid time
-
-        DateTime localTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime.Value, TimeZoneInfo.Local);
-        if (localTime.Date == DateTime.Today) return $"Today {localTime:HH:mm}";
-        if (localTime.Date == DateTime.Today.AddDays(-1)) return $"Yesterday {localTime:HH:mm}";
-        return localTime.ToString("MM/dd HH:mm");
-    }
-
-    // Check if all goals are met
-    private bool AreAllGoalsMet()
-    {
-        // Use null-conditional access and null checks
-        if (PlayerGoals?.WeeklySEGainGoal == null || string.IsNullOrEmpty(PlayerGoals.WeeklySEGainGoal) || !_localPlayerSEThisWeek.HasValue)
-            return false;
-
-        // Format the BigInteger for display
-        string formattedSEThisWeek = FormatBigIntegerDisplay(_localPlayerSEThisWeek);
-
-        // Check SE This Week goal using BigInteger? for CalculateMissingSEGain
-        var (isSEGoalMet, _, _, _) = PlayerDataService.CalculateMissingSEGain(_localPlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal);
-
-        // Check Prestiges Today goal (use ?? 0 for goal if PlayerGoals is null)
-        var (isDailyPrestigeGoalMet, _, _, _) = PlayerDataService.CalculateMissingDailyPrestiges(Player?.PrestigesToday, PlayerGoals?.DailyPrestigeGoal ?? 0);
-
-        // Check Prestiges This Week goal (use ?? 0 for goal if PlayerGoals is null)
-        var (isWeeklyPrestigeGoalMet, _, _, _) = PlayerDataService.CalculateMissingPrestiges(Player?.PrestigesThisWeek, PlayerGoals?.DailyPrestigeGoal ?? 0);
-
-        return isSEGoalMet && isDailyPrestigeGoalMet && isWeeklyPrestigeGoalMet;
-    }
-
-    protected override void OnInitialized()
-    {
-        // Subscribe to the state change event using the instance variable
-        DashboardState.OnChange += HandleStateChange;
-        // Initial check for fireworks
-        CheckGoalsAndShowFireworks();
-        base.OnInitialized();
-    }
-
-    protected override void OnParametersSet()
-    {
-        // Get the initial value from DashboardState using the instance variable
-        if (Player != null && !string.IsNullOrEmpty(Player.PlayerName))
-        {
-            _localPlayerSEThisWeek = DashboardState.GetPlayerSEThisWeek(Player.PlayerName);
-            Logger.LogDebug("PlayerCard OnParametersSet for {PlayerName}: _localPlayerSEThisWeek set from DashboardState.", Player.PlayerName);
-        }
-
-        // Check goals whenever parameters change
-        CheckGoalsAndShowFireworks();
-        base.OnParametersSet(); // Call base method
-    }
-
-    // Handle state changes from DashboardState
-    private void HandleStateChange()
-    {
-        if (Player != null && !string.IsNullOrEmpty(Player.PlayerName))
-        {
-             // Access GetPlayerSEThisWeek via the instance variable
-            var newStateValue = DashboardState.GetPlayerSEThisWeek(Player.PlayerName);
-            if (_localPlayerSEThisWeek != newStateValue)
-            {
-                _localPlayerSEThisWeek = newStateValue;
-                Logger.LogDebug("PlayerCard HandleStateChange for {PlayerName}: _localPlayerSEThisWeek updated from DashboardState.", Player.PlayerName);
-                CheckGoalsAndShowFireworks(); // Re-check goals if SE value changed
-            }
-        }
-    }
-
-    private void CheckGoalsAndShowFireworks()
-    {
-        // Check if all goals are met
-        bool wereGoalsAchieved = _allGoalsAchieved;
-        _allGoalsAchieved = AreAllGoalsMet();
-
-        // Only show fireworks if goals were just achieved (not previously achieved)
-        if (_allGoalsAchieved && !wereGoalsAchieved && !_showFireworks)
-        {
-            _showFireworks = true;
-
-            // Create a timer to hide the fireworks after 30 seconds
-            _fireworksTimer?.Dispose(); // Dispose any existing timer
-            _fireworksTimer = new System.Timers.Timer(30000);
-            _fireworksTimer.Elapsed += (sender, e) => {
-                _showFireworks = false;
-                _fireworksTimer?.Stop();
-                _fireworksTimer?.Dispose();
-                _fireworksTimer = null;
-            };
-            _fireworksTimer.AutoReset = false;
-            _fireworksTimer.Start();
-
-            Logger.LogInformation($"All goals met for {Player?.PlayerName}! Showing fireworks for 30 seconds.");
-        }
-    }
-
-    public void Dispose()
-    {
-        // Unsubscribe from the event using the instance variable
-        DashboardState.OnChange -= HandleStateChange;
-        _fireworksTimer?.Stop();
-        _fireworksTimer?.Dispose();
-    }
-}

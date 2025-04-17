@@ -258,8 +258,6 @@ namespace HemSoft.EggIncTracker.Api.Controllers
                 try
                 {
                     titleInfo = GetTitleWithProgress(earningsBonus);
-                    logger.LogInformation("Calculated title progress for {PlayerName}: Current={CurrentTitle}, Next={NextTitle}, Progress={Progress}%",
-                        name, titleInfo.currentTitle, titleInfo.nextTitle, titleInfo.progress);
                 }
                 catch (Exception ex)
                 {

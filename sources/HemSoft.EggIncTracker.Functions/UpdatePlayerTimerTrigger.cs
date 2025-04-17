@@ -207,9 +207,11 @@ public class UpdatePlayerTimerTrigger
         var playerMajSERankings = await Api.CallMajSEPlayerRankingsApi();
         foreach (var p in playerMajSERankings)
         {
-            // Commented out call as SaveMajPlayerRanking uses ServiceLocator which no longer has IApiService
-            // var result = await MajPlayerRankingManager.SaveMajPlayerRanking(p, _logger);
-            _logger.LogWarning("Skipping SaveMajPlayerRanking for {PlayerIGN} as it requires refactoring.", p.IGN); // Added warning
+            var (success, previousRanking) = await MajPlayerRankingManager.SaveMajPlayerRankingAsync(p, _logger);
+            if (!success)
+            {
+                _logger.LogWarning("Failed to save ranking for {PlayerIGN}", p.IGN);
+            }
         }
     }
 

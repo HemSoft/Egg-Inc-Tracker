@@ -1,18 +1,25 @@
-using System.Numerics; // Add for BigInteger
-
-// Updated namespace for Blazor Server project
 namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Services;
+
+using System.Numerics;
+using Microsoft.AspNetCore.Components;
 
 public class DashboardState
 {
+    private readonly Dispatcher _dispatcher;
+
     // Add this event declaration at the top of the class
     public event Action? OnChange;
 
-    private DateTime _lastUpdated = DateTime.Now;
-    public DateTime LastUpdated => _lastUpdated;
+    public DashboardState(Dispatcher dispatcher)
+    {
+        _dispatcher = dispatcher;
+    }
+
+
+    public DateTime LastUpdated { get; private set; } = DateTime.Now;
 
     // Store last updated timestamps for each player
-    private Dictionary<string, DateTime> _playerLastUpdated = new Dictionary<string, DateTime>()
+    private readonly Dictionary<string, DateTime> _playerLastUpdated = new()
     {
         { "King Friday!", DateTime.MinValue },
         { "King Saturday!", DateTime.MinValue },
@@ -20,10 +27,6 @@ public class DashboardState
         { "King Monday!", DateTime.MinValue }
     };
 
-    // Legacy property for backward compatibility
-    public DateTime PlayerLastUpdated => _playerLastUpdated.GetValueOrDefault("King Friday!", DateTime.MinValue);
-
-    // New method to get last updated timestamp for a specific player
     public DateTime GetPlayerLastUpdated(string playerName)
     {
         return _playerLastUpdated.GetValueOrDefault(playerName, DateTime.MinValue);
@@ -31,51 +34,46 @@ public class DashboardState
 
     public void SetLastUpdated(DateTime lastUpdated)
     {
-        _lastUpdated = lastUpdated;
-        OnChange?.Invoke();
+        LastUpdated = lastUpdated;
+        // Use Dispatcher to ensure we're on the UI thread
+        _dispatcher?.InvokeAsync(NotifyStateChanged);
     }
 
     // Update to accept player name
     public void SetPlayerLastUpdated(string playerName, DateTime playerLastUpdated)
     {
-        if (_playerLastUpdated.ContainsKey(playerName))
-        {
-            _playerLastUpdated[playerName] = playerLastUpdated;
-        }
-        else
-        {
-            _playerLastUpdated.Add(playerName, playerLastUpdated);
-        }
-        OnChange?.Invoke();
+        _playerLastUpdated[playerName] = playerLastUpdated;
+        // Use Dispatcher to ensure we're on the UI thread
+        _dispatcher?.InvokeAsync(NotifyStateChanged);
     }
 
-    // Legacy method for backward compatibility
-    public void SetPlayerLastUpdated(DateTime playerLastUpdated)
+    private void NotifyStateChanged()
     {
-        SetPlayerLastUpdated("King Friday!", playerLastUpdated);
+        try
+        {
+            // Use the dispatcher to ensure we're on the UI thread
+            // This is a simpler approach that works because we're already using the dispatcher
+            // to call this method
+            OnChange?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            // Log the exception but don't rethrow to prevent cascading failures
+            System.Diagnostics.Debug.WriteLine($"Error in NotifyStateChanged: {ex.Message}");
+        }
     }
 
-    // Store SE This Week for each player
-    private Dictionary<string, BigInteger?> _playerSEThisWeek = new Dictionary<string, BigInteger?>();
+    private readonly Dictionary<string, BigInteger?> _playerSEThisWeek = new();
 
-    // Method to get SE This Week for a specific player
     public BigInteger? GetPlayerSEThisWeek(string playerName)
     {
         return _playerSEThisWeek.GetValueOrDefault(playerName, null);
     }
 
-    // Added missing method to set SE This Week for a specific player
     public void SetPlayerSEThisWeek(string playerName, BigInteger? seThisWeek)
     {
-        if (_playerSEThisWeek.ContainsKey(playerName))
-        {
-            _playerSEThisWeek[playerName] = seThisWeek;
-        }
-        else
-        {
-            _playerSEThisWeek.Add(playerName, seThisWeek);
-        }
-        // Optionally invoke OnChange if components need to react directly to this change
-        // OnChange?.Invoke();
+        _playerSEThisWeek[playerName] = seThisWeek;
+        // Use Dispatcher to ensure we're on the UI thread
+        _dispatcher?.InvokeAsync(NotifyStateChanged);
     }
 }
