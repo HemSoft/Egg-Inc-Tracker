@@ -359,4 +359,7 @@ MigrationBackup/
 /EggIncTrackerApi/
 /UpdatePlayerFunction/
 /Web/
-/resources/news-database/news*.*
+# News database files
+resources/news-database/news.db
+resources/news-database/news.db-shm
+resources/news-database/news.db-wal
