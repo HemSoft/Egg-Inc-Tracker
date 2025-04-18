@@ -182,20 +182,20 @@
         <MudText Typo="Typo.subtitle2" Class="mb-0">
             EB (@PlayerStats?.EB) -- Rank: @(EBGoalEnd?.Ranking + 1)
         </MudText>
-            <MudProgressLinear Color="Color.Success" Value="@PlayerEBGoalPercentage" Max="100" Striped="false"
-                Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
-                <MudText Typo="Typo.caption" Style="color: white;">
-                    @PlayerEBGoalPercentage.ToString("F1")%
-                </MudText>
-            </MudProgressLinear>
-            <div class="d-flex justify-space-between mt-n1">
-                <MudText Typo="Typo.caption">
-                    (@EBGoalBegin?.EBString) @(EBGoalBegin?.IGN?.Length > NameCutOff ?
-                                    EBGoalBegin.IGN.Substring(0, NameCutOff) : EBGoalBegin?.IGN)
-                                                                                            </MudText>
-                                                                                            <MudText Typo="Typo.caption">
-                    @(EBGoalEnd?.IGN?.Length > NameCutOff ? EBGoalEnd.IGN.Substring(0, NameCutOff) :
-                                    EBGoalEnd?.IGN) (@EBGoalEnd?.EBString)
+        <MudProgressLinear Color="Color.Success" Value="@PlayerEBGoalPercentage" Max="100" Striped="false"
+            Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
+            <MudText Typo="Typo.caption" Style="color: white;">
+                @PlayerEBGoalPercentage.ToString("F1")%
+            </MudText>
+        </MudProgressLinear>
+        <div class="d-flex justify-space-between mt-n1">
+            <MudText Typo="Typo.caption">
+                (@EBGoalBegin?.EBString) @(EBGoalBegin?.IGN?.Length > NameCutOff ?
+                                EBGoalBegin.IGN.Substring(0, NameCutOff) : EBGoalBegin?.IGN)
+            </MudText>
+            <MudText Typo="Typo.caption">
+                @(EBGoalEnd?.IGN?.Length > NameCutOff ? EBGoalEnd.IGN.Substring(0, NameCutOff) :
+                                EBGoalEnd?.IGN) (@EBGoalEnd?.EBString)
             </MudText>
         </div>
     </div>

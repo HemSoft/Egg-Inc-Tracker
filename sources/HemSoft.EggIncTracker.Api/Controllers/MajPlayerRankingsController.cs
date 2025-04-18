@@ -253,13 +253,42 @@ public class MajPlayerRankingsController : ControllerBase
                 orderedRankings[i].Ranking.Ranking = i + 1; // 1-based ranking
             }
 
+            // Log the player's EB value for debugging
+            _logger.LogDebug("Player {PlayerName} EB value: {EBValue}", playerName, playerEB);
+
+            // Find players with higher EB
             var upperPlayers = orderedRankings
-                .Where(r => r.EBValue > playerEB && !r.Ranking.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+                .Where(r => r.EBValue > playerEB && !r.Ranking.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            // Get the player with the next higher EB (closest to the player)
             var upperPlayer = upperPlayers.Any() ? upperPlayers.Last() : null;
 
+            if (upperPlayer != null)
+            {
+                _logger.LogDebug("Upper player: {PlayerName}, EB value: {EBValue}", upperPlayer.Ranking.IGN, upperPlayer.EBValue);
+            }
+            else
+            {
+                _logger.LogWarning("No upper player found for {PlayerName}", playerName);
+            }
+
+            // Find players with lower EB
             var lowerPlayers = orderedRankings
-                .Where(r => r.EBValue < playerEB && !r.Ranking.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+                .Where(r => r.EBValue < playerEB && !r.Ranking.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            // Get the player with the next lower EB (closest to the player)
             var lowerPlayer = lowerPlayers.Any() ? lowerPlayers.First() : null;
+
+            if (lowerPlayer != null)
+            {
+                _logger.LogDebug("Lower player: {PlayerName}, EB value: {EBValue}", lowerPlayer.Ranking.IGN, lowerPlayer.EBValue);
+            }
+            else
+            {
+                _logger.LogWarning("No lower player found for {PlayerName}", playerName);
+            }
 
             return Ok(new SurroundingPlayersDto
             {

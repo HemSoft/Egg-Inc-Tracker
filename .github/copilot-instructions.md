@@ -1,5 +1,10 @@
 # Instructions
 
+## Code Style
+
+- Minimize comments. Use descriptive variable names and try to make code simple and self explantory.
+- If you do have to put comments in the code, never put them at the end of a statement. Always put them on a line above the statement.
+
 ## Database Discovery
 
 Just so you know, you can use sqlcmd in a terminal session to discover the schema etc. and interact with my local database - example:

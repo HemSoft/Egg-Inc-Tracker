@@ -1,9 +1,8 @@
 @page "/player/{EID}"
 @using Microsoft.AspNetCore.Components
 @using MudBlazor
-@using HemSoft.EggIncTracker.Dashboard.BlazorServer.Components @* Updated namespace *@
-@using System.Numerics // Added for BigInteger
-@using System.Globalization // Added for CultureInfo
+@using System.Numerics
+@using System.Globalization
 
 <PageTitle>Player Details - @(Player?.PlayerName ?? "Loading...")</PageTitle>
 
@@ -49,7 +48,7 @@
             </MudItem>
 
             <!-- Player History Chart -->
-            <MudItem xs="9"> <!-- Take up remaining width -->
+            <MudItem xs="9">
                 <MudPaper Class="dashboard-tile d-flex flex-column" Style="height: 100%;">
                     <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-2">Soul Egg History</MudText>
 
@@ -69,12 +68,13 @@
                     <!-- Line Chart -->
                     @if (_playerHistorySeries.Any())
                     {
-                        <MudChart ChartType="ChartType.Line" ChartSeries="_playerHistorySeries"
-                            XAxisLabels="_playerHistoryLabels" ChartOptions="_historyChartOptions" Height="400px" />
+                        <MudChart @key="_playerHistoryData" ChartType="ChartType.Line" ChartSeries="_playerHistorySeries"
+                            XAxisLabels="_playerHistoryLabels" Height="400px" ChartOptions="_chartOptions" />
                     }
                     else
                     {
-                        <MudText Align="Align.Center" Class="mt-4">No historical data available for the selected period.
+                        <MudText Align="Align.Center" Class="mt-4">
+                            No historical data available for the selected period.
                         </MudText>
                     }
                 </MudPaper>

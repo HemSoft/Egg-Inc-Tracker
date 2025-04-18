@@ -43,26 +43,31 @@ public class NewsContentParser
 
         try
         {
-            _logger.LogInformation("Parsing NuGet packages from content");
-
-            // Create a specialized chat client for NuGet parsing
             var nugetChatClient = ChatClientFactory.CreateForNuGetParsing(_configuration);
+            nugetChatClient.AddUserMessage($$"""
 
-            // Add the content as a user message
-            nugetChatClient.AddUserMessage($"Parse the following content and extract NuGet package information in pure JSON format:\n\n{content}");
-            // Instruct the AI on the desired JSON structure and date format, matching the PackageInfo class properties
-            nugetChatClient.AddUserMessage("Return a JSON array containing objects with the following fields: 'Title' (string), 'Url' (string), 'Description' (string), 'Version' (string, optional), 'ReleaseDate' (string in ISO 8601 format 'YYYY-MM-DD' or null if unknown), 'Author' (string, optional). Ensure the JSON is valid and directly deserializable into a C# List<PackageInfo> where PackageInfo has corresponding properties. The 'ReleaseDate' field MUST be included, even if its value is null.");
+                Parse the following content and extract NuGet package information in pure JSON format:
+         
+                {{content}}
 
-            // Create chat options for the request
+                Return a JSON array containing objects with the following schema: {
+                    'Title' (string),
+                    'Url' (string),
+                    'Description' (string),
+                    'Version' (string, optional),
+                    'ReleaseDate' (string in ISO 8601 format 'YYYY-MM-DD' or null if unknown),
+                    'Author' (string, optional).
+                }
+                
+                Ensure the JSON is valid and directly deserializable into a C# List<PackageInfo> where PackageInfo has corresponding properties.
+                
+                The 'ReleaseDate' field MUST be included, even if its value is null. The content above will likely state 'Updated n days ago' or something to that effect.
+                You are to take this date and make this your current date to calculate the correct ReleaseDate: {{ DateTime.Now }}"
+                
+                """);
+
             var chatOptions = new ChatClientOptions();
-
-            // Get the response
             var response = await nugetChatClient.GetResponseAsync(chatOptions).ConfigureAwait(false);
-            var trimmedResponse = response.TrimStart('[');
-
-            // Return the raw JSON response from the AI
-            _logger.LogInformation("Successfully received AI response for NuGet packages.");
-            // Basic validation: Check if it looks like a JSON array
             if (!string.IsNullOrWhiteSpace(response) && response.Trim().StartsWith("[") && response.Trim().EndsWith("]"))
             {
                 return response;
@@ -81,14 +86,9 @@ public class NewsContentParser
         catch (Exception ex)
         {
             _logger.LogError(ex, "General Error parsing NuGet packages: {ErrorMessage}", ex.Message);
-            // Consider if fallback is still desired here, or just return empty
-            // For now, returning empty as fallback might also fail or be inconsistent
             return "[]";
-            // _logger.LogWarning("Using fallback package extraction method");
-            // return FallbackParseNuGetPackages(content); // Fallback returns string now
         }
     }
-
 
     /// <summary>
     /// Tool function to extract package information
