@@ -10,19 +10,17 @@ using System.Threading.Tasks;
 using HemSoft.EggIncTracker.Data.Dtos;
 
 using Microsoft.Extensions.Logging;
-using HemSoft.EggIncTracker.Data; // Added for EggIncContext
-using Microsoft.EntityFrameworkCore; // Added for EF Core methods
-using System.Numerics; // Added for BigInteger
-
-// Removed IApiService interface and related DTOs as they are no longer needed here
+using HemSoft.EggIncTracker.Data;
+using Microsoft.EntityFrameworkCore;
+using System.Numerics;
 
 /// <summary>
 /// DTO for surrounding players response (Moved from previous version)
 /// </summary>
 public class SurroundingPlayersDto
 {
-    public MajPlayerRankingDto? LowerPlayer { get; set; } // Made nullable
-    public MajPlayerRankingDto? UpperPlayer { get; set; } // Made nullable
+    public MajPlayerRankingDto? LowerPlayer { get; set; }
+    public MajPlayerRankingDto? UpperPlayer { get; set; }
 }
 
 
@@ -30,14 +28,12 @@ public static class MajPlayerRankingManager
 {
     // Static HttpClient for API calls
     private static readonly HttpClient _httpClient = new HttpClient();
-    private static readonly string _apiBaseUrl = "https://localhost:5000/api/v1"; // Default to localhost
+    private static readonly string _apiBaseUrl = "https://localhost:5000/api/v1";
 
     public static async Task<SurroundingPlayersDto?> GetSurroundingEBPlayersAsync(string playerName, string eb, ILogger? logger)
     {
         try
         {
-            logger?.LogInformation("Calling API to get surrounding EB players for {PlayerName} with EB {EB}", playerName, eb);
-
             // Encode the player name for URL
             var encodedPlayerName = Uri.EscapeDataString(playerName);
             var encodedEB = Uri.EscapeDataString(eb);
@@ -53,7 +49,6 @@ public static class MajPlayerRankingManager
             {
                 // Deserialize the response
                 var result = await response.Content.ReadFromJsonAsync<SurroundingPlayersDto>();
-                logger?.LogInformation("Successfully retrieved surrounding EB players for {PlayerName}", playerName);
                 return result;
             }
             else
@@ -86,8 +81,6 @@ public static class MajPlayerRankingManager
     {
         try
         {
-            logger?.LogInformation("Calling API to get surrounding SE players for {PlayerName} with SE {SE}", playerName, se);
-
             // Encode the player name for URL
             var encodedPlayerName = Uri.EscapeDataString(playerName);
             var encodedSE = Uri.EscapeDataString(se);
@@ -103,7 +96,6 @@ public static class MajPlayerRankingManager
             {
                 // Deserialize the response
                 var result = await response.Content.ReadFromJsonAsync<SurroundingPlayersDto>();
-                logger?.LogInformation("Successfully retrieved surrounding SE players for {PlayerName}", playerName);
                 return result;
             }
             else
@@ -136,8 +128,6 @@ public static class MajPlayerRankingManager
     {
         try
         {
-            logger?.LogInformation("Calling API to get surrounding MER players for {PlayerName} with MER {MER}", playerName, mer);
-
             // Encode the player name for URL
             var encodedPlayerName = Uri.EscapeDataString(playerName);
 
@@ -152,7 +142,6 @@ public static class MajPlayerRankingManager
             {
                 // Deserialize the response
                 var result = await response.Content.ReadFromJsonAsync<SurroundingPlayersDto>();
-                logger?.LogInformation("Successfully retrieved surrounding MER players for {PlayerName}", playerName);
                 return result;
             }
             else
@@ -185,8 +174,6 @@ public static class MajPlayerRankingManager
     {
         try
         {
-            logger?.LogInformation("Calling API to get surrounding JER players for {PlayerName} with JER {JER}", playerName, jer);
-
             // Encode the player name for URL
             var encodedPlayerName = Uri.EscapeDataString(playerName);
 
@@ -201,7 +188,6 @@ public static class MajPlayerRankingManager
             {
                 // Deserialize the response
                 var result = await response.Content.ReadFromJsonAsync<SurroundingPlayersDto>();
-                logger?.LogInformation("Successfully retrieved surrounding JER players for {PlayerName}", playerName);
                 return result;
             }
             else
@@ -234,8 +220,6 @@ public static class MajPlayerRankingManager
     {
         try
         {
-            logger?.LogInformation("Calling API to get latest major player rankings with limit {LimitTo}", limitTo);
-
             // Build the API URL
             var apiUrl = $"{_apiBaseUrl}/MajPlayerRankings/latest-all";
 
@@ -247,7 +231,6 @@ public static class MajPlayerRankingManager
             {
                 // Deserialize the response
                 var result = await response.Content.ReadFromJsonAsync<List<MajPlayerRankingDto>>();
-                logger?.LogInformation("Successfully retrieved {Count} latest major player rankings", result?.Count ?? 0);
 
                 // Apply the limit if specified
                 return result != null && limitTo > 0 && result.Count > limitTo
@@ -276,8 +259,6 @@ public static class MajPlayerRankingManager
     {
         try
         {
-            logger?.LogInformation("Calling API to save major player ranking for {PlayerName}", majPlayerRanking.IGN);
-
             // Build the API URL
             var apiUrl = $"{_apiBaseUrl}/MajPlayerRankings";
 
@@ -289,9 +270,6 @@ public static class MajPlayerRankingManager
             {
                 // Deserialize the response
                 var result = await response.Content.ReadFromJsonAsync<SaveRankingResponseDto>();
-                logger?.LogInformation("Successfully saved major player ranking for {PlayerName}: {Message}",
-                    majPlayerRanking.IGN, result?.Message);
-
                 return (true, result?.PreviousRanking);
             }
             else
@@ -312,8 +290,6 @@ public static class MajPlayerRankingManager
         }
     }
 }
-
-// Removed ServiceLocator as it's an anti-pattern and not needed with static managers
 
 /// <summary>
 /// DTO for save ranking response
