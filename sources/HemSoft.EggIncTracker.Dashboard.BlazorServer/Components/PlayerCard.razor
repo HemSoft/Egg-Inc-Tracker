@@ -89,7 +89,7 @@
                     }
                 </span>
                 <span class="d-inline-flex align-center mr-2">
-                    Prestiges Today/Week:
+                    Prestiges Today/Week/Total:
                      @* Use null-conditional access for PlayerGoals properties *@
                     @if (PlayerGoals?.DailyPrestigeGoal > 0)
                     {
@@ -121,6 +121,23 @@
                                     @Player?.PrestigesThisWeek
                                 </span>
                                 @if (isWeeklyGoalMet)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small"
+                                        Color="Color.Success" Class="ml-1"></MudIcon>
+                                }
+                            </span>
+                        </MudTooltip>
+                        <span> / </span>
+                         @* Use null-conditional access for PlayerGoals properties *@
+                        string totalTooltipText = "";
+                        bool isTotalGoalMet = false;
+                        int expectedTotalPrestiges = Player?.Prestiges ?? 0;
+                        <MudTooltip Text="@totalTooltipText" Arrow="true" Placement="Placement.Top">
+                            <span>
+                                <span style="@GetProgressColorStyle(Player?.Prestiges, expectedTotalPrestiges)">
+                                    @Player?.Prestiges
+                                </span>
+                                @if (isTotalGoalMet)
                                 {
                                     <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small"
                                         Color="Color.Success" Class="ml-1"></MudIcon>

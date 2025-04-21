@@ -47,7 +47,7 @@ public class NewsContentParser
             nugetChatClient.AddUserMessage($$"""
 
                 Parse the following content and extract NuGet package information in pure JSON format:
-         
+
                 {{content}}
 
                 Return a JSON array containing objects with the following schema: {
@@ -58,12 +58,12 @@ public class NewsContentParser
                     'ReleaseDate' (string in ISO 8601 format 'YYYY-MM-DD' or null if unknown),
                     'Author' (string, optional).
                 }
-                
+
                 Ensure the JSON is valid and directly deserializable into a C# List<PackageInfo> where PackageInfo has corresponding properties.
-                
+
                 The 'ReleaseDate' field MUST be included, even if its value is null. The content above will likely state 'Updated n days ago' or something to that effect.
-                You are to take this date and make this your current date to calculate the correct ReleaseDate: {{ DateTime.Now }}"
-                
+                You are to take this date and make this your current date to calculate the correct ReleaseDate: {{DateTime.Now}}"
+
                 """);
 
             var chatOptions = new ChatClientOptions();
@@ -75,7 +75,7 @@ public class NewsContentParser
             else
             {
                 _logger.LogWarning("AI response does not appear to be a valid JSON array. Response: {Response}", response);
-                return "[]"; // Return empty array string if response is invalid
+                return "[]";
             }
         }
         catch (JsonException jsonEx)

@@ -38,7 +38,7 @@ public class NuGetMonitorFunction
     /// </summary>
     /// <param name="myTimer">Timer information</param>
     [Function("MonitorNewsSources")]
-    public async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer)
+    public async Task Run([TimerTrigger("0 0 */2 * * *")] TimerInfo myTimer)
     {
         try
         {
