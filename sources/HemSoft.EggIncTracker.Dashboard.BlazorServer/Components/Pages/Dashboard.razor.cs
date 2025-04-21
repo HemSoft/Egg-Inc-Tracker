@@ -16,12 +16,20 @@ public class DashboardPlayer
     public int DaysToNextTitle { get; set; }
     public MajPlayerRankingDto? SEGoalBegin { get; set; }
     public MajPlayerRankingDto? SEGoalEnd { get; set; }
+    public List<MajPlayerRankingDto> NextLowerSEPlayers { get; set; } = new List<MajPlayerRankingDto>();
+    public List<MajPlayerRankingDto> NextUpperSEPlayers { get; set; } = new List<MajPlayerRankingDto>();
     public MajPlayerRankingDto? EBGoalBegin { get; set; }
     public MajPlayerRankingDto? EBGoalEnd { get; set; }
+    public List<MajPlayerRankingDto> NextLowerEBPlayers { get; set; } = new List<MajPlayerRankingDto>();
+    public List<MajPlayerRankingDto> NextUpperEBPlayers { get; set; } = new List<MajPlayerRankingDto>();
     public MajPlayerRankingDto? MERGoalBegin { get; set; }
     public MajPlayerRankingDto? MERGoalEnd { get; set; }
+    public List<MajPlayerRankingDto> NextLowerMERPlayers { get; set; } = new List<MajPlayerRankingDto>();
+    public List<MajPlayerRankingDto> NextUpperMERPlayers { get; set; } = new List<MajPlayerRankingDto>();
     public MajPlayerRankingDto? JERGoalBegin { get; set; }
     public MajPlayerRankingDto? JERGoalEnd { get; set; }
+    public List<MajPlayerRankingDto> NextLowerJERPlayers { get; set; } = new List<MajPlayerRankingDto>();
+    public List<MajPlayerRankingDto> NextUpperJERPlayers { get; set; } = new List<MajPlayerRankingDto>();
     public BigInteger? SEThisWeek { get; set; }
 }
 

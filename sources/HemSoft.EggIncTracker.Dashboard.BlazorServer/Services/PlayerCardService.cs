@@ -74,9 +74,12 @@ public class PlayerCardService
 
                 try
                 {
-                    var sePlayers = await MajPlayerRankingManager.GetSurroundingSEPlayersAsync(playerName, dashboardPlayer.Player.SoulEggs, _logger);
-                    dashboardPlayer.SEGoalBegin = sePlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Lower SE", SEString = "0s" };
-                    dashboardPlayer.SEGoalEnd = sePlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Upper SE", SEString = dashboardPlayer.Player.SoulEggs };
+                    // Get extended surrounding SE players
+                    var extendedSEPlayers = await MajPlayerRankingManager.GetExtendedSurroundingSEPlayersAsync(playerName, dashboardPlayer.Player.SoulEggs, 3, _logger);
+                    dashboardPlayer.SEGoalBegin = extendedSEPlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Lower SE", SEString = "0s" };
+                    dashboardPlayer.SEGoalEnd = extendedSEPlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Upper SE", SEString = dashboardPlayer.Player.SoulEggs };
+                    dashboardPlayer.NextLowerSEPlayers = extendedSEPlayers?.NextLowerPlayers ?? new List<MajPlayerRankingDto>();
+                    dashboardPlayer.NextUpperSEPlayers = extendedSEPlayers?.NextUpperPlayers ?? new List<MajPlayerRankingDto>();
                 }
                 catch (Exception ex)
                 {
@@ -87,9 +90,12 @@ public class PlayerCardService
 
                 try
                 {
-                    var ebPlayers = await MajPlayerRankingManager.GetSurroundingEBPlayersAsync(playerName, dashboardPlayer.Player.EarningsBonusPercentage, _logger);
-                    dashboardPlayer.EBGoalBegin = ebPlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Lower EB", EBString = "0%" };
-                    dashboardPlayer.EBGoalEnd = ebPlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Upper EB", EBString = dashboardPlayer.Player.EarningsBonusPercentage };
+                    // Get extended surrounding EB players
+                    var extendedEBPlayers = await MajPlayerRankingManager.GetExtendedSurroundingEBPlayersAsync(playerName, dashboardPlayer.Player.EarningsBonusPercentage, 3, _logger);
+                    dashboardPlayer.EBGoalBegin = extendedEBPlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Lower EB", EBString = "0%" };
+                    dashboardPlayer.EBGoalEnd = extendedEBPlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Upper EB", EBString = dashboardPlayer.Player.EarningsBonusPercentage };
+                    dashboardPlayer.NextLowerEBPlayers = extendedEBPlayers?.NextLowerPlayers ?? new List<MajPlayerRankingDto>();
+                    dashboardPlayer.NextUpperEBPlayers = extendedEBPlayers?.NextUpperPlayers ?? new List<MajPlayerRankingDto>();
                 }
                 catch (Exception ex)
                 {
@@ -101,9 +107,12 @@ public class PlayerCardService
                 try
                 {
                     decimal merValue = (decimal)dashboardPlayer.Player.MER;
-                    var merPlayers = await MajPlayerRankingManager.GetSurroundingMERPlayersAsync(playerName, merValue, _logger);
-                    dashboardPlayer.MERGoalBegin = merPlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Lower MER", MER = 0m };
-                    dashboardPlayer.MERGoalEnd = merPlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Upper MER", MER = merValue };
+                    // Get extended surrounding MER players
+                    var extendedMERPlayers = await MajPlayerRankingManager.GetExtendedSurroundingMERPlayersAsync(playerName, merValue, 3, _logger);
+                    dashboardPlayer.MERGoalBegin = extendedMERPlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Lower MER", MER = 0m };
+                    dashboardPlayer.MERGoalEnd = extendedMERPlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Upper MER", MER = merValue };
+                    dashboardPlayer.NextLowerMERPlayers = extendedMERPlayers?.NextLowerPlayers ?? new List<MajPlayerRankingDto>();
+                    dashboardPlayer.NextUpperMERPlayers = extendedMERPlayers?.NextUpperPlayers ?? new List<MajPlayerRankingDto>();
                 }
                 catch (Exception ex)
                 {
@@ -115,9 +124,12 @@ public class PlayerCardService
                 try
                 {
                     decimal jerValue = (decimal)dashboardPlayer.Player.JER;
-                    var jerPlayers = await MajPlayerRankingManager.GetSurroundingJERPlayersAsync(playerName, jerValue, _logger);
-                    dashboardPlayer.JERGoalBegin = jerPlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Lower JER", JER = 0m };
-                    dashboardPlayer.JERGoalEnd = jerPlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Upper JER", JER = jerValue };
+                    // Get extended surrounding JER players
+                    var extendedJERPlayers = await MajPlayerRankingManager.GetExtendedSurroundingJERPlayersAsync(playerName, jerValue, 3, _logger);
+                    dashboardPlayer.JERGoalBegin = extendedJERPlayers?.LowerPlayer ?? new MajPlayerRankingDto { IGN = "Lower JER", JER = 0m };
+                    dashboardPlayer.JERGoalEnd = extendedJERPlayers?.UpperPlayer ?? new MajPlayerRankingDto { IGN = "Upper JER", JER = jerValue };
+                    dashboardPlayer.NextLowerJERPlayers = extendedJERPlayers?.NextLowerPlayers ?? new List<MajPlayerRankingDto>();
+                    dashboardPlayer.NextUpperJERPlayers = extendedJERPlayers?.NextUpperPlayers ?? new List<MajPlayerRankingDto>();
                 }
                 catch (Exception ex)
                 {
@@ -248,7 +260,7 @@ public class PlayerCardService
             _lastUpdated = DateTime.Now;
             _timeSinceLastUpdate = GetTimeSinceLastUpdate();
             _dashboardState.SetLastUpdated(DateTime.Now);
-            
+
             // Notify subscribers of the updated data
             OnPlayerDataRefreshed?.Invoke(playerName, updatedPlayer);
         }
@@ -286,7 +298,7 @@ public class PlayerCardService
 
                 // Load player data
                 result = await GetDashboardPlayer(playerName, cts.Token);
-                
+
                 _lastUpdated = DateTime.Now;
                 _timeSinceLastUpdate = GetTimeSinceLastUpdate();
                 _dashboardState.SetLastUpdated(DateTime.Now);
@@ -351,12 +363,20 @@ public class PlayerCardService
             },
             SEGoalBegin = new MajPlayerRankingDto { IGN = "Lower SE", SEString = "0s" },
             SEGoalEnd = new MajPlayerRankingDto { IGN = "Upper SE", SEString = "0s" },
+            NextLowerSEPlayers = new List<MajPlayerRankingDto>(),
+            NextUpperSEPlayers = new List<MajPlayerRankingDto>(),
             EBGoalBegin = new MajPlayerRankingDto { IGN = "Lower EB", EBString = "0%" },
             EBGoalEnd = new MajPlayerRankingDto { IGN = "Upper EB", EBString = "0%" },
+            NextLowerEBPlayers = new List<MajPlayerRankingDto>(),
+            NextUpperEBPlayers = new List<MajPlayerRankingDto>(),
             MERGoalBegin = new MajPlayerRankingDto { IGN = "Lower MER", MER = 0m },
             MERGoalEnd = new MajPlayerRankingDto { IGN = "Upper MER", MER = 0m },
+            NextLowerMERPlayers = new List<MajPlayerRankingDto>(),
+            NextUpperMERPlayers = new List<MajPlayerRankingDto>(),
             JERGoalBegin = new MajPlayerRankingDto { IGN = "Lower JER", JER = 0m },
-            JERGoalEnd = new MajPlayerRankingDto { IGN = "Upper JER", JER = 0m }
+            JERGoalEnd = new MajPlayerRankingDto { IGN = "Upper JER", JER = 0m },
+            NextLowerJERPlayers = new List<MajPlayerRankingDto>(),
+            NextUpperJERPlayers = new List<MajPlayerRankingDto>()
         };
     }
 

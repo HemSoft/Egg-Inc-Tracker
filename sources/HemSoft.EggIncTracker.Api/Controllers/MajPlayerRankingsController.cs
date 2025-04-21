@@ -597,7 +597,6 @@ public class MajPlayerRankingsController : ControllerBase
                     MER = r.MER,
                     JER = r.JER,
                     Updated = r.Updated,
-                    // Initialize these fields, they will be calculated later
                     SEGains = "0",
                     SEGainsWeek = "0"
                 })
@@ -643,65 +642,8 @@ public class MajPlayerRankingsController : ControllerBase
                 }
             }
 
-            // Let's directly calculate the weekly gains for King Friday as a test case
-            var kingFridayRecords = await _context.MajPlayerRankings
-                .Where(r => r.IGN == "King Friday")
-                .OrderBy(r => r.Updated)
-                .ToListAsync();
-
-            if (kingFridayRecords.Count > 0)
-            {
-                // Get the start of the week (Monday)
-                var today = DateTime.Today;
-                // Calculate Monday of the current week
-                int daysToSubtract = today.DayOfWeek == DayOfWeek.Sunday ? 6 : (int)today.DayOfWeek - 1;
-                var weekStartDate = today.AddDays(-daysToSubtract);
-                _logger.LogInformation($"Week start date: {weekStartDate}");
-
-                // Find the record closest to but before the week start
-                var recordsBeforeWeek = kingFridayRecords.Where(r => r.Updated < weekStartDate).ToList();
-                var baselineRecord = recordsBeforeWeek.Count > 0
-                    ? recordsBeforeWeek.OrderByDescending(r => r.Updated).First()
-                    : null;
-
-                // Find the latest record
-                var latestRecord = kingFridayRecords.OrderByDescending(r => r.Updated).First();
-
-                if (baselineRecord != null)
-                {
-                    _logger.LogInformation($"King Friday baseline: {baselineRecord.Updated}, SE: {baselineRecord.SEString}");
-                    _logger.LogInformation($"King Friday latest: {latestRecord.Updated}, SE: {latestRecord.SEString}");
-
-                    // Calculate the weekly gain
-                    if (latestRecord.SEString.EndsWith('s') && baselineRecord.SEString.EndsWith('s'))
-                    {
-                        // Scientific notation
-                        var latestValue = decimal.Parse(latestRecord.SEString.TrimEnd('s'));
-                        var baselineValue = decimal.Parse(baselineRecord.SEString.TrimEnd('s'));
-                        var diff = latestValue - baselineValue;
-
-                        _logger.LogInformation($"King Friday calculation: {latestValue} - {baselineValue} = {diff}");
-
-                        // Find King Friday in the rankings and update
-                        var kfInRankings = rankings.FirstOrDefault(r => r.IGN == "King Friday");
-                        if (kfInRankings != null && diff > 0)
-                        {
-                            kfInRankings.SEGainsWeek = $"{diff:0.00}s";
-                            _logger.LogInformation($"Set King Friday weekly gain to {kfInRankings.SEGainsWeek}");
-                        }
-                    }
-                }
-            }
-
             // Calculate weekly gains for all players in a single batch
             await CalculateWeeklyGains(rankings);
-
-            // Debug: Log a sample of the weekly gains (just a few players)
-            var samplePlayers = rankings.GroupBy(r => r.IGN).Select(g => g.First()).Take(3).ToList();
-            foreach (var player in samplePlayers)
-            {
-                _logger.LogInformation($"Sample weekly gain for {player.IGN}: {player.SEGainsWeek}");
-            }
 
             // Return all rankings but ensure we have a reasonable number of records
             // Group by player name and take the most recent records for each player
@@ -710,8 +652,6 @@ public class MajPlayerRankingsController : ControllerBase
                 .SelectMany(g => g.OrderByDescending(r => r.Updated).Take(10))
                 .OrderByDescending(r => r.Updated)
                 .ToList();
-
-            _logger.LogInformation($"Returning {groupedRankings.Count} records after grouping by player");
             return Ok(groupedRankings);
         }
         catch (Exception ex)

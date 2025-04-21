@@ -19,12 +19,20 @@ public partial class PlayerCard : IDisposable
     private GoalDto? PlayerGoals => DashboardPlayer?.Goals;
     private MajPlayerRankingDto? SEGoalBegin => DashboardPlayer?.SEGoalBegin;
     private MajPlayerRankingDto? SEGoalEnd => DashboardPlayer?.SEGoalEnd;
+    private List<MajPlayerRankingDto> NextLowerSEPlayers => DashboardPlayer?.NextLowerSEPlayers ?? new List<MajPlayerRankingDto>();
+    private List<MajPlayerRankingDto> NextUpperSEPlayers => DashboardPlayer?.NextUpperSEPlayers ?? new List<MajPlayerRankingDto>();
     private MajPlayerRankingDto? EBGoalBegin => DashboardPlayer?.EBGoalBegin;
     private MajPlayerRankingDto? EBGoalEnd => DashboardPlayer?.EBGoalEnd;
+    private List<MajPlayerRankingDto> NextLowerEBPlayers => DashboardPlayer?.NextLowerEBPlayers ?? new List<MajPlayerRankingDto>();
+    private List<MajPlayerRankingDto> NextUpperEBPlayers => DashboardPlayer?.NextUpperEBPlayers ?? new List<MajPlayerRankingDto>();
     private MajPlayerRankingDto? MERGoalBegin => DashboardPlayer?.MERGoalBegin;
     private MajPlayerRankingDto? MERGoalEnd => DashboardPlayer?.MERGoalEnd;
+    private List<MajPlayerRankingDto> NextLowerMERPlayers => DashboardPlayer?.NextLowerMERPlayers ?? new List<MajPlayerRankingDto>();
+    private List<MajPlayerRankingDto> NextUpperMERPlayers => DashboardPlayer?.NextUpperMERPlayers ?? new List<MajPlayerRankingDto>();
     private MajPlayerRankingDto? JERGoalBegin => DashboardPlayer?.JERGoalBegin;
     private MajPlayerRankingDto? JERGoalEnd => DashboardPlayer?.JERGoalEnd;
+    private List<MajPlayerRankingDto> NextLowerJERPlayers => DashboardPlayer?.NextLowerJERPlayers ?? new List<MajPlayerRankingDto>();
+    private List<MajPlayerRankingDto> NextUpperJERPlayers => DashboardPlayer?.NextUpperJERPlayers ?? new List<MajPlayerRankingDto>();
     private int DaysToNextTitle => DashboardPlayer?.DaysToNextTitle ?? 0;
 
     private BigInteger? _localPlayerSEThisWeek;
@@ -263,14 +271,53 @@ public partial class PlayerCard : IDisposable
             };
             _fireworksTimer.AutoReset = false;
             _fireworksTimer.Start();
-
-            Logger.LogInformation("All goals met for {PlayerName}! Showing fireworks for 30 seconds.", Player?.PlayerName);
         }
     }
 
-    // Removed CreateEmptyDashboardPlayer - now handled by PlayerCardService
+    // Helper method to generate tooltip text for next players
+    private string GetNextPlayersTooltip(List<MajPlayerRankingDto> players, string statType)
+    {
+        if (players == null || !players.Any())
+        {
+            return "No more players in this direction";
+        }
 
-    // Removed GetTimeSinceLastUpdate - now handled by PlayerCardService
+        string currentPlayerName = Player?.PlayerName ?? string.Empty;
+        var filteredPlayers = new List<MajPlayerRankingDto>();
+        foreach (var player in players)
+        {
+            // Skip players whose IGN contains the current player's name or vice versa
+            if (string.IsNullOrEmpty(currentPlayerName) ||
+                (!player.IGN.Contains(currentPlayerName, StringComparison.OrdinalIgnoreCase) &&
+                 !currentPlayerName.Contains(player.IGN, StringComparison.OrdinalIgnoreCase)))
+            {
+                filteredPlayers.Add(player);
+            }
+        }
+
+        if (!filteredPlayers.Any())
+        {
+            return "No more players in this direction";
+        }
+
+        var tooltipText = new System.Text.StringBuilder("Next players:\n");
+
+        foreach (var player in filteredPlayers)
+        {
+            string statValue = statType switch
+            {
+                "SE" => player.SEString,
+                "EB" => player.EBString,
+                "MER" => player.MER.ToString(),
+                "JER" => player.JER.ToString(),
+                _ => "N/A"
+            };
+
+            tooltipText.AppendLine($"{player.IGN} ({statValue})");
+        }
+
+        return tooltipText.ToString();
+    }
 
     public void Dispose()
     {
