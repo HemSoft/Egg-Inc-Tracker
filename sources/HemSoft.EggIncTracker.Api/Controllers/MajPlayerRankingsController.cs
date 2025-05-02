@@ -597,6 +597,7 @@ public class MajPlayerRankingsController : ControllerBase
                     MER = r.MER,
                     JER = r.JER,
                     Updated = r.Updated,
+                    // Initialize these fields, they will be calculated later
                     SEGains = "0",
                     SEGainsWeek = "0"
                 })

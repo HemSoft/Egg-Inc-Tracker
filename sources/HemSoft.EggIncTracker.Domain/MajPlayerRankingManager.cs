@@ -317,6 +317,8 @@ public static class MajPlayerRankingManager
 
             // Transform to include parsed EB for sorting
             var playersWithEB = allPlayers
+                .GroupBy(r => r.IGN)
+                .Select(g => g.OrderByDescending(r => r.Updated).First())
                 .Select(r => new
                 {
                     Player = r,
@@ -390,6 +392,8 @@ public static class MajPlayerRankingManager
 
             // Order by MER
             var orderedPlayers = allPlayers
+                .GroupBy(r => r.IGN)
+                .Select(g => g.OrderByDescending(r => r.Updated).First())
                 .OrderByDescending(r => r.MER)
                 .ToList();
 
@@ -452,6 +456,8 @@ public static class MajPlayerRankingManager
 
             // Order by JER
             var orderedPlayers = allPlayers
+                .GroupBy(r => r.IGN)
+                .Select(g => g.OrderByDescending(r => r.Updated).First())
                 .OrderByDescending(r => r.JER)
                 .ToList();
 
