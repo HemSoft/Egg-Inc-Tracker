@@ -1,6 +1,7 @@
 namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Services;
 
 using System.Numerics;
+using HemSoft.EggIncTracker.Data.Dtos;
 using HemSoft.EggIncTracker.Domain;
 using Microsoft.AspNetCore.Components;
 
