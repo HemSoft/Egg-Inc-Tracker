@@ -10,19 +10,28 @@ using System.Threading.Tasks;
 using HemSoft.EggIncTracker.Data.Dtos;
 
 using Microsoft.Extensions.Logging;
-using HemSoft.EggIncTracker.Data; // Added for EggIncContext
-using Microsoft.EntityFrameworkCore; // Added for EF Core methods
-using System.Numerics; // Added for BigInteger
-
-// Removed IApiService interface and related DTOs as they are no longer needed here
+using HemSoft.EggIncTracker.Data;
+using Microsoft.EntityFrameworkCore;
+using System.Numerics;
 
 /// <summary>
 /// DTO for surrounding players response (Moved from previous version)
 /// </summary>
 public class SurroundingPlayersDto
 {
-    public MajPlayerRankingDto? LowerPlayer { get; set; } // Made nullable
-    public MajPlayerRankingDto? UpperPlayer { get; set; } // Made nullable
+    public MajPlayerRankingDto? LowerPlayer { get; set; }
+    public MajPlayerRankingDto? UpperPlayer { get; set; }
+}
+
+/// <summary>
+/// DTO for extended surrounding players response with next 3 players in each direction
+/// </summary>
+public class ExtendedSurroundingPlayersDto
+{
+    public MajPlayerRankingDto? LowerPlayer { get; set; }
+    public MajPlayerRankingDto? UpperPlayer { get; set; }
+    public List<MajPlayerRankingDto> NextLowerPlayers { get; set; } = new List<MajPlayerRankingDto>();
+    public List<MajPlayerRankingDto> NextUpperPlayers { get; set; } = new List<MajPlayerRankingDto>();
 }
 
 
@@ -30,14 +39,13 @@ public static class MajPlayerRankingManager
 {
     // Static HttpClient for API calls
     private static readonly HttpClient _httpClient = new HttpClient();
-    private static readonly string _apiBaseUrl = "https://localhost:5000/api/v1"; // Default to localhost
+    private static readonly string _apiBaseUrl = "https://localhost:5000/api/v1";
+    private const int DefaultNextPlayersCount = 3; // Default number of next players to retrieve
 
     public static async Task<SurroundingPlayersDto?> GetSurroundingEBPlayersAsync(string playerName, string eb, ILogger? logger)
     {
         try
         {
-            logger?.LogInformation("Calling API to get surrounding EB players for {PlayerName} with EB {EB}", playerName, eb);
-
             // Encode the player name for URL
             var encodedPlayerName = Uri.EscapeDataString(playerName);
             var encodedEB = Uri.EscapeDataString(eb);
@@ -53,7 +61,6 @@ public static class MajPlayerRankingManager
             {
                 // Deserialize the response
                 var result = await response.Content.ReadFromJsonAsync<SurroundingPlayersDto>();
-                logger?.LogInformation("Successfully retrieved surrounding EB players for {PlayerName}", playerName);
                 return result;
             }
             else
@@ -86,8 +93,6 @@ public static class MajPlayerRankingManager
     {
         try
         {
-            logger?.LogInformation("Calling API to get surrounding SE players for {PlayerName} with SE {SE}", playerName, se);
-
             // Encode the player name for URL
             var encodedPlayerName = Uri.EscapeDataString(playerName);
             var encodedSE = Uri.EscapeDataString(se);
@@ -103,7 +108,6 @@ public static class MajPlayerRankingManager
             {
                 // Deserialize the response
                 var result = await response.Content.ReadFromJsonAsync<SurroundingPlayersDto>();
-                logger?.LogInformation("Successfully retrieved surrounding SE players for {PlayerName}", playerName);
                 return result;
             }
             else
@@ -136,8 +140,6 @@ public static class MajPlayerRankingManager
     {
         try
         {
-            logger?.LogInformation("Calling API to get surrounding MER players for {PlayerName} with MER {MER}", playerName, mer);
-
             // Encode the player name for URL
             var encodedPlayerName = Uri.EscapeDataString(playerName);
 
@@ -152,7 +154,6 @@ public static class MajPlayerRankingManager
             {
                 // Deserialize the response
                 var result = await response.Content.ReadFromJsonAsync<SurroundingPlayersDto>();
-                logger?.LogInformation("Successfully retrieved surrounding MER players for {PlayerName}", playerName);
                 return result;
             }
             else
@@ -185,8 +186,6 @@ public static class MajPlayerRankingManager
     {
         try
         {
-            logger?.LogInformation("Calling API to get surrounding JER players for {PlayerName} with JER {JER}", playerName, jer);
-
             // Encode the player name for URL
             var encodedPlayerName = Uri.EscapeDataString(playerName);
 
@@ -201,7 +200,6 @@ public static class MajPlayerRankingManager
             {
                 // Deserialize the response
                 var result = await response.Content.ReadFromJsonAsync<SurroundingPlayersDto>();
-                logger?.LogInformation("Successfully retrieved surrounding JER players for {PlayerName}", playerName);
                 return result;
             }
             else
@@ -230,12 +228,285 @@ public static class MajPlayerRankingManager
         }
     }
 
+    public static async Task<ExtendedSurroundingPlayersDto?> GetExtendedSurroundingSEPlayersAsync(string playerName, string se, int nextPlayersCount = DefaultNextPlayersCount, ILogger? logger = null)
+    {
+        try
+        {
+            // Get all players first
+            var allPlayers = await GetLatestMajPlayerRankingsAsync(0, logger);
+            if (allPlayers == null || !allPlayers.Any())
+            {
+                return new ExtendedSurroundingPlayersDto
+                {
+                    LowerPlayer = new MajPlayerRankingDto { IGN = "Lower SE Placeholder" },
+                    UpperPlayer = new MajPlayerRankingDto { IGN = "Upper SE Placeholder" }
+                };
+            }
+
+            var playerSE = (decimal)BigNumberCalculator.ParseBigNumber(se);
+
+            // Order by SE number
+            var orderedPlayers = allPlayers
+                .GroupBy(r => r.IGN)
+                .Select(g => g.OrderByDescending(r => r.Updated).First())
+                .OrderByDescending(r => r.SENumber)
+                .ToList();
+
+            // Update rankings based on index in ordered list
+            for (int i = 0; i < orderedPlayers.Count; i++)
+            {
+                orderedPlayers[i].Ranking = i + 1; // 1-based ranking
+            }
+
+            // Find the player's position
+            var playerIndex = orderedPlayers.FindIndex(p =>
+                p.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase));
+
+            // Get surrounding players
+            var result = new ExtendedSurroundingPlayersDto();
+
+            // Get immediate surrounding players
+            var upperPlayers = orderedPlayers
+                .Where(r => r.SENumber > playerSE && !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
+                .OrderBy(r => r.SENumber)
+                .ToList();
+
+            var lowerPlayers = orderedPlayers
+                .Where(r => r.SENumber < playerSE && !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(r => r.SENumber)
+                .ToList();
+
+            result.UpperPlayer = upperPlayers.FirstOrDefault();
+            result.LowerPlayer = lowerPlayers.FirstOrDefault();
+
+            // Get next players
+            result.NextUpperPlayers = upperPlayers.Skip(1).Take(nextPlayersCount).ToList();
+            result.NextLowerPlayers = lowerPlayers.Skip(1).Take(nextPlayersCount).ToList();
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Error getting extended surrounding SE players for {PlayerName}", playerName);
+
+            // Return a default response in case of error
+            return new ExtendedSurroundingPlayersDto
+            {
+                LowerPlayer = new MajPlayerRankingDto { IGN = "Lower SE Placeholder" },
+                UpperPlayer = new MajPlayerRankingDto { IGN = "Upper SE Placeholder" }
+            };
+        }
+    }
+
+    public static async Task<ExtendedSurroundingPlayersDto?> GetExtendedSurroundingEBPlayersAsync(string playerName, string eb, int nextPlayersCount = DefaultNextPlayersCount, ILogger? logger = null)
+    {
+        try
+        {
+            // Get all players first
+            var allPlayers = await GetLatestMajPlayerRankingsAsync(0, logger);
+            if (allPlayers == null || !allPlayers.Any())
+            {
+                return new ExtendedSurroundingPlayersDto
+                {
+                    LowerPlayer = new MajPlayerRankingDto { IGN = "Lower EB Placeholder" },
+                    UpperPlayer = new MajPlayerRankingDto { IGN = "Upper EB Placeholder" }
+                };
+            }
+
+            var playerEB = BigNumberCalculator.ParseBigNumber(eb.TrimEnd('%'));
+
+            // Transform to include parsed EB for sorting
+            var playersWithEB = allPlayers
+                .GroupBy(r => r.IGN)
+                .Select(g => g.OrderByDescending(r => r.Updated).First())
+                .Select(r => new
+                {
+                    Player = r,
+                    EBValue = BigNumberCalculator.ParseBigNumber(r.EBString.TrimEnd('%'))
+                })
+                .ToList();
+
+            // Order by EB
+            var orderedPlayers = playersWithEB
+                .OrderByDescending(r => r.EBValue)
+                .ToList();
+
+            // Update rankings based on index in ordered list
+            for (int i = 0; i < orderedPlayers.Count; i++)
+            {
+                orderedPlayers[i].Player.Ranking = i + 1; // 1-based ranking
+            }
+
+            // Get surrounding players
+            var result = new ExtendedSurroundingPlayersDto();
+
+            // Get immediate surrounding players
+            var upperPlayers = orderedPlayers
+                .Where(r => r.EBValue > playerEB && !r.Player.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
+                .OrderBy(r => r.EBValue)
+                .Select(r => r.Player)
+                .ToList();
+
+            var lowerPlayers = orderedPlayers
+                .Where(r => r.EBValue < playerEB && !r.Player.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(r => r.EBValue)
+                .Select(r => r.Player)
+                .ToList();
+
+            result.UpperPlayer = upperPlayers.FirstOrDefault();
+            result.LowerPlayer = lowerPlayers.FirstOrDefault();
+
+            // Get next players
+            result.NextUpperPlayers = upperPlayers.Skip(1).Take(nextPlayersCount).ToList();
+            result.NextLowerPlayers = lowerPlayers.Skip(1).Take(nextPlayersCount).ToList();
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Error getting extended surrounding EB players for {PlayerName}", playerName);
+
+            // Return a default response in case of error
+            return new ExtendedSurroundingPlayersDto
+            {
+                LowerPlayer = new MajPlayerRankingDto { IGN = "Lower EB Placeholder" },
+                UpperPlayer = new MajPlayerRankingDto { IGN = "Upper EB Placeholder" }
+            };
+        }
+    }
+
+    public static async Task<ExtendedSurroundingPlayersDto?> GetExtendedSurroundingMERPlayersAsync(string playerName, decimal mer, int nextPlayersCount = DefaultNextPlayersCount, ILogger? logger = null)
+    {
+        try
+        {
+            // Get all players first
+            var allPlayers = await GetLatestMajPlayerRankingsAsync(0, logger);
+            if (allPlayers == null || !allPlayers.Any())
+            {
+                return new ExtendedSurroundingPlayersDto
+                {
+                    LowerPlayer = new MajPlayerRankingDto { IGN = "Lower MER Placeholder" },
+                    UpperPlayer = new MajPlayerRankingDto { IGN = "Upper MER Placeholder" }
+                };
+            }
+
+            // Order by MER
+            var orderedPlayers = allPlayers
+                .GroupBy(r => r.IGN)
+                .Select(g => g.OrderByDescending(r => r.Updated).First())
+                .OrderByDescending(r => r.MER)
+                .ToList();
+
+            // Update rankings based on index in ordered list
+            for (int i = 0; i < orderedPlayers.Count; i++)
+            {
+                orderedPlayers[i].Ranking = i + 1; // 1-based ranking
+            }
+
+            // Get surrounding players
+            var result = new ExtendedSurroundingPlayersDto();
+
+            // Get immediate surrounding players
+            var upperPlayers = orderedPlayers
+                .Where(r => r.MER > mer && !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
+                .OrderBy(r => r.MER)
+                .ToList();
+
+            var lowerPlayers = orderedPlayers
+                .Where(r => r.MER < mer && !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(r => r.MER)
+                .ToList();
+
+            result.UpperPlayer = upperPlayers.FirstOrDefault();
+            result.LowerPlayer = lowerPlayers.FirstOrDefault();
+
+            // Get next players
+            result.NextUpperPlayers = upperPlayers.Skip(1).Take(nextPlayersCount).ToList();
+            result.NextLowerPlayers = lowerPlayers.Skip(1).Take(nextPlayersCount).ToList();
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Error getting extended surrounding MER players for {PlayerName}", playerName);
+
+            // Return a default response in case of error
+            return new ExtendedSurroundingPlayersDto
+            {
+                LowerPlayer = new MajPlayerRankingDto { IGN = "Lower MER Placeholder" },
+                UpperPlayer = new MajPlayerRankingDto { IGN = "Upper MER Placeholder" }
+            };
+        }
+    }
+
+    public static async Task<ExtendedSurroundingPlayersDto?> GetExtendedSurroundingJERPlayersAsync(string playerName, decimal jer, int nextPlayersCount = DefaultNextPlayersCount, ILogger? logger = null)
+    {
+        try
+        {
+            // Get all players first
+            var allPlayers = await GetLatestMajPlayerRankingsAsync(0, logger);
+            if (allPlayers == null || !allPlayers.Any())
+            {
+                return new ExtendedSurroundingPlayersDto
+                {
+                    LowerPlayer = new MajPlayerRankingDto { IGN = "Lower JER Placeholder" },
+                    UpperPlayer = new MajPlayerRankingDto { IGN = "Upper JER Placeholder" }
+                };
+            }
+
+            // Order by JER
+            var orderedPlayers = allPlayers
+                .GroupBy(r => r.IGN)
+                .Select(g => g.OrderByDescending(r => r.Updated).First())
+                .OrderByDescending(r => r.JER)
+                .ToList();
+
+            // Update rankings based on index in ordered list
+            for (int i = 0; i < orderedPlayers.Count; i++)
+            {
+                orderedPlayers[i].Ranking = i + 1; // 1-based ranking
+            }
+
+            // Get surrounding players
+            var result = new ExtendedSurroundingPlayersDto();
+
+            // Get immediate surrounding players
+            var upperPlayers = orderedPlayers
+                .Where(r => r.JER > jer && !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
+                .OrderBy(r => r.JER)
+                .ToList();
+
+            var lowerPlayers = orderedPlayers
+                .Where(r => r.JER < jer && !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(r => r.JER)
+                .ToList();
+
+            result.UpperPlayer = upperPlayers.FirstOrDefault();
+            result.LowerPlayer = lowerPlayers.FirstOrDefault();
+
+            // Get next players
+            result.NextUpperPlayers = upperPlayers.Skip(1).Take(nextPlayersCount).ToList();
+            result.NextLowerPlayers = lowerPlayers.Skip(1).Take(nextPlayersCount).ToList();
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Error getting extended surrounding JER players for {PlayerName}", playerName);
+
+            // Return a default response in case of error
+            return new ExtendedSurroundingPlayersDto
+            {
+                LowerPlayer = new MajPlayerRankingDto { IGN = "Lower JER Placeholder" },
+                UpperPlayer = new MajPlayerRankingDto { IGN = "Upper JER Placeholder" }
+            };
+        }
+    }
+
     public static async Task<List<MajPlayerRankingDto>?> GetLatestMajPlayerRankingsAsync(int limitTo = 30, ILogger? logger = null)
     {
         try
         {
-            logger?.LogInformation("Calling API to get latest major player rankings with limit {LimitTo}", limitTo);
-
             // Build the API URL
             var apiUrl = $"{_apiBaseUrl}/MajPlayerRankings/latest-all";
 
@@ -247,7 +518,6 @@ public static class MajPlayerRankingManager
             {
                 // Deserialize the response
                 var result = await response.Content.ReadFromJsonAsync<List<MajPlayerRankingDto>>();
-                logger?.LogInformation("Successfully retrieved {Count} latest major player rankings", result?.Count ?? 0);
 
                 // Apply the limit if specified
                 return result != null && limitTo > 0 && result.Count > limitTo
@@ -276,8 +546,6 @@ public static class MajPlayerRankingManager
     {
         try
         {
-            logger?.LogInformation("Calling API to save major player ranking for {PlayerName}", majPlayerRanking.IGN);
-
             // Build the API URL
             var apiUrl = $"{_apiBaseUrl}/MajPlayerRankings";
 
@@ -289,10 +557,7 @@ public static class MajPlayerRankingManager
             {
                 // Deserialize the response
                 var result = await response.Content.ReadFromJsonAsync<SaveRankingResponseDto>();
-                logger?.LogInformation("Successfully saved major player ranking for {PlayerName}: {Message}",
-                    majPlayerRanking.IGN, result?.Message);
-
-                return (result?.Success ?? false, result?.PreviousRanking);
+                return (true, result?.PreviousRanking);
             }
             else
             {
@@ -312,8 +577,6 @@ public static class MajPlayerRankingManager
         }
     }
 }
-
-// Removed ServiceLocator as it's an anti-pattern and not needed with static managers
 
 /// <summary>
 /// DTO for save ranking response

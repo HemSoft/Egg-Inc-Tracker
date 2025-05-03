@@ -204,7 +204,6 @@ namespace HemSoft.EggIncTracker.Api.Controllers
                     return NotFound($"No ranked data found for player {name}");
                 }
 
-                logger.LogInformation("Successfully retrieved player rankings for {PlayerName}", name);
                 return Ok(playerStats);
             }
             catch (Exception ex)

@@ -350,3 +350,16 @@ MigrationBackup/
 
 # Reference projects folder
 /ref/
+
+# Ignore legacy root folders
+/Data/
+/Domain/
+/EggDash/
+/EggDash.Client/
+/EggIncTrackerApi/
+/UpdatePlayerFunction/
+/Web/
+# News database files
+resources/news-database/news.db
+resources/news-database/news.db-shm
+resources/news-database/news.db-wal

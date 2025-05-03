@@ -68,7 +68,6 @@ public static class PlayerManager
                 .OrderByDescending(p => p.Updated) // Get the most recent record for that EID
                 .FirstOrDefaultAsync();
 
-            logger?.LogInformation("Successfully retrieved latest record for EID {EID}", eid);
             return player;
         }
         catch (Exception ex)
@@ -89,7 +88,6 @@ public static class PlayerManager
                 .OrderByDescending(p => p.Updated)
                 .FirstOrDefaultAsync();
 
-            logger?.LogInformation("Successfully retrieved latest record for player {PlayerName}", playerName);
             return player;
         }
         catch (Exception ex)
@@ -110,7 +108,6 @@ public static class PlayerManager
                     $"EXEC GetRankedPlayerRecords @RecordLimit = {recordLimit}, @SampleDaysBack = {sampleDaysBack}")
                 .ToListAsync();
 
-            logger?.LogInformation("Successfully retrieved player rankings");
             return rankings.First(x => x.PlayerName == playerName);
         }
         catch (Exception ex)

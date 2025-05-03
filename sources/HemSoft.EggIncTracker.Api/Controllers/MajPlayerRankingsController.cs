@@ -178,7 +178,7 @@ public class MajPlayerRankingsController : ControllerBase
     {
         try
         {
-            var playerSE = (decimal) Domain.BigNumberCalculator.ParseBigNumber(soulEggs);
+            var playerSE = (decimal)Domain.BigNumberCalculator.ParseBigNumber(soulEggs);
 
             // Get latest ranking for each player
             var latestRankings = await _context.MajPlayerRankings
@@ -191,41 +191,19 @@ public class MajPlayerRankingsController : ControllerBase
                 .OrderByDescending(r => r.SENumber)
                 .ToList();
 
-            MajPlayerRankingDto? lowerPlayer = null;
-            MajPlayerRankingDto? upperPlayer = null;
-            int rank = 0;
-
-            // Find the player's position in the ordered list
-            var playerIndex = -1;
+            // Update rankings based on index in ordered list
             for (int i = 0; i < orderedRankings.Count; i++)
             {
-                rank++;
-                orderedRankings[i].Ranking = rank; // Update the ranking
-
-                if (orderedRankings[i].IGN != null && orderedRankings[i].IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
-                {
-                    playerIndex = i;
-                    break;
-                }
+                orderedRankings[i].Ranking = i + 1; // 1-based ranking
             }
 
-            // If player found, get surrounding players
-            if (playerIndex >= 0)
-            {
-                // Get upper player (player with higher SE)
-                if (playerIndex > 0)
-                {
-                    upperPlayer = orderedRankings[playerIndex - 1];
-                }
+            var upperPlayers = orderedRankings
+                .Where(r => r.SENumber > playerSE && !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+            var upperPlayer = upperPlayers.Any() ? upperPlayers.Last() : null;
 
-                // Get lower player (player with lower SE)
-                if (playerIndex < orderedRankings.Count - 1)
-                {
-                    lowerPlayer = orderedRankings[playerIndex + 1];
-                }
-
-                _logger.LogWarning($"Found player {playerName} at index {playerIndex} with SE {playerSE}. Upper: {upperPlayer?.IGN}, Lower: {lowerPlayer?.IGN}");
-            }
+            var lowerPlayers = orderedRankings
+                .Where(r => r.SENumber < playerSE && !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+            var lowerPlayer = lowerPlayers.Any() ? lowerPlayers.First() : null;
 
             return Ok(new SurroundingPlayersDto
             {
@@ -250,7 +228,7 @@ public class MajPlayerRankingsController : ControllerBase
     {
         try
         {
-            var playerEB = HemSoft.EggIncTracker.Domain.BigNumberCalculator.ParseBigNumber(earningsBonus);
+            var playerEB = Domain.BigNumberCalculator.ParseBigNumber(earningsBonus);
 
             // Get latest ranking for each player
             var latestRankings = await _context.MajPlayerRankings
@@ -259,82 +237,63 @@ public class MajPlayerRankingsController : ControllerBase
                 .ToListAsync();
 
             // Transform to include parsed EB for sorting
-            var rankingsWithEB = latestRankings
+            // Order by SE number and find surrounding players
+            var orderedRankings = latestRankings
                 .Select(r => new
                 {
                     Ranking = r,
-                    EBValue = HemSoft.EggIncTracker.Domain.BigNumberCalculator.ParseBigNumber(r.EBString.TrimEnd('%'))
+                    EBValue = Domain.BigNumberCalculator.ParseBigNumber(r.EBString.TrimEnd('%'))
                 })
                 .OrderByDescending(x => x.EBValue)
                 .ToList();
 
-            MajPlayerRankingDto? lowerPlayer = null;
-            MajPlayerRankingDto? upperPlayer = null;
-            int rank = 0;
-
-            // Find the player's position in the ordered list
-            var playerIndex = -1;
-            for (int i = 0; i < rankingsWithEB.Count; i++)
+            // Update rankings based on index in ordered list
+            for (int i = 0; i < orderedRankings.Count; i++)
             {
-                rank++;
-                rankingsWithEB[i].Ranking.Ranking = rank; // Update the ranking
-
-                if (rankingsWithEB[i].Ranking.IGN != null && rankingsWithEB[i].Ranking.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
-                {
-                    playerIndex = i;
-                    break;
-                }
+                orderedRankings[i].Ranking.Ranking = i + 1; // 1-based ranking
             }
 
-            // If player found, get surrounding players
-            if (playerIndex >= 0)
+            // Log the player's EB value for debugging
+            _logger.LogDebug("Player {PlayerName} EB value: {EBValue}", playerName, playerEB);
+
+            // Find players with higher EB
+            var upperPlayers = orderedRankings
+                .Where(r => r.EBValue > playerEB && !r.Ranking.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            // Get the player with the next higher EB (closest to the player)
+            var upperPlayer = upperPlayers.Any() ? upperPlayers.Last() : null;
+
+            if (upperPlayer != null)
             {
-                // Get upper player (player with higher EB)
-                if (playerIndex > 0)
-                {
-                    upperPlayer = rankingsWithEB[playerIndex - 1].Ranking;
-                }
-
-                // Get lower player (player with lower EB)
-                if (playerIndex < rankingsWithEB.Count - 1)
-                {
-                    lowerPlayer = rankingsWithEB[playerIndex + 1].Ranking;
-                }
-
-                _logger.LogWarning($"Found player {playerName} at index {playerIndex} with EB {playerEB}. Upper: {upperPlayer?.IGN}, Lower: {lowerPlayer?.IGN}");
+                _logger.LogDebug("Upper player: {PlayerName}, EB value: {EBValue}", upperPlayer.Ranking.IGN, upperPlayer.EBValue);
             }
             else
             {
-                _logger.LogWarning($"Player {playerName} not found in rankings. Using value-based comparison.");
+                _logger.LogWarning("No upper player found for {PlayerName}", playerName);
+            }
 
-                // Fallback to value-based comparison if player not in rankings
-                // Since rankingsWithEB is sorted by descending EBValue, we need to find:
-                // 1. The first player with EBValue < playerEB (this will be the closest lower player)
-                // 2. The last player with EBValue > playerEB (this will be the closest upper player)
+            // Find players with lower EB
+            var lowerPlayers = orderedRankings
+                .Where(r => r.EBValue < playerEB && !r.Ranking.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
-                // Find the closest upper player (player with higher EB but closest to playerEB)
-                var upperPlayers = rankingsWithEB.Where(r => r.EBValue > playerEB &&
-                    (r.Ranking.IGN == null || !r.Ranking.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
-                if (upperPlayers.Any())
-                {
-                    upperPlayer = upperPlayers.Last().Ranking; // Get the closest one (lowest EB among those higher than player)
-                }
+            // Get the player with the next lower EB (closest to the player)
+            var lowerPlayer = lowerPlayers.Any() ? lowerPlayers.First() : null;
 
-                // Find the closest lower player (player with lower EB but closest to playerEB)
-                var lowerPlayers = rankingsWithEB.Where(r => r.EBValue < playerEB &&
-                    (r.Ranking.IGN == null || !r.Ranking.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
-                if (lowerPlayers.Any())
-                {
-                    lowerPlayer = lowerPlayers.First().Ranking; // Get the closest one (highest EB among those lower than player)
-                }
-
-                _logger.LogWarning($"Value-based comparison for {playerName} with EB {playerEB}: Found Upper={upperPlayer?.IGN} ({upperPlayer?.EBString}), Lower={lowerPlayer?.IGN} ({lowerPlayer?.EBString})");
+            if (lowerPlayer != null)
+            {
+                _logger.LogDebug("Lower player: {PlayerName}, EB value: {EBValue}", lowerPlayer.Ranking.IGN, lowerPlayer.EBValue);
+            }
+            else
+            {
+                _logger.LogWarning("No lower player found for {PlayerName}", playerName);
             }
 
             return Ok(new SurroundingPlayersDto
             {
-                LowerPlayer = lowerPlayer,
-                UpperPlayer = upperPlayer
+                LowerPlayer = lowerPlayer?.Ranking,
+                UpperPlayer = upperPlayer?.Ranking
             });
         }
         catch (Exception ex)
@@ -354,79 +313,32 @@ public class MajPlayerRankingsController : ControllerBase
     {
         try
         {
+            var playerMER = mer;
+
             // Get latest ranking for each player
             var latestRankings = await _context.MajPlayerRankings
                 .GroupBy(r => r.IGN)
                 .Select(g => g.OrderByDescending(r => r.Updated).First())
                 .ToListAsync();
 
-            // Order by MER
+            // Order by MER number and find surrounding players
             var orderedRankings = latestRankings
                 .OrderByDescending(r => r.MER)
                 .ToList();
 
-            MajPlayerRankingDto? lowerPlayer = null;
-            MajPlayerRankingDto? upperPlayer = null;
-            int rank = 0;
-
-            // Find the player's position in the ordered list
-            var playerIndex = -1;
+            // Update rankings based on index in ordered list
             for (int i = 0; i < orderedRankings.Count; i++)
             {
-                rank++;
-                orderedRankings[i].Ranking = rank; // Update the ranking
-
-                if (orderedRankings[i].IGN != null && orderedRankings[i].IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
-                {
-                    playerIndex = i;
-                    break;
-                }
+                orderedRankings[i].Ranking = i + 1; // 1-based ranking
             }
 
-            // If player found, get surrounding players
-            if (playerIndex >= 0)
-            {
-                // Get upper player (player with higher MER)
-                if (playerIndex > 0)
-                {
-                    upperPlayer = orderedRankings[playerIndex - 1];
-                }
+            var upperPlayers = orderedRankings
+                .Where(r => r.MER > playerMER && !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+            var upperPlayer = upperPlayers.Any() ? upperPlayers.Last() : null;
 
-                // Get lower player (player with lower MER)
-                if (playerIndex < orderedRankings.Count - 1)
-                {
-                    lowerPlayer = orderedRankings[playerIndex + 1];
-                }
-
-                _logger.LogWarning($"Found player {playerName} at index {playerIndex} with MER {mer}. Upper: {upperPlayer?.IGN}, Lower: {lowerPlayer?.IGN}");
-            }
-            else
-            {
-                _logger.LogWarning($"Player {playerName} not found in rankings. Using value-based comparison.");
-
-                // Fallback to value-based comparison if player not in rankings
-                // Since orderedRankings is sorted by descending MER, we need to find:
-                // 1. The first player with MER < mer (this will be the closest lower player)
-                // 2. The last player with MER > mer (this will be the closest upper player)
-
-                // Find the closest upper player (player with higher MER but closest to mer)
-                var upperPlayers = orderedRankings.Where(r => r.MER > mer &&
-                    (r.IGN == null || !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
-                if (upperPlayers.Any())
-                {
-                    upperPlayer = upperPlayers.Last(); // Get the closest one (lowest MER among those higher than player)
-                }
-
-                // Find the closest lower player (player with lower MER but closest to mer)
-                var lowerPlayers = orderedRankings.Where(r => r.MER < mer &&
-                    (r.IGN == null || !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
-                if (lowerPlayers.Any())
-                {
-                    lowerPlayer = lowerPlayers.First(); // Get the closest one (highest MER among those lower than player)
-                }
-
-                _logger.LogWarning($"Value-based comparison for {playerName} with MER {mer}: Found Upper={upperPlayer?.IGN} ({upperPlayer?.MER}), Lower={lowerPlayer?.IGN} ({lowerPlayer?.MER})");
-            }
+            var lowerPlayers = orderedRankings
+                .Where(r => r.MER < playerMER && !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+            var lowerPlayer = lowerPlayers.Any() ? lowerPlayers.First() : null;
 
             return Ok(new SurroundingPlayersDto
             {
@@ -451,79 +363,32 @@ public class MajPlayerRankingsController : ControllerBase
     {
         try
         {
+            var playerJER = jer;
+
             // Get latest ranking for each player
             var latestRankings = await _context.MajPlayerRankings
                 .GroupBy(r => r.IGN)
                 .Select(g => g.OrderByDescending(r => r.Updated).First())
                 .ToListAsync();
 
-            // Order by JER
+            // Order by JER number and find surrounding players
             var orderedRankings = latestRankings
                 .OrderByDescending(r => r.JER)
                 .ToList();
 
-            MajPlayerRankingDto? lowerPlayer = null;
-            MajPlayerRankingDto? upperPlayer = null;
-            int rank = 0;
-
-            // Find the player's position in the ordered list
-            var playerIndex = -1;
+            // Update rankings based on index in ordered list
             for (int i = 0; i < orderedRankings.Count; i++)
             {
-                rank++;
-                orderedRankings[i].Ranking = rank; // Update the ranking
-
-                if (orderedRankings[i].IGN != null && orderedRankings[i].IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))
-                {
-                    playerIndex = i;
-                    break;
-                }
+                orderedRankings[i].Ranking = i + 1; // 1-based ranking
             }
 
-            // If player found, get surrounding players
-            if (playerIndex >= 0)
-            {
-                // Get upper player (player with higher JER)
-                if (playerIndex > 0)
-                {
-                    upperPlayer = orderedRankings[playerIndex - 1];
-                }
+            var upperPlayers = orderedRankings
+                .Where(r => r.JER > playerJER && !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+            var upperPlayer = upperPlayers.Any() ? upperPlayers.Last() : null;
 
-                // Get lower player (player with lower JER)
-                if (playerIndex < orderedRankings.Count - 1)
-                {
-                    lowerPlayer = orderedRankings[playerIndex + 1];
-                }
-
-                _logger.LogWarning($"Found player {playerName} at index {playerIndex} with JER {jer}. Upper: {upperPlayer?.IGN}, Lower: {lowerPlayer?.IGN}");
-            }
-            else
-            {
-                _logger.LogWarning($"Player {playerName} not found in rankings. Using value-based comparison.");
-
-                // Fallback to value-based comparison if player not in rankings
-                // Since orderedRankings is sorted by descending JER, we need to find:
-                // 1. The first player with JER < jer (this will be the closest lower player)
-                // 2. The last player with JER > jer (this will be the closest upper player)
-
-                // Find the closest upper player (player with higher JER but closest to jer)
-                var upperPlayers = orderedRankings.Where(r => r.JER > jer &&
-                    (r.IGN == null || !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
-                if (upperPlayers.Any())
-                {
-                    upperPlayer = upperPlayers.Last(); // Get the closest one (lowest JER among those higher than player)
-                }
-
-                // Find the closest lower player (player with lower JER but closest to jer)
-                var lowerPlayers = orderedRankings.Where(r => r.JER < jer &&
-                    (r.IGN == null || !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
-                if (lowerPlayers.Any())
-                {
-                    lowerPlayer = lowerPlayers.First(); // Get the closest one (highest JER among those lower than player)
-                }
-
-                _logger.LogWarning($"Value-based comparison for {playerName} with JER {jer}: Found Upper={upperPlayer?.IGN} ({upperPlayer?.JER}), Lower={lowerPlayer?.IGN} ({lowerPlayer?.JER})");
-            }
+            var lowerPlayers = orderedRankings
+                .Where(r => r.JER < playerJER && !r.IGN.Trim().Equals(playerName.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+            var lowerPlayer = lowerPlayers.Any() ? lowerPlayers.First() : null;
 
             return Ok(new SurroundingPlayersDto
             {
@@ -778,65 +643,8 @@ public class MajPlayerRankingsController : ControllerBase
                 }
             }
 
-            // Let's directly calculate the weekly gains for King Friday as a test case
-            var kingFridayRecords = await _context.MajPlayerRankings
-                .Where(r => r.IGN == "King Friday")
-                .OrderBy(r => r.Updated)
-                .ToListAsync();
-
-            if (kingFridayRecords.Count > 0)
-            {
-                // Get the start of the week (Monday)
-                var today = DateTime.Today;
-                // Calculate Monday of the current week
-                int daysToSubtract = today.DayOfWeek == DayOfWeek.Sunday ? 6 : (int)today.DayOfWeek - 1;
-                var weekStartDate = today.AddDays(-daysToSubtract);
-                _logger.LogInformation($"Week start date: {weekStartDate}");
-
-                // Find the record closest to but before the week start
-                var recordsBeforeWeek = kingFridayRecords.Where(r => r.Updated < weekStartDate).ToList();
-                var baselineRecord = recordsBeforeWeek.Count > 0
-                    ? recordsBeforeWeek.OrderByDescending(r => r.Updated).First()
-                    : null;
-
-                // Find the latest record
-                var latestRecord = kingFridayRecords.OrderByDescending(r => r.Updated).First();
-
-                if (baselineRecord != null)
-                {
-                    _logger.LogInformation($"King Friday baseline: {baselineRecord.Updated}, SE: {baselineRecord.SEString}");
-                    _logger.LogInformation($"King Friday latest: {latestRecord.Updated}, SE: {latestRecord.SEString}");
-
-                    // Calculate the weekly gain
-                    if (latestRecord.SEString.EndsWith('s') && baselineRecord.SEString.EndsWith('s'))
-                    {
-                        // Scientific notation
-                        var latestValue = decimal.Parse(latestRecord.SEString.TrimEnd('s'));
-                        var baselineValue = decimal.Parse(baselineRecord.SEString.TrimEnd('s'));
-                        var diff = latestValue - baselineValue;
-
-                        _logger.LogInformation($"King Friday calculation: {latestValue} - {baselineValue} = {diff}");
-
-                        // Find King Friday in the rankings and update
-                        var kfInRankings = rankings.FirstOrDefault(r => r.IGN == "King Friday");
-                        if (kfInRankings != null && diff > 0)
-                        {
-                            kfInRankings.SEGainsWeek = $"{diff:0.00}s";
-                            _logger.LogInformation($"Set King Friday weekly gain to {kfInRankings.SEGainsWeek}");
-                        }
-                    }
-                }
-            }
-
             // Calculate weekly gains for all players in a single batch
             await CalculateWeeklyGains(rankings);
-
-            // Debug: Log a sample of the weekly gains (just a few players)
-            var samplePlayers = rankings.GroupBy(r => r.IGN).Select(g => g.First()).Take(3).ToList();
-            foreach (var player in samplePlayers)
-            {
-                _logger.LogInformation($"Sample weekly gain for {player.IGN}: {player.SEGainsWeek}");
-            }
 
             // Return all rankings but ensure we have a reasonable number of records
             // Group by player name and take the most recent records for each player
@@ -845,8 +653,6 @@ public class MajPlayerRankingsController : ControllerBase
                 .SelectMany(g => g.OrderByDescending(r => r.Updated).Take(10))
                 .OrderByDescending(r => r.Updated)
                 .ToList();
-
-            _logger.LogInformation($"Returning {groupedRankings.Count} records after grouping by player");
             return Ok(groupedRankings);
         }
         catch (Exception ex)

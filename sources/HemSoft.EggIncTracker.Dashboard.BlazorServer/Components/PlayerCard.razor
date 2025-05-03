@@ -89,7 +89,7 @@
                     }
                 </span>
                 <span class="d-inline-flex align-center mr-2">
-                    Prestiges Today/Week:
+                    Prestiges Today/Week/Total:
                      @* Use null-conditional access for PlayerGoals properties *@
                     @if (PlayerGoals?.DailyPrestigeGoal > 0)
                     {
@@ -121,6 +121,23 @@
                                     @Player?.PrestigesThisWeek
                                 </span>
                                 @if (isWeeklyGoalMet)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small"
+                                        Color="Color.Success" Class="ml-1"></MudIcon>
+                                }
+                            </span>
+                        </MudTooltip>
+                        <span> / </span>
+                         @* Use null-conditional access for PlayerGoals properties *@
+                        string totalTooltipText = "";
+                        bool isTotalGoalMet = false;
+                        int expectedTotalPrestiges = Player?.Prestiges ?? 0;
+                        <MudTooltip Text="@totalTooltipText" Arrow="true" Placement="Placement.Top">
+                            <span>
+                                <span style="@GetProgressColorStyle(Player?.Prestiges, expectedTotalPrestiges)">
+                                    @Player?.Prestiges
+                                </span>
+                                @if (isTotalGoalMet)
                                 {
                                     <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small"
                                         Color="Color.Success" Class="ml-1"></MudIcon>
@@ -165,23 +182,27 @@
                 </MudText>
             </MudProgressLinear>
             <div class="d-flex justify-space-between mt-n1">
-                <MudText Typo="Typo.caption">
-                    (@SEGoalBegin?.SEString) @(SEGoalBegin?.IGN?.Length > NameCutOff ?
-                                    SEGoalBegin.IGN.Substring(0, NameCutOff) : SEGoalBegin?.IGN)
-                                                                                            </MudText>
-                                                                                            <MudText Typo="Typo.caption">
-                    @(SEGoalEnd?.IGN?.Length > NameCutOff ? SEGoalEnd.IGN.Substring(0, NameCutOff) :
-                                    SEGoalEnd?.IGN) (@SEGoalEnd?.SEString)
-            </MudText>
+                <MudTooltip Text="@GetNextPlayersTooltip(NextLowerSEPlayers, "SE")" Arrow="true" Placement="Placement.Top">
+                    <MudText Typo="Typo.caption">
+                        (@SEGoalBegin?.SEString) @(SEGoalBegin?.IGN?.Length > NameCutOff ?
+                                        SEGoalBegin.IGN.Substring(0, NameCutOff) : SEGoalBegin?.IGN)
+                    </MudText>
+                </MudTooltip>
+                <MudTooltip Text="@GetNextPlayersTooltip(NextUpperSEPlayers, "SE")" Arrow="true" Placement="Placement.Top">
+                    <MudText Typo="Typo.caption">
+                        @(SEGoalEnd?.IGN?.Length > NameCutOff ? SEGoalEnd.IGN.Substring(0, NameCutOff) :
+                                        SEGoalEnd?.IGN) (@SEGoalEnd?.SEString)
+                    </MudText>
+                </MudTooltip>
+            </div>
         </div>
-    </div>
-    <!---------------------->
-    <!-- EB Progress Bar: -->
-    <!---------------------->
-    <div class="mt-2 px-4" style="width: 100%;">
-        <MudText Typo="Typo.subtitle2" Class="mb-0">
-            EB (@PlayerStats?.EB) -- Rank: @(EBGoalEnd?.Ranking + 1)
-        </MudText>
+        <!---------------------->
+        <!-- EB Progress Bar: -->
+        <!---------------------->
+        <div class="mt-2 px-4" style="width: 100%;">
+            <MudText Typo="Typo.subtitle2" Class="mb-0">
+                EB (@PlayerStats?.EB) -- Rank: @(EBGoalEnd?.Ranking + 1)
+            </MudText>
             <MudProgressLinear Color="Color.Success" Value="@PlayerEBGoalPercentage" Max="100" Striped="false"
                 Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
                 <MudText Typo="Typo.caption" Style="color: white;">
@@ -189,23 +210,27 @@
                 </MudText>
             </MudProgressLinear>
             <div class="d-flex justify-space-between mt-n1">
-                <MudText Typo="Typo.caption">
-                    (@EBGoalBegin?.EBString) @(EBGoalBegin?.IGN?.Length > NameCutOff ?
-                                    EBGoalBegin.IGN.Substring(0, NameCutOff) : EBGoalBegin?.IGN)
-                                                                                            </MudText>
-                                                                                            <MudText Typo="Typo.caption">
-                    @(EBGoalEnd?.IGN?.Length > NameCutOff ? EBGoalEnd.IGN.Substring(0, NameCutOff) :
-                                    EBGoalEnd?.IGN) (@EBGoalEnd?.EBString)
-            </MudText>
+                <MudTooltip Text="@GetNextPlayersTooltip(NextLowerEBPlayers, "EB")" Arrow="true" Placement="Placement.Top">
+                    <MudText Typo="Typo.caption">
+                        (@EBGoalBegin?.EBString) @(EBGoalBegin?.IGN?.Length > NameCutOff ?
+                                        EBGoalBegin.IGN.Substring(0, NameCutOff) : EBGoalBegin?.IGN)
+                    </MudText>
+                </MudTooltip>
+                <MudTooltip Text="@GetNextPlayersTooltip(NextUpperEBPlayers, "EB")" Arrow="true" Placement="Placement.Top">
+                    <MudText Typo="Typo.caption">
+                        @(EBGoalEnd?.IGN?.Length > NameCutOff ? EBGoalEnd.IGN.Substring(0, NameCutOff) :
+                                        EBGoalEnd?.IGN) (@EBGoalEnd?.EBString)
+                    </MudText>
+                </MudTooltip>
+            </div>
         </div>
-    </div>
-    <!----------------------->
-    <!-- MER Progress Bar: -->
-    <!----------------------->
-    <div class="mt-2 px-4" style="width: 100%;">
-        <MudText Typo="Typo.subtitle2" Class="mb-0">
-            MER (@PlayerStats?.MER) -- Rank: @MERGoalEnd?.Ranking
-        </MudText>
+        <!----------------------->
+        <!-- MER Progress Bar: -->
+        <!----------------------->
+        <div class="mt-2 px-4" style="width: 100%;">
+            <MudText Typo="Typo.subtitle2" Class="mb-0">
+                MER (@PlayerStats?.MER) -- Rank: @MERGoalEnd?.Ranking
+            </MudText>
             <MudProgressLinear Color="Color.Success" Value="@PlayerMERGoalPercentage" Max="100" Striped="false"
                 Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
                 <MudText Typo="Typo.caption" Style="color: white;">
@@ -213,23 +238,27 @@
                 </MudText>
             </MudProgressLinear>
             <div class="d-flex justify-space-between mt-n1">
-                <MudText Typo="Typo.caption">
-                    (@MERGoalBegin?.MER) @(MERGoalBegin?.IGN?.Length > NameCutOff ?
-                                    MERGoalBegin.IGN.Substring(0, NameCutOff) : MERGoalBegin?.IGN)
-                                                                                              </MudText>
-                                                                                              <MudText Typo="Typo.caption">
-                    @(MERGoalEnd?.IGN?.Length > NameCutOff ? MERGoalEnd.IGN.Substring(0, NameCutOff) :
-                                    MERGoalEnd?.IGN) (@MERGoalEnd?.MER)
-            </MudText>
+                <MudTooltip Text="@GetNextPlayersTooltip(NextLowerMERPlayers, "MER")" Arrow="true" Placement="Placement.Top">
+                    <MudText Typo="Typo.caption">
+                        (@MERGoalBegin?.MER) @(MERGoalBegin?.IGN?.Length > NameCutOff ?
+                                        MERGoalBegin.IGN.Substring(0, NameCutOff) : MERGoalBegin?.IGN)
+                    </MudText>
+                </MudTooltip>
+                <MudTooltip Text="@GetNextPlayersTooltip(NextUpperMERPlayers, "MER")" Arrow="true" Placement="Placement.Top">
+                    <MudText Typo="Typo.caption">
+                        @(MERGoalEnd?.IGN?.Length > NameCutOff ? MERGoalEnd.IGN.Substring(0, NameCutOff) :
+                                        MERGoalEnd?.IGN) (@MERGoalEnd?.MER)
+                    </MudText>
+                </MudTooltip>
+            </div>
         </div>
-    </div>
-    <!----------------------->
-    <!-- JER Progress Bar: -->
-    <!----------------------->
-    <div class="mt-2 px-4" style="width: 100%;">
-        <MudText Typo="Typo.subtitle2" Class="mb-0">
-            JER (@PlayerStats?.JER) -- Rank: @JERGoalEnd?.Ranking
-        </MudText>
+        <!----------------------->
+        <!-- JER Progress Bar: -->
+        <!----------------------->
+        <div class="mt-2 px-4" style="width: 100%;">
+            <MudText Typo="Typo.subtitle2" Class="mb-0">
+                JER (@PlayerStats?.JER) -- Rank: @JERGoalEnd?.Ranking
+            </MudText>
             <MudProgressLinear Color="Color.Success" Value="@PlayerJERGoalPercentage" Max="100" Striped="false"
                 Size="Size.Large" Style="height: 20px; border-radius: 4px;" Class="my-0">
                 <MudText Typo="Typo.caption" Style="color: white;">
@@ -237,17 +266,21 @@
                 </MudText>
             </MudProgressLinear>
             <div class="d-flex justify-space-between mt-n1">
-                <MudText Typo="Typo.caption">
-                    (@JERGoalBegin?.JER) @(JERGoalBegin?.IGN?.Length > NameCutOff ?
-                                    JERGoalBegin.IGN.Substring(0, NameCutOff) : JERGoalBegin?.IGN)
-                                                                                              </MudText>
-                                                                                              <MudText Typo="Typo.caption">
-                    @(JERGoalEnd?.IGN?.Length > NameCutOff ? JERGoalEnd.IGN.Substring(0, NameCutOff) :
-                                    JERGoalEnd?.IGN) (@JERGoalEnd?.JER)
-            </MudText>
+                <MudTooltip Text="@GetNextPlayersTooltip(NextLowerJERPlayers, "JER")" Arrow="true" Placement="Placement.Top">
+                    <MudText Typo="Typo.caption">
+                        (@JERGoalBegin?.JER) @(JERGoalBegin?.IGN?.Length > NameCutOff ?
+                                        JERGoalBegin.IGN.Substring(0, NameCutOff) : JERGoalBegin?.IGN)
+                    </MudText>
+                </MudTooltip>
+                <MudTooltip Text="@GetNextPlayersTooltip(NextUpperJERPlayers, "JER")" Arrow="true" Placement="Placement.Top">
+                    <MudText Typo="Typo.caption">
+                        @(JERGoalEnd?.IGN?.Length > NameCutOff ? JERGoalEnd.IGN.Substring(0, NameCutOff) :
+                                        JERGoalEnd?.IGN) (@JERGoalEnd?.JER)
+                    </MudText>
+                </MudTooltip>
+            </div>
         </div>
-    </div>
-</MudPaper>
+    </MudPaper>
 }
 else
 {
@@ -395,74 +428,68 @@ else
         animation-delay: 1.4s;
         background: rgba(255, 255, 255, 0.8);
     }
+</style>
 
+@code {
     /* Firework explosion animation */
-    @@keyframes firework-animation {
-        0% {
-            transform: scale(0.1);
-            opacity: 0;
+    public string FireworkAnimationKeyframes => @"
+        @keyframes firework-animation {
+            0% {
+                transform: scale(0.1);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
         }
-        50% {
-            transform: scale(1);
-            opacity: 1;
-        }
-        100% {
-            transform: scale(1.5);
-            opacity: 0;
-        }
-    }
+    ";
 
     /* Particles animation */
-    @@keyframes particles-animation {
-        0% {
-            transform: scale(0.1) translate(0, 0);
-            opacity: 0;
+    public string ParticlesAnimationKeyframes => @"
+        @keyframes particles-animation {
+            0% {
+                transform: scale(0.1) translate(0, 0);
+                opacity: 0;
+            }
+            25% {
+                transform: scale(1) translate(20px, -30px);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(0.8) translate(40px, -10px);
+                opacity: 0.8;
+            }
+            75% {
+                transform: scale(0.6) translate(10px, -40px);
+                opacity: 0.6;
+            }
+            100% {
+                transform: scale(0.4) translate(30px, -20px);
+                opacity: 0;
+            }
         }
-        25% {
-            transform: scale(1) translate(20px, -30px);
-            opacity: 1;
-        }
-        50% {
-            transform: scale(0.8) translate(40px, -10px);
-            opacity: 0.8;
-        }
-        75% {
-            transform: scale(0.6) translate(10px, -40px);
-            opacity: 0.6;
-        }
-        100% {
-            transform: scale(0.4) translate(30px, -20px);
-            opacity: 0;
-        }
-    }
-
-    /* Success background transition */
-    .goals-achieved {
-        transition: background-color 1s ease-in-out;
-    }
-
-    /* Goals achieved indicator */
-    .goals-achieved-indicator {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 5;
-        animation: pulse 2s infinite;
-    }
+    ";
 
     /* Pulse animation for the trophy icon */
-    @@keyframes pulse {
-        0% {
-            transform: scale(1);
-            opacity: 0.8;
+    public string PulseAnimationKeyframes => @"
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
         }
-        50% {
-            transform: scale(1.2);
-            opacity: 1;
-        }
-        100% {
-            transform: scale(1);
-            opacity: 0.8;
-        }
-    }
-</style>
+    ";
+}

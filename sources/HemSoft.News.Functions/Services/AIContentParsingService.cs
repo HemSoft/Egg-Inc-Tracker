@@ -56,12 +56,9 @@ public class AIContentParsingService : IAIContentParsingService
 
         try
         {
-            _logger.LogInformation("Parsing NuGet packages for source '{SourceName}' with query '{Query}'", source.Name, source.Query);
-
-            // Use the NewsContentParser to get potential package info from the scraped content
             var parserResultJson = await _newsContentParser.ParseNuGetPackagesAsync(content).ConfigureAwait(false);
+            List<NewsContentParser.PackageInfo>? packageInfos;
 
-            List<NewsContentParser.PackageInfo>? packageInfos = null;
             try
             {
                 packageInfos = System.Text.Json.JsonSerializer.Deserialize<List<NewsContentParser.PackageInfo>>(parserResultJson);
@@ -111,6 +108,7 @@ public class AIContentParsingService : IAIContentParsingService
 
             if (isNewVersion)
             {
+                _logger.LogInformation("NEW VERSION! found for package '{PackageId}'. Current version: '{Version}'", source.Query, latestVersion);
                 var newsItem = new NewsItem
                 {
                     Title = targetPackageInfo.Title,
@@ -118,16 +116,12 @@ public class AIContentParsingService : IAIContentParsingService
                     Url = targetPackageInfo.Url,
                     Source = source.Type,
                     Category = "Package Update",
-                    PublishedDate = DateTime.UtcNow,
+                    PublishedDate = Convert.ToDateTime(targetPackageInfo.ReleaseDate),
                     DiscoveredDate = DateTime.UtcNow,
                     IsRead = false,
                     AdditionalData = JsonConvert.SerializeObject(new { PackageId = targetPackageInfo.Title, Version = targetPackageInfo.Version })
                 };
                 newsItemsToCreate.Add(newsItem);
-            }
-            else
-            {
-                _logger.LogInformation("No new version found for package '{PackageId}'. Current version: '{Version}'", source.Query, latestVersion);
             }
 
             return newsItemsToCreate;

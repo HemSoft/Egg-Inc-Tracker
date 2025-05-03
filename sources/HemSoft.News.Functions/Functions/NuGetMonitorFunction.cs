@@ -38,22 +38,15 @@ public class NuGetMonitorFunction
     /// </summary>
     /// <param name="myTimer">Timer information</param>
     [Function("MonitorNewsSources")]
-    public async Task Run([TimerTrigger("0 */30 * * * *")] TimerInfo myTimer)
-    //public async Task Run([TimerTrigger("0 * * * * *")] TimerInfo myTimer)
+    public async Task Run([TimerTrigger("0 0 */2 * * *")] TimerInfo myTimer)
     {
-        _logger.LogInformation("News monitor function executed at: {Time}", DateTime.Now);
-
         try
         {
             // Get all news sources that need to be checked
             var newsSources = await _newsRepository.GetNewsSourcesToCheckAsync();
 
-            _logger.LogInformation("Found {Count} news sources to check", newsSources.Count());
-
             foreach (var source in newsSources)
             {
-                _logger.LogInformation("Checking news source: {Name}", source.Name);
-
                 try
                 {
                     // Scrape the URL
@@ -64,16 +57,8 @@ public class NuGetMonitorFunction
                     }
 
                     var result = await _firecrawlService.ScrapeUrlAsync(source.Url, MarkdownFormat);
-
-                    _logger.LogInformation("Successfully scraped content from {Name}", source.Name);
-
-                    // Process the results based on the source type
                     var newsItems = await ProcessScrapedContentAsync(source, result);
-
-                    // Update the last checked time
                     await _newsRepository.UpdateNewsSourceLastCheckedAsync(source.Id, DateTime.UtcNow);
-
-                    _logger.LogInformation("Found {Count} news items from {Name}", newsItems.Count, source.Name);
                 }
                 catch (Exception ex)
                 {

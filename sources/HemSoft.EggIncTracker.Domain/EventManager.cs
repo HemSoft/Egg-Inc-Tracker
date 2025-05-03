@@ -1,4 +1,4 @@
-﻿namespace HemSoft.EggIncTracker.Domain;
+namespace HemSoft.EggIncTracker.Domain;
 
 using System.Linq;
 
@@ -6,21 +6,20 @@ using HemSoft.EggIncTracker.Data;
 using HemSoft.EggIncTracker.Data.Dtos;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore; // Added for EF Core methods
-using System.Collections.Generic; // Added for List<>
-using System.Threading.Tasks; // Added for Task
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 public static class EventManager
 {
-    // Method to get active events from the database
     public static async Task<List<CurrentEventDto>> GetActiveEventsAsync(ILogger? logger)
     {
         try
         {
             logger?.LogInformation("Getting active events from database");
 
-            using var context = new EggIncContext();
-            var now = DateTime.UtcNow;
+            await using var context = new EggIncContext();
+            var now = DateTime.Now;
 
             // Get events that are currently active (EndTime > now)
             var activeEvents = await context.Events
@@ -29,7 +28,7 @@ public static class EventManager
                 .Select(e => new CurrentEventDto
                 {
                     EventId = e.EventId,
-                    Title = e.SubTitle, // Use SubTitle as Title since EventDto doesn't have a Title property
+                    Title = e.SubTitle,
                     SubTitle = e.SubTitle,
                     StartTime = e.StartTime,
                     EndTime = e.EndTime,
