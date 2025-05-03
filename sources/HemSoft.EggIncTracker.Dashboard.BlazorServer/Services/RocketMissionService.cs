@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using HemSoft.EggIncTracker.Dashboard.BlazorServer.Utilities;
 using HemSoft.EggIncTracker.Data.Dtos;
 using HemSoft.EggIncTracker.Domain;
 using Microsoft.Extensions.Logging;
@@ -36,7 +37,7 @@ public class RocketMissionService
     {
         { 0, "Unknown" },
         { 1, "Fueling" },
-        { 2, "Traveling" },
+        { 2, "Exploring" },
         { 3, "Returned" },
         { 4, "Complete" },
         { 5, "Archived" }
@@ -221,11 +222,11 @@ public class RocketMissionService
         }
         else if (timeSpan.TotalHours >= 1)
         {
-            return $"{timeSpan.Hours}h {timeSpan.Minutes}m";
+            return $"{timeSpan.Hours}h {timeSpan.Minutes}m {timeSpan.Seconds}s";
         }
         else
         {
-            return $"{timeSpan.Minutes}m {timeSpan.Seconds}s";
+            return $"{timeSpan.Minutes:D2}:{timeSpan.Seconds:D2}";
         }
     }
 
@@ -261,7 +262,7 @@ public class RocketMissionService
     /// <returns>Ship name</returns>
     public string GetShipName(int shipType)
     {
-        return ShipTypes.TryGetValue(shipType, out string? name) ? name : $"Unknown Ship ({shipType})";
+        return ShipNameMapper.GetShipName(shipType);
     }
 
     /// <summary>
@@ -271,7 +272,7 @@ public class RocketMissionService
     /// <returns>Status name</returns>
     public string GetStatusName(int statusCode)
     {
-        return MissionStatuses.TryGetValue(statusCode, out string? name) ? name : $"Unknown Status ({statusCode})";
+        return ShipNameMapper.GetStatusDescription(statusCode);
     }
 
     /// <summary>
