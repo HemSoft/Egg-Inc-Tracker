@@ -4,6 +4,7 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Components.Pages;
 using System.Numerics;
 using HemSoft.EggIncTracker.Dashboard.BlazorServer.Services;
 using HemSoft.EggIncTracker.Data.Dtos;
+using HemSoft.EggIncTracker.Domain;
 
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -31,6 +32,10 @@ public class DashboardPlayer
     public List<MajPlayerRankingDto> NextLowerJERPlayers { get; set; } = new List<MajPlayerRankingDto>();
     public List<MajPlayerRankingDto> NextUpperJERPlayers { get; set; } = new List<MajPlayerRankingDto>();
     public BigInteger? SEThisWeek { get; set; }
+
+    // Rocket mission data
+    public List<JsonPlayerExtendedMissionInfo> Missions { get; set; } = new List<JsonPlayerExtendedMissionInfo>();
+    public JsonPlayerExtendedMissionInfo? StandbyMission { get; set; }
 }
 
 // Ensure the partial class matches the file name and namespace
