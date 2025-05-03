@@ -152,15 +152,15 @@
         // Factory method to create Egg Day countdown
         public static CarouselItem CreateEggDayCountdown()
         {
-            // Calculate days until next Egg Day (July 8th)
+            // Calculate days until next Egg Day (July 14th)
             var today = DateTime.Today;
             var currentYear = today.Year;
-            var eggDay = new DateTime(currentYear, 7, 8);
+            var eggDay = new DateTime(currentYear, 7, 14);
 
             // If Egg Day has already passed this year, use next year's date
             if (today > eggDay)
             {
-                eggDay = new DateTime(currentYear + 1, 7, 8);
+                eggDay = new DateTime(currentYear + 1, 7, 14);
             }
 
             var daysLeft = (eggDay - today).Days;
@@ -171,7 +171,7 @@
                 SubTitle = "Days Left Until Egg Day",
                 Icon = Icons.Material.Filled.Egg,
                 IconColor = Color.Warning,
-                TimeText = $"{daysLeft} days until July 8th",
+                TimeText = $"{daysLeft} days until July 14th",
                 IsCustom = true
             };
         }
