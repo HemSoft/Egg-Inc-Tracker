@@ -2,6 +2,7 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Components;
 
 using HemSoft.EggIncTracker.Dashboard.BlazorServer.Services;
 using HemSoft.EggIncTracker.Dashboard.BlazorServer.Components.Pages;
+using HemSoft.EggIncTracker.Dashboard.BlazorServer.Utilities;
 using HemSoft.EggIncTracker.Data.Dtos;
 using HemSoft.EggIncTracker.Domain;
 using Microsoft.AspNetCore.Components;
@@ -93,8 +94,19 @@ public partial class RocketCard : IDisposable
         return Math.Min(fuel.Amount * 100, 100);
     }
 
+    // Get start time
+    private string GetStartTime(double startTimeDerived)
+    {
+        DateTime startTime = DateTimeOffset.FromUnixTimeSeconds((long)startTimeDerived).DateTime;
+
+        // Convert to local time
+        DateTime localStartTime = TimeZoneInfo.ConvertTimeFromUtc(startTime, TimeZoneInfo.Local);
+
+        return localStartTime.ToString("MM/dd HH:mm");
+    }
+
     // Get return time
-    private string GetReturnTime(double startTimeDerived, float durationSeconds)
+    private string GetReturnTime(double startTimeDerived, float durationSeconds, bool includeSeconds = false)
     {
         DateTime startTime = DateTimeOffset.FromUnixTimeSeconds((long)startTimeDerived).DateTime;
         DateTime returnTime = startTime.AddSeconds(durationSeconds);
@@ -102,23 +114,67 @@ public partial class RocketCard : IDisposable
         // Convert to local time
         DateTime localReturnTime = TimeZoneInfo.ConvertTimeFromUtc(returnTime, TimeZoneInfo.Local);
 
-        return localReturnTime.ToString("MM/dd HH:mm");
+        // Format based on when the mission returns
+        if (localReturnTime.Date == DateTime.Today)
+        {
+            return includeSeconds
+                ? $"Today at {localReturnTime:HH:mm:ss}"
+                : $"Today at {localReturnTime:HH:mm}";
+        }
+        else if (localReturnTime.Date == DateTime.Today.AddDays(1))
+        {
+            return includeSeconds
+                ? $"Tomorrow at {localReturnTime:HH:mm:ss}"
+                : $"Tomorrow at {localReturnTime:HH:mm}";
+        }
+        else
+        {
+            return includeSeconds
+                ? localReturnTime.ToString("MM/dd HH:mm:ss")
+                : localReturnTime.ToString("MM/dd HH:mm");
+        }
+    }
+
+    // Format duration
+    private string FormatDuration(float durationSeconds)
+    {
+        TimeSpan duration = TimeSpan.FromSeconds(durationSeconds);
+
+        if (duration.TotalDays >= 1)
+        {
+            return $"{duration.Days}d {duration.Hours}h {duration.Minutes}m";
+        }
+        else if (duration.TotalHours >= 1)
+        {
+            return $"{duration.Hours}h {duration.Minutes}m";
+        }
+        else
+        {
+            return $"{duration.Minutes}m {duration.Seconds}s";
+        }
+    }
+
+    // Get return time style (color based on how soon the mission returns)
+    private string GetReturnTimeStyle(double secondsRemaining)
+    {
+        if (secondsRemaining <= 3600) // Less than 1 hour
+        {
+            return "color: var(--mud-palette-success);";
+        }
+        else if (secondsRemaining <= 14400) // Less than 4 hours
+        {
+            return "color: var(--mud-palette-info);";
+        }
+        else
+        {
+            return string.Empty;
+        }
     }
 
     // Get ship name based on ship type
     private string GetShipName(int shipType)
     {
-        return shipType switch
-        {
-            1 => "Chicken One",
-            2 => "Chicken Heavy",
-            3 => "BCR",
-            4 => "Quintillion Chicken",
-            5 => "Corellihen Corvette",
-            6 => "Galeggtica",
-            7 => "Henerprise",
-            _ => $"Unknown Ship ({shipType})"
-        };
+        return ShipNameMapper.GetShipName(shipType);
     }
 
     // Get ship icon based on ship type
@@ -140,13 +196,7 @@ public partial class RocketCard : IDisposable
     // Get status name based on status code
     private string GetStatusName(int statusCode)
     {
-        return statusCode switch
-        {
-            1 => "Fueling",
-            2 => "Traveling",
-            3 => "Returned",
-            _ => $"Unknown ({statusCode})"
-        };
+        return ShipNameMapper.GetStatusDescription(statusCode);
     }
 
     // Get status color based on status code
@@ -157,8 +207,81 @@ public partial class RocketCard : IDisposable
             1 => Color.Warning,  // Fueling
             2 => Color.Info,     // Traveling
             3 => Color.Success,  // Returned
+            10 => Color.Success, // Complete
+            25 => Color.Dark,    // Archived
             _ => Color.Default
         };
+    }
+
+    // Get status color hex based on status code
+    private string GetStatusColorHex(int statusCode)
+    {
+        return statusCode switch
+        {
+            1 => "#ff9800",  // Warning - Fueling
+            2 => "#03a9f4",  // Info - Traveling
+            3 => "#4caf50",  // Success - Returned
+            10 => "#4caf50", // Success - Complete
+            25 => "#424242", // Dark - Archived
+            _ => "#9e9e9e"   // Default
+        };
+    }
+
+    // Get duration type description
+    private string GetDurationType(int durationType)
+    {
+        return durationType switch
+        {
+            0 => "Short",
+            1 => "Medium",
+            2 => "Long",
+            3 => "Epic",
+            _ => $"Unknown ({durationType})"
+        };
+    }
+
+    // Get estimated duration based on ship type and level
+    private string GetDurationByShipAndLevel(int shipType, int level)
+    {
+        // These are approximate durations based on ship type and level
+        // The actual duration may vary slightly
+        TimeSpan duration;
+
+        switch (shipType)
+        {
+            case 10: // Cornish-Ex Hen
+                duration = level switch
+                {
+                    7 => TimeSpan.FromHours(38.4), // 138,240 seconds
+                    6 => TimeSpan.FromHours(38.4), // 138,240 seconds
+                    5 => TimeSpan.FromHours(4.8),  // 17,280 seconds
+                    4 => TimeSpan.FromHours(9.6),  // 34,560 seconds
+                    _ => TimeSpan.FromHours(38.4)  // Default to long mission
+                };
+                break;
+            case 9: // Defihent
+                duration = level switch
+                {
+                    6 => TimeSpan.FromHours(9.6),  // 34,560 seconds
+                    5 => TimeSpan.FromHours(9.6),  // 34,560 seconds
+                    _ => TimeSpan.FromHours(57.6)  // 207,360 seconds (default to long mission)
+                };
+                break;
+            case 8: // Henerprise
+                duration = TimeSpan.FromHours(7.2); // 25,920 seconds
+                break;
+            default:
+                duration = TimeSpan.FromHours(24); // Default duration
+                break;
+        }
+
+        return FormatDuration((float)duration.TotalSeconds);
+    }
+
+    // Get quality bonus text
+    private string GetQualityBonusText(double qualityBump)
+    {
+        return qualityBump > 0 ? $"+{qualityBump:F2}x" : "None";
     }
 
     // Get egg name based on egg type
