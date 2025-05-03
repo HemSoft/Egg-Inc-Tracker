@@ -28,7 +28,7 @@ public partial class RocketDashboard : IDisposable, IAsyncDisposable
     private string _timeSinceLastUpdate = "Never";
     private bool IsLoading = false;
     private Timer? _refreshTimer;
-    private const int RefreshIntervalMs = 30000; // 30 seconds
+    private const int RefreshIntervalMs = 1800000; // 30 minutes
 
     private DashboardPlayer _kingFridayPlayer = new();
     private DashboardPlayer _kingSaturdayPlayer = new();
