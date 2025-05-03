@@ -1,10 +1,4 @@
-@using HemSoft.EggIncTracker.Data.Dtos
-@using HemSoft.EggIncTracker.Dashboard.BlazorServer.Services @* Updated namespace *@
-@using HemSoft.EggIncTracker.Dashboard.BlazorServer.Extensions @* Updated namespace *@
 @using MudBlazor
-@using Microsoft.Extensions.Logging
-@using HemSoft.EggIncTracker.Domain
-@implements IDisposable
 
 <div class="event-carousel @(_isDarkMode ? "dark-mode" : "light-mode")"
     style="z-index: 1; height: 100%; display: flex; align-items: center; justify-content: center; width: 100%;">
@@ -16,19 +10,42 @@
     {
         <MudText Typo="Typo.subtitle1" Color="Color.Error">@_errorMessage</MudText>
     }
-    else if (_events == null || !_events.Any())
+    else if (_carouselItems.Count == 0)
     {
-        <MudText Typo="Typo.subtitle1">No active events</MudText>
+        <MudText Typo="Typo.subtitle1">No items to display</MudText>
     }
-    else if (_currentEvent != null)
+    else if (_currentItem != null)
     {
-        <div class="d-flex flex-column align-center justify-center event-content @_transitionClass" style="width: 100%;">
-            <div class="d-flex align-center">
-                <MudIcon Icon="@Icons.Material.Filled.Event" Color="Color.Primary" Size="Size.Medium" Class="mr-2" />
-                <MudText Typo="Typo.subtitle1" Color="Color.Primary">@_currentEvent.SubTitle
-                </MudText>
+        <div class="d-flex align-center justify-center" style="width: 100%; position: relative;">
+            <!-- Previous button -->
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Color="Color.Default" Size="Size.Small"
+                OnClick="PreviousItemAsync" Class="carousel-nav-button carousel-prev-button"
+                Style="position: absolute; left: 0; z-index: 2;" Disabled="@_isTransitioning" />
+
+            <!-- Carousel content -->
+            <div class="d-flex flex-column align-center justify-center event-content @_transitionClass"
+                style="width: 100%; padding: 0 40px;">
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@_currentItem.Icon" Color="@_currentItem.IconColor" Size="Size.Medium" Class="mr-2" />
+                    <MudText Typo="Typo.subtitle1" Color="@_currentItem.IconColor">@_currentItem.SubTitle</MudText>
+                </div>
+                <MudText Typo="Typo.caption" Class="mt-1">@_currentItem.TimeText</MudText>
+
+                <!-- Carousel indicators -->
+                <div class="d-flex justify-center mt-1">
+                    @for (int i = 0; i < _carouselItems.Count; i++)
+                    {
+                        var index = i;
+                        <div class="carousel-indicator @(index == _currentIndex ? "active" : "")"
+                            @onclick="async () => await GoToItemAsync(index)"></div>
+                    }
+                </div>
             </div>
-            <MudText Typo="Typo.caption" Class="mt-1">@GetTimeRemaining(_currentEvent)</MudText>
+
+            <!-- Next button -->
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Color="Color.Default" Size="Size.Small"
+                OnClick="NextItemAsync" Class="carousel-nav-button carousel-next-button"
+                Style="position: absolute; right: 0; z-index: 2;" Disabled="@_isTransitioning" />
         </div>
     }
 </div>
@@ -49,355 +66,42 @@
 
     .event-content.fade-out {
         opacity: 0;
+        transition: opacity 0.3s ease-out;
     }
 
     .event-content.fade-in {
         opacity: 1;
+        transition: opacity 0.3s ease-in;
+    }
+
+    .carousel-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: rgba(128, 128, 128, 0.5);
+        margin: 0 3px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .carousel-indicator.active {
+        background-color: var(--mud-palette-primary);
+    }
+
+    .carousel-nav-button {
+        opacity: 0.6;
+        transition: opacity 0.3s ease;
+    }
+
+    .carousel-nav-button:hover {
+        opacity: 1;
+    }
+
+    .event-carousel.dark-mode .carousel-nav-button {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .event-carousel.light-mode .carousel-nav-button {
+        color: rgba(0, 0, 0, 0.7);
     }
 </style>
-
-@code {
-    // Removed IApiService injection
-    // [Inject] private HemSoft.EggIncTracker.Dashboard.BlazorServer.Services.IApiService ApiService { get; set; } = default!;
-    [Inject] private ILogger<EventCarousel> Logger { get; set; } = default!;
-    [Parameter] public bool IsDarkMode { get; set; }
-
-    private List<CurrentEventDto>? _events;
-    private CurrentEventDto? _currentEvent;
-    private int _currentIndex = 0;
-    private System.Timers.Timer? _rotationTimer;
-    private System.Timers.Timer? _refreshTimer;
-    private System.Timers.Timer? _expiredEventRefreshTimer;
-    private bool _isDarkMode;
-    private bool _isLoading = true;
-    private string? _errorMessage;
-    private bool _expiredEventRefreshScheduled = false;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            Logger.LogInformation("EventCarousel: Initializing");
-            // Initialize dark mode
-            _isDarkMode = IsDarkMode;
-
-            await LoadEventsAsync();
-
-            // Set up rotation timer (10 seconds)
-            _rotationTimer = new System.Timers.Timer(10000);
-            _rotationTimer.Elapsed += OnRotationTimerElapsed;
-            _rotationTimer.AutoReset = true;
-            _rotationTimer.Start();
-
-            // Set up refresh timer (5 minutes)
-            _refreshTimer = new System.Timers.Timer(300000); // 5 minutes
-            _refreshTimer.Elapsed += OnRefreshTimerElapsed;
-            _refreshTimer.AutoReset = true;
-            _refreshTimer.Start();
-
-            Logger.LogInformation("EventCarousel: Initialized successfully");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error initializing EventCarousel");
-            _errorMessage = "Error loading events. Please try again later.";
-        }
-        finally
-        {
-            _isLoading = false;
-        }
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        // Check if dark mode has changed
-        if (_isDarkMode != IsDarkMode)
-        {
-            Logger.LogInformation($"EventCarousel: Dark mode changed to {IsDarkMode}");
-            _isDarkMode = IsDarkMode;
-        }
-    }
-
-    private async Task LoadEventsAsync()
-    {
-        try
-        {
-            Logger.LogInformation("EventCarousel: Loading events");
-            _isLoading = true;
-            _errorMessage = null;
-
-            var events = await EventManager.GetActiveEventsAsync(Logger);
-            if (!events.Any())
-            {
-                Logger.LogInformation("EventCarousel: No active events found");
-                _events = new List<CurrentEventDto>();
-                _currentEvent = null;
-            }
-            else
-            {
-                _events = events;
-                _currentIndex = 0;
-                _currentEvent = _events.FirstOrDefault();
-                Logger.LogInformation($"EventCarousel: Loaded {_events.Count} events");
-
-                // Check if any events are expired
-                if (_events.Any(e => e.EndTime.HasValue && e.EndTime.Value < DateTime.Now))
-                {
-                    Logger.LogInformation("EventCarousel: Found expired events during initialization");
-                    // If all events are expired, schedule a refresh
-                    if (_events.All(e => e.EndTime.HasValue && e.EndTime.Value < DateTime.Now))
-                    {
-                        ScheduleRefreshForExpiredEvent();
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error loading events");
-            _errorMessage = "Error loading events. Please try again later.";
-            _events = new List<CurrentEventDto>();
-            _currentEvent = null;
-        }
-        finally
-        {
-            _isLoading = false;
-        }
-    }
-
-    private bool _isTransitioning = false;
-    private string _transitionClass = "";
-
-    private void OnRotationTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
-    {
-        try
-        {
-            // Skip rotation if we're already transitioning or if there are no events
-            if (_isTransitioning || _events == null || !_events.Any())
-            {
-                return;
-            }
-
-            // If we only have one event, no need to rotate
-            if (_events.Count == 1)
-            {
-                // Check if the single event is expired and refresh if needed
-                if (_currentEvent?.EndTime.HasValue == true && _currentEvent.EndTime.Value < DateTime.Now)
-                {
-                    ScheduleRefreshForExpiredEvent();
-                    return;
-                }
-                return;
-            }
-
-            _isTransitioning = true;
-
-            // Use InvokeAsync to ensure we're on the UI thread
-            InvokeAsync(async () =>
-            {
-                try
-                {
-                    _transitionClass = "fade-out";
-
-                    // Wait for fade-out animation to complete
-                    await Task.Delay(300);
-
-                    // Move to the next event
-                    _currentIndex = (_currentIndex + 1) % _events.Count;
-                    _currentEvent = _events[_currentIndex];
-
-                    // Check if the new current event is expired
-                    if (_currentEvent?.EndTime.HasValue == true && _currentEvent.EndTime.Value < DateTime.Now)
-                    {
-                        // If all events are expired, schedule a refresh
-                        if (_events.All(e => e.EndTime.HasValue && e.EndTime.Value < DateTime.Now))
-                        {
-                            ScheduleRefreshForExpiredEvent();
-                        }
-                    }
-
-                    // Start fade-in transition
-                    _transitionClass = "fade-in";
-
-                    // Wait for fade-in animation to complete
-                    await Task.Delay(300);
-
-                    // Reset transition class
-                    _transitionClass = "";
-                    _isTransitioning = false;
-
-                    // Trigger a UI refresh
-                    StateHasChanged();
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Error during event rotation transition");
-                    _isTransitioning = false; // Ensure flag is reset on error
-                }
-            });
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error in rotation timer");
-            _isTransitioning = false; // Ensure flag is reset on error
-        }
-    }
-
-    private void OnRefreshTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
-    {
-        try
-        {
-            // Use InvokeAsync to ensure we're on the UI thread
-            InvokeAsync(async () =>
-            {
-                try
-                {
-                    await LoadEventsAsync();
-                    // Trigger a UI refresh
-                    StateHasChanged();
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Error loading events during refresh");
-                }
-            });
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error in refresh timer");
-        }
-    }
-
-    private void ScheduleRefreshForExpiredEvent()
-    {
-        // Only schedule a refresh if one isn't already scheduled
-        if (!_expiredEventRefreshScheduled)
-        {
-            Logger.LogInformation("EventCarousel: Scheduling refresh for expired event");
-            _expiredEventRefreshScheduled = true;
-
-            // Dispose of any existing timer
-            if (_expiredEventRefreshTimer != null)
-            {
-                _expiredEventRefreshTimer.Stop();
-                _expiredEventRefreshTimer.Elapsed -= OnExpiredEventRefreshTimerElapsed;
-                _expiredEventRefreshTimer.Dispose();
-            }
-
-            // Create a new timer that will trigger after 5 seconds
-            _expiredEventRefreshTimer = new System.Timers.Timer(5000); // 5 seconds
-            _expiredEventRefreshTimer.Elapsed += OnExpiredEventRefreshTimerElapsed;
-            _expiredEventRefreshTimer.AutoReset = false; // Only trigger once
-            _expiredEventRefreshTimer.Start();
-        }
-    }
-
-    private void OnExpiredEventRefreshTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
-    {
-        try
-        {
-            Logger.LogInformation("EventCarousel: Refreshing events due to expired event");
-
-            // Use InvokeAsync to ensure we're on the UI thread
-            InvokeAsync(async () =>
-            {
-                try
-                {
-                    await LoadEventsAsync();
-                    _expiredEventRefreshScheduled = false;
-
-                    // Trigger a UI refresh
-                    StateHasChanged();
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Error refreshing events for expired event");
-                    _expiredEventRefreshScheduled = false;
-                }
-            });
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error in expired event refresh timer");
-            _expiredEventRefreshScheduled = false;
-        }
-    }
-
-    public void Dispose()
-    {
-        if (_rotationTimer != null)
-        {
-            _rotationTimer.Stop();
-            _rotationTimer.Elapsed -= OnRotationTimerElapsed;
-            _rotationTimer.Dispose();
-        }
-
-        if (_refreshTimer != null)
-        {
-            _refreshTimer.Stop();
-            _refreshTimer.Elapsed -= OnRefreshTimerElapsed;
-            _refreshTimer.Dispose();
-        }
-
-        if (_expiredEventRefreshTimer != null)
-        {
-            _expiredEventRefreshTimer.Stop();
-            _expiredEventRefreshTimer.Elapsed -= OnExpiredEventRefreshTimerElapsed;
-            _expiredEventRefreshTimer.Dispose();
-        }
-    }
-
-    private string GetEventIcon(string eventType)
-    {
-        return eventType switch
-        {
-            "hab-sale" => Icons.Material.Filled.Home,
-            "piggy-boost" => Icons.Material.Filled.Savings,
-            "mission-fuel" => Icons.Material.Filled.Rocket,
-            "boost-duration" => Icons.Material.Filled.Speed,
-            "prestige-boost" => Icons.Material.Filled.EmojiEvents,
-            _ => Icons.Material.Filled.Event
-        };
-    }
-
-    private Color GetEventColor(string eventType)
-    {
-        return eventType switch
-        {
-            "hab-sale" => Color.Primary,
-            "piggy-boost" => Color.Success,
-            "mission-fuel" => Color.Warning,
-            "boost-duration" => Color.Info,
-            "prestige-boost" => Color.Secondary,
-            _ => Color.Default
-        };
-    }
-
-    private string GetTimeRemaining(CurrentEventDto eventDto)
-    {
-        if (eventDto.EndTime.HasValue)
-        {
-            var timeRemaining = eventDto.EndTime.Value - DateTime.Now;
-            if (timeRemaining.TotalSeconds <= 0)
-            {
-                // If we detect an expired event, schedule a refresh
-                ScheduleRefreshForExpiredEvent();
-                return "Expired"; // Handle expired events
-            }
-            if (timeRemaining.TotalDays >= 1)
-            {
-                return $"{Math.Floor(timeRemaining.TotalDays)}d {timeRemaining.Hours}h remaining";
-            }
-            else if (timeRemaining.TotalHours >= 1)
-            {
-                return $"{Math.Floor(timeRemaining.TotalHours)}h {timeRemaining.Minutes}m remaining";
-            }
-            else
-            {
-                return $"{timeRemaining.Minutes}m {timeRemaining.Seconds}s remaining";
-            }
-        }
-
-        return "Time remaining unknown";
-    }
-}
