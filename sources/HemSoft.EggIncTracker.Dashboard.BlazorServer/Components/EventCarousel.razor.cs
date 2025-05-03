@@ -210,6 +210,7 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Components
             {
                 // Start fade-out transition
                 _transitionClass = "fade-out";
+                StateHasChanged(); // Force UI update to apply the fade-out class
 
                 // Wait for fade-out animation to complete
                 await Task.Delay(300);
@@ -231,6 +232,7 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Components
 
                 // Start fade-in transition
                 _transitionClass = "fade-in";
+                StateHasChanged(); // Force UI update to apply the fade-in class
 
                 // Wait for fade-in animation to complete
                 await Task.Delay(300);
@@ -241,7 +243,7 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Components
             finally
             {
                 _isTransitioning = false;
-                StateHasChanged();
+                StateHasChanged(); // Final UI update
             }
         }
 
