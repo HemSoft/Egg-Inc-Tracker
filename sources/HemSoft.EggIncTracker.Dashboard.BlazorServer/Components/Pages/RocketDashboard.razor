@@ -1,0 +1,78 @@
+@page "/rockets"
+@using Microsoft.AspNetCore.Components
+@using HemSoft.EggIncTracker.Dashboard.BlazorServer.Components
+@implements IDisposable
+@implements IAsyncDisposable
+
+<PageTitle>Rocket Dashboard</PageTitle>
+
+<div class="dashboard-container mt-4 px-3">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.body2">Last updated: @_timeSinceLastUpdate</MudText>
+        <div class="d-flex align-center" style="visibility: @(IsLoading ? "visible" : "hidden")">
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2"/>
+            <MudText Typo="Typo.body2">Refreshing...</MudText>
+        </div>
+    </div>
+
+    @if (IsLoading && _lastUpdated == default)
+    {
+        <!-- Initial loading state - show a loading indicator for the entire dashboard -->
+        <div class="d-flex flex-column justify-center align-center" style="height: 400px;">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h6" Class="mt-4">Loading rocket mission data...</MudText>
+            <MudText Typo="Typo.body2" Class="mt-2">This may take a few moments</MudText>
+        </div>
+    }
+    else
+    {
+        <MudGrid Spacing="2" Class="fill-grid">
+            <!----------------->
+            <!-- King Monday -->
+            <!----------------->
+            <MudItem xs="3">
+                <RocketCard DashboardPlayer="_kingMondayPlayer"
+                           LastUpdatedTimestamp='DashboardState.GetMissionLastUpdated("King Monday!")'
+                           IsLoading="IsLoading" />
+            </MudItem>
+            <!----------------->
+            <!-- King Sunday -->
+            <!----------------->
+            <MudItem xs="3">
+                <RocketCard DashboardPlayer="_kingSundayPlayer"
+                           LastUpdatedTimestamp='DashboardState.GetMissionLastUpdated("King Sunday!")'
+                           IsLoading="IsLoading" />
+            </MudItem>
+            <!------------------->
+            <!-- King Saturday -->
+            <!------------------->
+            <MudItem xs="3">
+                <RocketCard DashboardPlayer="_kingSaturdayPlayer"
+                           LastUpdatedTimestamp='DashboardState.GetMissionLastUpdated("King Saturday!")'
+                           IsLoading="IsLoading" />
+            </MudItem>
+            <!----------------->
+            <!-- King Friday -->
+            <!----------------->
+            <MudItem xs="3">
+                <RocketCard DashboardPlayer="_kingFridayPlayer"
+                           LastUpdatedTimestamp='DashboardState.GetMissionLastUpdated("King Friday!")'
+                           IsLoading="IsLoading" />
+            </MudItem>
+        </MudGrid>
+    }
+</div>
+
+@code {
+    // Lifecycle methods for component cleanup
+    void IDisposable.Dispose()
+    {
+        // This will call the Dispose method in the code-behind file
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        // This will call the DisposeAsync method in the code-behind file
+        await DisposeAsync();
+    }
+}
