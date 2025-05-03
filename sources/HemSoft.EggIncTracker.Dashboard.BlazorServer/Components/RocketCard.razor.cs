@@ -57,6 +57,7 @@ public partial class RocketCard : IDisposable
     // Format time remaining in a human-readable format
     private string FormatTimeRemaining(double seconds)
     {
+        // Calculate the actual time remaining based on the return time
         TimeSpan timeSpan = TimeSpan.FromSeconds(seconds);
 
         if (timeSpan.TotalDays >= 1)
@@ -65,11 +66,34 @@ public partial class RocketCard : IDisposable
         }
         else if (timeSpan.TotalHours >= 1)
         {
-            return $"{timeSpan.Hours}h {timeSpan.Minutes}m";
+            return $"{timeSpan.Hours}h {timeSpan.Minutes}m {timeSpan.Seconds}s";
         }
         else
         {
-            return $"{timeSpan.Minutes}m {timeSpan.Seconds}s";
+            return $"{timeSpan.Minutes:D2}:{timeSpan.Seconds:D2}";
+        }
+    }
+
+    // Calculate actual time remaining based on return time
+    private string CalculateActualTimeRemaining(double startTimeDerived, float durationSeconds)
+    {
+        DateTime startTime = DateTimeOffset.FromUnixTimeSeconds((long)startTimeDerived).DateTime;
+        DateTime returnTime = startTime.AddSeconds(durationSeconds);
+        DateTime localReturnTime = TimeZoneInfo.ConvertTimeFromUtc(returnTime, TimeZoneInfo.Local);
+
+        TimeSpan timeRemaining = localReturnTime - DateTime.Now;
+
+        if (timeRemaining.TotalDays >= 1)
+        {
+            return $"{timeRemaining.Days}d {timeRemaining.Hours}h {timeRemaining.Minutes}m";
+        }
+        else if (timeRemaining.TotalHours >= 1)
+        {
+            return $"{timeRemaining.Hours}h {timeRemaining.Minutes}m {timeRemaining.Seconds}s";
+        }
+        else
+        {
+            return $"{timeRemaining.Minutes:D2}:{timeRemaining.Seconds:D2}";
         }
     }
 
@@ -81,9 +105,21 @@ public partial class RocketCard : IDisposable
             return 0;
         }
 
-        double elapsed = mission.DurationSeconds - mission.SecondsRemaining;
+        // Make sure we have a positive value for seconds remaining
+        double secondsRemaining = Math.Max(0, mission.SecondsRemaining);
+
+        // Calculate elapsed time and percentage
+        double elapsed = mission.DurationSeconds - secondsRemaining;
         double percentage = (elapsed / mission.DurationSeconds) * 100;
-        return Math.Clamp(percentage, 0, 100);
+
+        // Ensure we return a value between 0 and 100
+        // For very small values, set a minimum of 5% to ensure the progress bar is visible
+        double result = Math.Clamp(percentage, 5, 100);
+
+        // Log the calculation for debugging
+        System.Diagnostics.Debug.WriteLine($"Mission progress: Duration={mission.DurationSeconds}, Remaining={secondsRemaining}, Elapsed={elapsed}, Percentage={percentage}, Result={result}");
+
+        return result;
     }
 
     // Calculate fuel percentage
@@ -207,7 +243,7 @@ public partial class RocketCard : IDisposable
             1 => Color.Warning,  // Fueling
             2 => Color.Info,     // Traveling
             3 => Color.Success,  // Returned
-            10 => Color.Success, // Complete
+            10 => Color.Warning, // In Progress (was Complete)
             25 => Color.Dark,    // Archived
             _ => Color.Default
         };
@@ -221,7 +257,7 @@ public partial class RocketCard : IDisposable
             1 => "#ff9800",  // Warning - Fueling
             2 => "#03a9f4",  // Info - Traveling
             3 => "#4caf50",  // Success - Returned
-            10 => "#4caf50", // Success - Complete
+            10 => "#ff9800", // Warning - In Progress (was Complete)
             25 => "#424242", // Dark - Archived
             _ => "#9e9e9e"   // Default
         };
