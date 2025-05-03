@@ -16,19 +16,49 @@
     {
         <MudText Typo="Typo.subtitle1" Color="Color.Error">@_errorMessage</MudText>
     }
-    else if (_events == null || !_events.Any())
+    else if (_carouselItems.Count == 0)
     {
-        <MudText Typo="Typo.subtitle1">No active events</MudText>
+        <MudText Typo="Typo.subtitle1">No items to display</MudText>
     }
-    else if (_currentEvent != null)
+    else if (_currentItem != null)
     {
-        <div class="d-flex flex-column align-center justify-center event-content @_transitionClass" style="width: 100%;">
-            <div class="d-flex align-center">
-                <MudIcon Icon="@Icons.Material.Filled.Event" Color="Color.Primary" Size="Size.Medium" Class="mr-2" />
-                <MudText Typo="Typo.subtitle1" Color="Color.Primary">@_currentEvent.SubTitle
-                </MudText>
+        <div class="d-flex align-center justify-center" style="width: 100%; position: relative;">
+            <!-- Previous button -->
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                          Color="Color.Default"
+                          Size="Size.Small"
+                          OnClick="PreviousItemAsync"
+                          Class="carousel-nav-button carousel-prev-button"
+                          Style="position: absolute; left: 0; z-index: 2;"
+                          Disabled="@_isTransitioning" />
+
+            <!-- Carousel content -->
+            <div class="d-flex flex-column align-center justify-center event-content @_transitionClass" style="width: 100%; padding: 0 40px;">
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@_currentItem.Icon" Color="@_currentItem.IconColor" Size="Size.Medium" Class="mr-2" />
+                    <MudText Typo="Typo.subtitle1" Color="@_currentItem.IconColor">@_currentItem.SubTitle</MudText>
+                </div>
+                <MudText Typo="Typo.caption" Class="mt-1">@_currentItem.TimeText</MudText>
+
+                <!-- Carousel indicators -->
+                <div class="d-flex justify-center mt-1">
+                    @for (int i = 0; i < _carouselItems.Count; i++)
+                    {
+                        var index = i;
+                        <div class="carousel-indicator @(index == _currentIndex ? "active" : "")"
+                             @onclick="async () => await GoToItemAsync(index)"></div>
+                    }
+                </div>
             </div>
-            <MudText Typo="Typo.caption" Class="mt-1">@GetTimeRemaining(_currentEvent)</MudText>
+
+            <!-- Next button -->
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                          Color="Color.Default"
+                          Size="Size.Small"
+                          OnClick="NextItemAsync"
+                          Class="carousel-nav-button carousel-next-button"
+                          Style="position: absolute; right: 0; z-index: 2;"
+                          Disabled="@_isTransitioning" />
         </div>
     }
 </div>
@@ -54,6 +84,37 @@
     .event-content.fade-in {
         opacity: 1;
     }
+
+    .carousel-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: rgba(128, 128, 128, 0.5);
+        margin: 0 3px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .carousel-indicator.active {
+        background-color: var(--mud-palette-primary);
+    }
+
+    .carousel-nav-button {
+        opacity: 0.6;
+        transition: opacity 0.3s ease;
+    }
+
+    .carousel-nav-button:hover {
+        opacity: 1;
+    }
+
+    .event-carousel.dark-mode .carousel-nav-button {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .event-carousel.light-mode .carousel-nav-button {
+        color: rgba(0, 0, 0, 0.7);
+    }
 </style>
 
 @code {
@@ -62,8 +123,63 @@
     [Inject] private ILogger<EventCarousel> Logger { get; set; } = default!;
     [Parameter] public bool IsDarkMode { get; set; }
 
+    // Class to represent carousel items (both events and custom items like Egg Day countdown)
+    private class CarouselItem
+    {
+        public string Title { get; set; } = string.Empty;
+        public string SubTitle { get; set; } = string.Empty;
+        public string Icon { get; set; } = Icons.Material.Filled.Event;
+        public Color IconColor { get; set; } = Color.Primary;
+        public string TimeText { get; set; } = string.Empty;
+        public bool IsCustom { get; set; } = false;
+        public CurrentEventDto? EventData { get; set; }
+
+        // Factory method to create from CurrentEventDto
+        public static CarouselItem FromEvent(CurrentEventDto eventDto, Func<CurrentEventDto, string> getTimeRemaining,
+            Func<string?, string> getEventIcon, Func<string?, Color> getEventColor)
+        {
+            return new CarouselItem
+            {
+                Title = eventDto.Title,
+                SubTitle = eventDto.SubTitle,
+                Icon = getEventIcon(eventDto.EventType),
+                IconColor = getEventColor(eventDto.EventType),
+                TimeText = getTimeRemaining(eventDto),
+                EventData = eventDto
+            };
+        }
+
+        // Factory method to create Egg Day countdown
+        public static CarouselItem CreateEggDayCountdown()
+        {
+            // Calculate days until next Egg Day (July 8th)
+            var today = DateTime.Today;
+            var currentYear = today.Year;
+            var eggDay = new DateTime(currentYear, 7, 8);
+
+            // If Egg Day has already passed this year, use next year's date
+            if (today > eggDay)
+            {
+                eggDay = new DateTime(currentYear + 1, 7, 8);
+            }
+
+            var daysLeft = (eggDay - today).Days;
+
+            return new CarouselItem
+            {
+                Title = "Egg Day Countdown",
+                SubTitle = "Days Left Until Egg Day",
+                Icon = Icons.Material.Filled.Egg,
+                IconColor = Color.Warning,
+                TimeText = $"{daysLeft} days until July 8th",
+                IsCustom = true
+            };
+        }
+    }
+
     private List<CurrentEventDto>? _events;
-    private CurrentEventDto? _currentEvent;
+    private List<CarouselItem> _carouselItems = new();
+    private CarouselItem? _currentItem;
     private int _currentIndex = 0;
     private System.Timers.Timer? _rotationTimer;
     private System.Timers.Timer? _refreshTimer;
@@ -126,18 +242,32 @@
             _isLoading = true;
             _errorMessage = null;
 
+            // Clear existing carousel items
+            _carouselItems.Clear();
+
+            // Add Egg Day countdown as the first item
+            _carouselItems.Add(CarouselItem.CreateEggDayCountdown());
+
             var events = await EventManager.GetActiveEventsAsync(Logger);
             if (!events.Any())
             {
                 Logger.LogInformation("EventCarousel: No active events found");
                 _events = new List<CurrentEventDto>();
-                _currentEvent = null;
             }
             else
             {
                 _events = events;
-                _currentIndex = 0;
-                _currentEvent = _events.FirstOrDefault();
+
+                // Add event items to carousel
+                foreach (var eventDto in _events)
+                {
+                    _carouselItems.Add(CarouselItem.FromEvent(
+                        eventDto,
+                        GetTimeRemaining,
+                        GetEventIcon,
+                        GetEventColor));
+                }
+
                 Logger.LogInformation($"EventCarousel: Loaded {_events.Count} events");
 
                 // Check if any events are expired
@@ -151,13 +281,20 @@
                     }
                 }
             }
+
+            // Set current item to the first item
+            _currentIndex = 0;
+            _currentItem = _carouselItems.FirstOrDefault();
+
+            Logger.LogInformation($"EventCarousel: Total carousel items: {_carouselItems.Count}");
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading events");
             _errorMessage = "Error loading events. Please try again later.";
             _events = new List<CurrentEventDto>();
-            _currentEvent = null;
+            _carouselItems.Clear();
+            _currentItem = null;
         }
         finally
         {
@@ -172,20 +309,20 @@
     {
         try
         {
-            // Skip rotation if we're already transitioning or if there are no events
-            if (_isTransitioning || _events == null || !_events.Any())
+            // Skip rotation if we're already transitioning or if there are no carousel items
+            if (_isTransitioning || _carouselItems.Count == 0)
             {
                 return;
             }
 
-            // If we only have one event, no need to rotate
-            if (_events.Count == 1)
+            // If we only have one item, no need to rotate
+            if (_carouselItems.Count == 1)
             {
-                // Check if the single event is expired and refresh if needed
-                if (_currentEvent?.EndTime.HasValue == true && _currentEvent.EndTime.Value < DateTime.Now)
+                // Check if the single item is an event and is expired
+                if (_currentItem?.EventData?.EndTime.HasValue == true &&
+                    _currentItem.EventData.EndTime.Value < DateTime.Now)
                 {
                     ScheduleRefreshForExpiredEvent();
-                    return;
                 }
                 return;
             }
@@ -202,15 +339,16 @@
                     // Wait for fade-out animation to complete
                     await Task.Delay(300);
 
-                    // Move to the next event
-                    _currentIndex = (_currentIndex + 1) % _events.Count;
-                    _currentEvent = _events[_currentIndex];
+                    // Move to the next item
+                    _currentIndex = (_currentIndex + 1) % _carouselItems.Count;
+                    _currentItem = _carouselItems[_currentIndex];
 
-                    // Check if the new current event is expired
-                    if (_currentEvent?.EndTime.HasValue == true && _currentEvent.EndTime.Value < DateTime.Now)
+                    // If this is an event item, check if it's expired
+                    if (_currentItem?.EventData?.EndTime.HasValue == true &&
+                        _currentItem.EventData.EndTime.Value < DateTime.Now)
                     {
                         // If all events are expired, schedule a refresh
-                        if (_events.All(e => e.EndTime.HasValue && e.EndTime.Value < DateTime.Now))
+                        if (_events?.All(e => e.EndTime.HasValue && e.EndTime.Value < DateTime.Now) == true)
                         {
                             ScheduleRefreshForExpiredEvent();
                         }
@@ -231,7 +369,7 @@
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Error during event rotation transition");
+                    Logger.LogError(ex, "Error during carousel rotation transition");
                     _isTransitioning = false; // Ensure flag is reset on error
                 }
             });
@@ -240,6 +378,111 @@
         {
             Logger.LogError(ex, "Error in rotation timer");
             _isTransitioning = false; // Ensure flag is reset on error
+        }
+    }
+
+    // Method to manually navigate to the next item
+    private async Task NextItemAsync()
+    {
+        if (_isTransitioning || _carouselItems.Count <= 1)
+            return;
+
+        _isTransitioning = true;
+
+        try
+        {
+            _transitionClass = "fade-out";
+
+            // Wait for fade-out animation to complete
+            await Task.Delay(300);
+
+            // Move to the next item
+            _currentIndex = (_currentIndex + 1) % _carouselItems.Count;
+            _currentItem = _carouselItems[_currentIndex];
+
+            // Start fade-in transition
+            _transitionClass = "fade-in";
+
+            // Wait for fade-in animation to complete
+            await Task.Delay(300);
+
+            // Reset transition class
+            _transitionClass = "";
+        }
+        finally
+        {
+            _isTransitioning = false;
+            StateHasChanged();
+        }
+    }
+
+    // Method to manually navigate to the previous item
+    private async Task PreviousItemAsync()
+    {
+        if (_isTransitioning || _carouselItems.Count <= 1)
+            return;
+
+        _isTransitioning = true;
+
+        try
+        {
+            _transitionClass = "fade-out";
+
+            // Wait for fade-out animation to complete
+            await Task.Delay(300);
+
+            // Move to the previous item
+            _currentIndex = (_currentIndex - 1 + _carouselItems.Count) % _carouselItems.Count;
+            _currentItem = _carouselItems[_currentIndex];
+
+            // Start fade-in transition
+            _transitionClass = "fade-in";
+
+            // Wait for fade-in animation to complete
+            await Task.Delay(300);
+
+            // Reset transition class
+            _transitionClass = "";
+        }
+        finally
+        {
+            _isTransitioning = false;
+            StateHasChanged();
+        }
+    }
+
+    // Method to navigate to a specific item by index
+    private async Task GoToItemAsync(int index)
+    {
+        if (_isTransitioning || _carouselItems.Count <= 1 || index == _currentIndex || index < 0 || index >= _carouselItems.Count)
+            return;
+
+        _isTransitioning = true;
+
+        try
+        {
+            _transitionClass = "fade-out";
+
+            // Wait for fade-out animation to complete
+            await Task.Delay(300);
+
+            // Go to the specified item
+            _currentIndex = index;
+            _currentItem = _carouselItems[_currentIndex];
+
+            // Start fade-in transition
+            _transitionClass = "fade-in";
+
+            // Wait for fade-in animation to complete
+            await Task.Delay(300);
+
+            // Reset transition class
+            _transitionClass = "";
+        }
+        finally
+        {
+            _isTransitioning = false;
+            StateHasChanged();
         }
     }
 
