@@ -1,0 +1,138 @@
+@namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Components
+
+@if (DashboardPlayer != null && DashboardPlayer.Player != null)
+{
+    <MudPaper Class="dashboard-tile d-flex flex-column" Style="height: 100%; position: relative; overflow: hidden;">
+        <div class="mb-2 text-center">
+            <MudText Typo="Typo.h4" Align="Align.Center">@DashboardPlayer.Player.PlayerName</MudText>
+            <MudText Typo="Typo.body1" Align="Align.Center">
+                <MudText Inline="true" Class="ml-2 align-bottom">
+                    (@DashboardPlayer.Player?.Title
+                    @if (LastUpdatedTimestamp.HasValue && LastUpdatedTimestamp.Value != DateTime.MinValue)
+                    {
+                        <span> -- Last Updated: @GetLocalTimeString(LastUpdatedTimestamp)</span>
+                    })
+                </MudText>
+            </MudText>
+        </div>
+
+        @if (IsLoading)
+        {
+            <div class="d-flex justify-center align-center" style="height: 100%;">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else if (Missions == null || Missions.Count == 0)
+        {
+            <div class="d-flex justify-center align-center" style="height: 100%;">
+                <MudText Typo="Typo.h6" Color="Color.Warning">No active missions</MudText>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-4 px-4">
+                @foreach (var mission in Missions.Take(3))
+                {
+                    <MudPaper Elevation="2" Class="pa-3 mission-card">
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@GetShipIcon(mission.Ship)" Color="Color.Primary" Size="Size.Large" Class="mr-2" />
+                                <MudText Typo="Typo.h6">@GetShipName(mission.Ship)</MudText>
+                            </div>
+                            <MudChip Color="@GetStatusColor(mission.Status)" Size="Size.Small">
+                                @GetStatusName(mission.Status)
+                            </MudChip>
+                        </div>
+
+                        <MudText Typo="Typo.body2" Class="mb-1">Mission Level: @mission.Level</MudText>
+                        
+                        @if (mission.Status == 2) // Traveling
+                        {
+                            <MudText Typo="Typo.body2" Class="mb-1">
+                                Time Remaining: @FormatTimeRemaining(mission.SecondsRemaining)
+                            </MudText>
+                            
+                            <MudTooltip Text="@($"Mission Progress: {GetMissionProgressPercentage(mission):F1}%")">
+                                <MudProgressLinear Color="Color.Info" Value="@GetMissionProgressPercentage(mission)" Class="my-2" />
+                            </MudTooltip>
+                            
+                            <MudText Typo="Typo.caption" Class="mt-1">
+                                Return: @GetReturnTime(mission.StartTimeDerived, mission.DurationSeconds)
+                            </MudText>
+                        }
+                        else if (mission.Status == 1) // Fueling
+                        {
+                            <div class="d-flex flex-column gap-1 mt-2">
+                                @foreach (var fuel in mission.FuelList)
+                                {
+                                    <div class="d-flex align-center justify-space-between">
+                                        <MudText Typo="Typo.caption">@GetEggName(fuel.Egg)</MudText>
+                                        <MudProgressLinear Color="Color.Success" Value="@GetFuelPercentage(fuel)" Class="mx-2" Style="width: 100px;" />
+                                        <MudText Typo="Typo.caption">@GetFuelPercentage(fuel)%</MudText>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else if (mission.Status == 3) // Returned
+                        {
+                            <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small" Class="mt-2">
+                                Collect Artifacts
+                            </MudButton>
+                        }
+                    </MudPaper>
+                }
+
+                @if (StandbyMission != null)
+                {
+                    <MudPaper Elevation="2" Class="pa-3 mission-card standby-mission">
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@GetShipIcon(StandbyMission.Ship)" Color="Color.Secondary" Size="Size.Large" Class="mr-2" />
+                                <MudText Typo="Typo.h6">@GetShipName(StandbyMission.Ship) (Standby)</MudText>
+                            </div>
+                            <MudChip Color="Color.Default" Size="Size.Small">Ready to Launch</MudChip>
+                        </div>
+
+                        <MudText Typo="Typo.body2" Class="mb-1">Mission Level: @StandbyMission.Level</MudText>
+                        
+                        <div class="d-flex flex-column gap-1 mt-2">
+                            @foreach (var fuel in StandbyMission.FuelList)
+                            {
+                                <div class="d-flex align-center justify-space-between">
+                                    <MudText Typo="Typo.caption">@GetEggName(fuel.Egg)</MudText>
+                                    <MudProgressLinear Color="Color.Success" Value="100" Class="mx-2" Style="width: 100px;" />
+                                    <MudText Typo="Typo.caption">100%</MudText>
+                                </div>
+                            }
+                        </div>
+                        
+                        <MudButton Color="Color.Secondary" Variant="Variant.Filled" Size="Size.Small" Class="mt-2">
+                            Launch Mission
+                        </MudButton>
+                    </MudPaper>
+                }
+            </div>
+        }
+    </MudPaper>
+}
+else
+{
+    <MudPaper Class="pa-4 d-flex justify-center">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    </MudPaper>
+}
+
+<style>
+    .mission-card {
+        border-radius: 8px;
+        transition: transform 0.2s;
+    }
+
+    .mission-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .standby-mission {
+        border: 1px dashed var(--mud-palette-secondary);
+    }
+</style>
