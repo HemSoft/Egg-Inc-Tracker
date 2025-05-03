@@ -42,13 +42,13 @@ public partial class RocketDashboard : IDisposable, IAsyncDisposable
 
             await Task.Delay(300); // Small delay to ensure UI updates
             await InitialDataLoad();
-            
+
             // Set up refresh timer
             SetupRefreshTimer();
-            
+
             // Subscribe to player data refresh events
             PlayerCardService.OnPlayerDataRefreshed += OnPlayerDataRefreshed;
-            
+
             IsLoading = false;
             await InvokeAsync(StateHasChanged);
         }
@@ -181,17 +181,40 @@ public partial class RocketDashboard : IDisposable, IAsyncDisposable
     {
         if (player?.Player == null)
         {
+            Logger.LogWarning("Player or Player.Player is null");
             return;
         }
 
         try
         {
+            Logger.LogInformation("Loading mission data for player {PlayerName} with EID {PlayerEid}",
+                player.Player.PlayerName, player.Player.EID);
+
             // Use the extension method to load mission data
             await player.LoadRocketMissionDataAsync(RocketMissionService);
+
+            Logger.LogInformation("Loaded {MissionCount} missions for player {PlayerName}",
+                player.Missions?.Count ?? 0, player.Player.PlayerName);
+
+            // Log details of each mission
+            if (player.Missions != null && player.Missions.Count > 0)
+            {
+                foreach (var mission in player.Missions)
+                {
+                    Logger.LogInformation("Mission in player object for {PlayerName}: Ship={Ship}, Status={Status}, Level={Level}",
+                        player.Player.PlayerName, mission.Ship, mission.Status, mission.Level);
+                }
+            }
+            else
+            {
+                Logger.LogWarning("No missions found for player {PlayerName}", player.Player.PlayerName);
+            }
 
             // Store mission data in DashboardState
             DashboardState.SetPlayerMissions(player.Player.PlayerName, player.Missions);
             DashboardState.SetPlayerStandbyMission(player.Player.PlayerName, player.StandbyMission);
+
+            Logger.LogInformation("Stored mission data in DashboardState for player {PlayerName}", player.Player.PlayerName);
         }
         catch (Exception ex)
         {

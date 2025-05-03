@@ -11,7 +11,8 @@
                     @if (LastUpdatedTimestamp.HasValue && LastUpdatedTimestamp.Value != DateTime.MinValue)
                     {
                         <span> -- Last Updated: @GetLocalTimeString(LastUpdatedTimestamp)</span>
-                    })
+                    }
+    )
                 </MudText>
             </MudText>
         </div>
@@ -24,8 +25,17 @@
         }
         else if (Missions == null || Missions.Count == 0)
         {
-            <div class="d-flex justify-center align-center" style="height: 100%;">
+            <div class="d-flex flex-column justify-center align-center" style="height: 100%;">
                 <MudText Typo="Typo.h6" Color="Color.Warning">No active missions</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Error" Class="mt-2">
+                    Mission Count: @(Missions?.Count ?? 0)
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Info" Class="mt-2">
+                    Player EID: @(DashboardPlayer.Player?.EID ?? "Unknown")
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Info" Class="mt-2">
+                    Last Updated: @(LastUpdatedTimestamp?.ToString() ?? "Never")
+                </MudText>
             </div>
         }
         else
@@ -45,17 +55,17 @@
                         </div>
 
                         <MudText Typo="Typo.body2" Class="mb-1">Mission Level: @mission.Level</MudText>
-                        
+
                         @if (mission.Status == 2) // Traveling
                         {
                             <MudText Typo="Typo.body2" Class="mb-1">
                                 Time Remaining: @FormatTimeRemaining(mission.SecondsRemaining)
                             </MudText>
-                            
+
                             <MudTooltip Text="@($"Mission Progress: {GetMissionProgressPercentage(mission):F1}%")">
                                 <MudProgressLinear Color="Color.Info" Value="@GetMissionProgressPercentage(mission)" Class="my-2" />
                             </MudTooltip>
-                            
+
                             <MudText Typo="Typo.caption" Class="mt-1">
                                 Return: @GetReturnTime(mission.StartTimeDerived, mission.DurationSeconds)
                             </MudText>
@@ -67,7 +77,8 @@
                                 {
                                     <div class="d-flex align-center justify-space-between">
                                         <MudText Typo="Typo.caption">@GetEggName(fuel.Egg)</MudText>
-                                        <MudProgressLinear Color="Color.Success" Value="@GetFuelPercentage(fuel)" Class="mx-2" Style="width: 100px;" />
+                                        <MudProgressLinear Color="Color.Success" Value="@GetFuelPercentage(fuel)" Class="mx-2"
+                                            Style="width: 100px;" />
                                         <MudText Typo="Typo.caption">@GetFuelPercentage(fuel)%</MudText>
                                     </div>
                                 }
@@ -87,14 +98,15 @@
                     <MudPaper Elevation="2" Class="pa-3 mission-card standby-mission">
                         <div class="d-flex justify-space-between align-center mb-2">
                             <div class="d-flex align-center">
-                                <MudIcon Icon="@GetShipIcon(StandbyMission.Ship)" Color="Color.Secondary" Size="Size.Large" Class="mr-2" />
+                                <MudIcon Icon="@GetShipIcon(StandbyMission.Ship)" Color="Color.Secondary" Size="Size.Large"
+                                    Class="mr-2" />
                                 <MudText Typo="Typo.h6">@GetShipName(StandbyMission.Ship) (Standby)</MudText>
                             </div>
                             <MudChip Color="Color.Default" Size="Size.Small">Ready to Launch</MudChip>
                         </div>
 
                         <MudText Typo="Typo.body2" Class="mb-1">Mission Level: @StandbyMission.Level</MudText>
-                        
+
                         <div class="d-flex flex-column gap-1 mt-2">
                             @foreach (var fuel in StandbyMission.FuelList)
                             {
@@ -105,7 +117,7 @@
                                 </div>
                             }
                         </div>
-                        
+
                         <MudButton Color="Color.Secondary" Variant="Variant.Filled" Size="Size.Small" Class="mt-2">
                             Launch Mission
                         </MudButton>

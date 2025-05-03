@@ -87,20 +87,53 @@ public class RocketMissionService
     {
         try
         {
+            _logger.LogInformation("Getting active missions for player {PlayerName} with EID {PlayerEid}", playerName, playerEid);
+
             var (_, fullPlayerInfo) = await Task.Run(() => Api.CallPlayerInfoApi(playerEid, playerName));
-            
-            if (fullPlayerInfo?.ArtifactsDb?.MissionInfosList == null)
+
+            if (fullPlayerInfo == null)
             {
-                _logger.LogWarning("No mission information found for player {PlayerName}", playerName);
+                _logger.LogWarning("Player info is null for player {PlayerName}", playerName);
                 return new List<JsonPlayerExtendedMissionInfo>();
             }
 
-            // Filter active missions (status 1 = Fueling, 2 = Traveling)
+            if (fullPlayerInfo.ArtifactsDb == null)
+            {
+                _logger.LogWarning("ArtifactsDb is null for player {PlayerName}", playerName);
+                return new List<JsonPlayerExtendedMissionInfo>();
+            }
+
+            if (fullPlayerInfo.ArtifactsDb.MissionInfosList == null)
+            {
+                _logger.LogWarning("MissionInfosList is null for player {PlayerName}", playerName);
+                return new List<JsonPlayerExtendedMissionInfo>();
+            }
+
+            _logger.LogInformation("Found {Count} missions for player {PlayerName}",
+                fullPlayerInfo.ArtifactsDb.MissionInfosList.Count, playerName);
+
+            // Log all missions regardless of status
+            foreach (var mission in fullPlayerInfo.ArtifactsDb.MissionInfosList)
+            {
+                _logger.LogInformation("All missions for {PlayerName}: Ship={Ship}, Status={Status}, Level={Level}",
+                    playerName, mission.Ship, mission.Status, mission.Level);
+            }
+
+            // Filter active missions - include ALL missions for now for debugging
             var activeMissions = fullPlayerInfo.ArtifactsDb.MissionInfosList
-                .Where(m => m.Status == 1 || m.Status == 2 || m.Status == 3)
                 .OrderBy(m => m.Status)
                 .ThenBy(m => m.SecondsRemaining)
                 .ToList();
+
+            _logger.LogInformation("Filtered to {Count} active missions for player {PlayerName}",
+                activeMissions.Count, playerName);
+
+            // Log details of each mission
+            foreach (var mission in activeMissions)
+            {
+                _logger.LogInformation("Mission for {PlayerName}: Ship={Ship}, Status={Status}, Level={Level}",
+                    playerName, mission.Ship, mission.Status, mission.Level);
+            }
 
             return activeMissions;
         }
@@ -122,7 +155,7 @@ public class RocketMissionService
         try
         {
             var (_, fullPlayerInfo) = await Task.Run(() => Api.CallPlayerInfoApi(playerEid, playerName));
-            
+
             if (fullPlayerInfo?.ArtifactsDb?.FuelingMission == null)
             {
                 return null;
@@ -131,7 +164,7 @@ public class RocketMissionService
             // Check if the fueling mission is fully fueled
             var fuelingMission = fullPlayerInfo.ArtifactsDb.FuelingMission;
             bool isFullyFueled = fuelingMission.FuelList.All(f => f.Amount >= 1.0);
-            
+
             if (isFullyFueled)
             {
                 // Convert FuelingMission to ExtendedMissionInfo
@@ -181,7 +214,7 @@ public class RocketMissionService
     public string FormatTimeRemaining(double seconds)
     {
         TimeSpan timeSpan = TimeSpan.FromSeconds(seconds);
-        
+
         if (timeSpan.TotalDays >= 1)
         {
             return $"{timeSpan.Days}d {timeSpan.Hours}h {timeSpan.Minutes}m";
@@ -208,10 +241,10 @@ public class RocketMissionService
         {
             DateTime startTime = DateTimeOffset.FromUnixTimeSeconds((long)startTimeDerived).DateTime;
             DateTime completionTime = startTime.AddSeconds(durationSeconds);
-            
+
             // Convert to local time
             DateTime localCompletionTime = TimeZoneInfo.ConvertTimeFromUtc(completionTime, TimeZoneInfo.Local);
-            
+
             return localCompletionTime.ToString("MM/dd HH:mm");
         }
         catch (Exception ex)
