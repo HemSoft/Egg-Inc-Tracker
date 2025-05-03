@@ -305,6 +305,53 @@
     private bool _isTransitioning = false;
     private string _transitionClass = "";
 
+    // Common method for transitioning between carousel items
+    private async Task TransitionToItemAsync(int newIndex)
+    {
+        if (_isTransitioning || _carouselItems.Count <= 1 || newIndex < 0 || newIndex >= _carouselItems.Count || newIndex == _currentIndex)
+            return;
+
+        _isTransitioning = true;
+
+        try
+        {
+            // Start fade-out transition
+            _transitionClass = "fade-out";
+
+            // Wait for fade-out animation to complete
+            await Task.Delay(300);
+
+            // Update the current index and item
+            _currentIndex = newIndex;
+            _currentItem = _carouselItems[_currentIndex];
+
+            // Check if this is an event item and if it's expired
+            if (_currentItem?.EventData?.EndTime.HasValue == true &&
+                _currentItem.EventData.EndTime.Value < DateTime.Now)
+            {
+                // If all events are expired, schedule a refresh
+                if (_events?.All(e => e.EndTime.HasValue && e.EndTime.Value < DateTime.Now) == true)
+                {
+                    ScheduleRefreshForExpiredEvent();
+                }
+            }
+
+            // Start fade-in transition
+            _transitionClass = "fade-in";
+
+            // Wait for fade-in animation to complete
+            await Task.Delay(300);
+
+            // Reset transition class
+            _transitionClass = "";
+        }
+        finally
+        {
+            _isTransitioning = false;
+            StateHasChanged();
+        }
+    }
+
     private void OnRotationTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
     {
         try
@@ -327,45 +374,16 @@
                 return;
             }
 
-            _isTransitioning = true;
+            // Calculate the next index
+            int nextIndex = (_currentIndex + 1) % _carouselItems.Count;
 
             // Use InvokeAsync to ensure we're on the UI thread
             InvokeAsync(async () =>
             {
                 try
                 {
-                    _transitionClass = "fade-out";
-
-                    // Wait for fade-out animation to complete
-                    await Task.Delay(300);
-
-                    // Move to the next item
-                    _currentIndex = (_currentIndex + 1) % _carouselItems.Count;
-                    _currentItem = _carouselItems[_currentIndex];
-
-                    // If this is an event item, check if it's expired
-                    if (_currentItem?.EventData?.EndTime.HasValue == true &&
-                        _currentItem.EventData.EndTime.Value < DateTime.Now)
-                    {
-                        // If all events are expired, schedule a refresh
-                        if (_events?.All(e => e.EndTime.HasValue && e.EndTime.Value < DateTime.Now) == true)
-                        {
-                            ScheduleRefreshForExpiredEvent();
-                        }
-                    }
-
-                    // Start fade-in transition
-                    _transitionClass = "fade-in";
-
-                    // Wait for fade-in animation to complete
-                    await Task.Delay(300);
-
-                    // Reset transition class
-                    _transitionClass = "";
-                    _isTransitioning = false;
-
-                    // Trigger a UI refresh
-                    StateHasChanged();
+                    // Use the common transition method
+                    await TransitionToItemAsync(nextIndex);
                 }
                 catch (Exception ex)
                 {
@@ -387,33 +405,11 @@
         if (_isTransitioning || _carouselItems.Count <= 1)
             return;
 
-        _isTransitioning = true;
+        // Calculate the next index
+        int nextIndex = (_currentIndex + 1) % _carouselItems.Count;
 
-        try
-        {
-            _transitionClass = "fade-out";
-
-            // Wait for fade-out animation to complete
-            await Task.Delay(300);
-
-            // Move to the next item
-            _currentIndex = (_currentIndex + 1) % _carouselItems.Count;
-            _currentItem = _carouselItems[_currentIndex];
-
-            // Start fade-in transition
-            _transitionClass = "fade-in";
-
-            // Wait for fade-in animation to complete
-            await Task.Delay(300);
-
-            // Reset transition class
-            _transitionClass = "";
-        }
-        finally
-        {
-            _isTransitioning = false;
-            StateHasChanged();
-        }
+        // Use the common transition method
+        await TransitionToItemAsync(nextIndex);
     }
 
     // Method to manually navigate to the previous item
@@ -422,68 +418,18 @@
         if (_isTransitioning || _carouselItems.Count <= 1)
             return;
 
-        _isTransitioning = true;
+        // Calculate the previous index
+        int prevIndex = (_currentIndex - 1 + _carouselItems.Count) % _carouselItems.Count;
 
-        try
-        {
-            _transitionClass = "fade-out";
-
-            // Wait for fade-out animation to complete
-            await Task.Delay(300);
-
-            // Move to the previous item
-            _currentIndex = (_currentIndex - 1 + _carouselItems.Count) % _carouselItems.Count;
-            _currentItem = _carouselItems[_currentIndex];
-
-            // Start fade-in transition
-            _transitionClass = "fade-in";
-
-            // Wait for fade-in animation to complete
-            await Task.Delay(300);
-
-            // Reset transition class
-            _transitionClass = "";
-        }
-        finally
-        {
-            _isTransitioning = false;
-            StateHasChanged();
-        }
+        // Use the common transition method
+        await TransitionToItemAsync(prevIndex);
     }
 
     // Method to navigate to a specific item by index
     private async Task GoToItemAsync(int index)
     {
-        if (_isTransitioning || _carouselItems.Count <= 1 || index == _currentIndex || index < 0 || index >= _carouselItems.Count)
-            return;
-
-        _isTransitioning = true;
-
-        try
-        {
-            _transitionClass = "fade-out";
-
-            // Wait for fade-out animation to complete
-            await Task.Delay(300);
-
-            // Go to the specified item
-            _currentIndex = index;
-            _currentItem = _carouselItems[_currentIndex];
-
-            // Start fade-in transition
-            _transitionClass = "fade-in";
-
-            // Wait for fade-in animation to complete
-            await Task.Delay(300);
-
-            // Reset transition class
-            _transitionClass = "";
-        }
-        finally
-        {
-            _isTransitioning = false;
-            StateHasChanged();
-        }
+        // Use the common transition method
+        await TransitionToItemAsync(index);
     }
 
     private void OnRefreshTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
