@@ -1,9 +1,11 @@
 namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Components.Pages;
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using HemSoft.EggIncTracker.Dashboard.BlazorServer.Extensions;
 using HemSoft.EggIncTracker.Dashboard.BlazorServer.Services;
+using HemSoft.EggIncTracker.Data.Dtos;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using System.Timers;
@@ -211,7 +213,7 @@ public partial class RocketDashboard : IDisposable, IAsyncDisposable
             }
 
             // Store mission data in DashboardState
-            DashboardState.SetPlayerMissions(player.Player.PlayerName, player.Missions);
+            DashboardState.SetPlayerMissions(player.Player.PlayerName, player.Missions != null ? player.Missions : new List<JsonPlayerExtendedMissionInfo>());
             DashboardState.SetPlayerStandbyMission(player.Player.PlayerName, player.StandbyMission);
 
             Logger.LogInformation("Stored mission data in DashboardState for player {PlayerName}", player.Player.PlayerName);

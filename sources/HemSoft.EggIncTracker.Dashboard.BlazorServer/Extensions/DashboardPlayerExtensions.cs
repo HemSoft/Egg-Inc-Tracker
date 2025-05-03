@@ -2,7 +2,10 @@ namespace HemSoft.EggIncTracker.Dashboard.BlazorServer.Extensions;
 
 using HemSoft.EggIncTracker.Dashboard.BlazorServer.Components.Pages;
 using HemSoft.EggIncTracker.Dashboard.BlazorServer.Services;
+using HemSoft.EggIncTracker.Data.Dtos;
 using HemSoft.EggIncTracker.Domain;
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 /// <summary>
@@ -38,7 +41,7 @@ public static class DashboardPlayerExtensions
             System.Diagnostics.Debug.WriteLine($"Loaded {missions.Count} missions for player {dashboardPlayer.Player.PlayerName}");
 
             // Ensure we have a non-null list
-            dashboardPlayer.Missions = missions ?? new List<JsonPlayerExtendedMissionInfo>();
+            dashboardPlayer.Missions = missions != null ? missions : new List<JsonPlayerExtendedMissionInfo>();
 
             // Log details of each mission
             foreach (var mission in dashboardPlayer.Missions)
