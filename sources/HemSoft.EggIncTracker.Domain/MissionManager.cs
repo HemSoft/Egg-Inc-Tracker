@@ -52,6 +52,19 @@ public static class MissionManager
             var now = DateTime.UtcNow;
             var approxTime = DateTimeOffset.FromUnixTimeSeconds(fullPlayerInfo.ApproxTime).UtcDateTime;
 
+            // Delete all existing missions for this player
+            var existingMissions = context.Missions
+                .Where(m => m.PlayerName == playerDto.PlayerName)
+                .ToList();
+
+            if (existingMissions.Any())
+            {
+                logger?.LogInformation("Deleting {Count} existing missions for player {PlayerName}",
+                    existingMissions.Count, playerDto.PlayerName);
+                context.Missions.RemoveRange(existingMissions);
+                context.SaveChanges();
+            }
+
             // Process active missions
             foreach (var missionInfo in fullPlayerInfo.ArtifactsDb.MissionInfosList)
             {
@@ -59,50 +72,31 @@ public static class MissionManager
                 var returnTime = approxTime.AddSeconds(missionInfo.SecondsRemaining);
                 var launchTime = returnTime.AddSeconds(-(double)missionInfo.DurationSeconds);
 
-                // Check if this mission already exists in the database
-                var existingMission = context.Missions
-                    .Where(m => m.PlayerName == playerDto.PlayerName &&
-                                m.Ship == missionInfo.Ship &&
-                                m.Status == missionInfo.Status &&
-                                m.ReturnTime == returnTime)
-                    .FirstOrDefault();
-
-                if (existingMission != null)
+                // Create new mission
+                var mission = new MissionDto
                 {
-                    // Update existing mission
-                    existingMission.SecondsRemaining = (float)missionInfo.SecondsRemaining;
-                    existingMission.Updated = now;
-                    logger?.LogInformation("Updated existing mission for {PlayerName}: Ship={Ship}, Status={Status}",
-                        playerDto.PlayerName, missionInfo.Ship, missionInfo.Status);
-                }
-                else
-                {
-                    // Create new mission
-                    var mission = new MissionDto
-                    {
-                        PlayerId = player.Id,
-                        PlayerName = playerDto.PlayerName,
-                        Ship = missionInfo.Ship,
-                        Status = missionInfo.Status,
-                        DurationType = missionInfo.DurationType,
-                        Level = missionInfo.Level,
-                        DurationSeconds = missionInfo.DurationSeconds,
-                        Capacity = missionInfo.Capacity,
-                        QualityBump = missionInfo.QualityBump,
-                        TargetArtifact = missionInfo.TargetArtifact,
-                        SecondsRemaining = (float)missionInfo.SecondsRemaining,
-                        LaunchTime = launchTime,
-                        ReturnTime = returnTime,
-                        FuelListObject = missionInfo.FuelList,
-                        IsStandby = false,
-                        Created = now,
-                        Updated = now
-                    };
+                    PlayerId = player.Id,
+                    PlayerName = playerDto.PlayerName,
+                    Ship = missionInfo.Ship,
+                    Status = missionInfo.Status,
+                    DurationType = missionInfo.DurationType,
+                    Level = missionInfo.Level,
+                    DurationSeconds = missionInfo.DurationSeconds,
+                    Capacity = missionInfo.Capacity,
+                    QualityBump = missionInfo.QualityBump,
+                    TargetArtifact = missionInfo.TargetArtifact,
+                    SecondsRemaining = (float)missionInfo.SecondsRemaining,
+                    LaunchTime = launchTime,
+                    ReturnTime = returnTime,
+                    FuelListObject = missionInfo.FuelList,
+                    IsStandby = false,
+                    Created = now,
+                    Updated = now
+                };
 
-                    context.Missions.Add(mission);
-                    logger?.LogInformation("Added new mission for {PlayerName}: Ship={Ship}, Status={Status}",
-                        playerDto.PlayerName, missionInfo.Ship, missionInfo.Status);
-                }
+                context.Missions.Add(mission);
+                logger?.LogInformation("Added mission for {PlayerName}: Ship={Ship}, Status={Status}",
+                    playerDto.PlayerName, missionInfo.Ship, missionInfo.Status);
             }
 
             // Process standby mission (if any)
@@ -113,48 +107,31 @@ public static class MissionManager
 
                 if (isFullyFueled)
                 {
-                    // Check if this standby mission already exists
-                    var existingStandby = context.Missions
-                        .Where(m => m.PlayerName == playerDto.PlayerName &&
-                                    m.Ship == fuelingMission.Ship &&
-                                    m.IsStandby)
-                        .FirstOrDefault();
-
-                    if (existingStandby != null)
+                    // Create new standby mission
+                    var standbyMission = new MissionDto
                     {
-                        // Update existing standby mission
-                        existingStandby.Updated = now;
-                        logger?.LogInformation("Updated existing standby mission for {PlayerName}: Ship={Ship}",
-                            playerDto.PlayerName, fuelingMission.Ship);
-                    }
-                    else
-                    {
-                        // Create new standby mission
-                        var standbyMission = new MissionDto
-                        {
-                            PlayerId = player.Id,
-                            PlayerName = playerDto.PlayerName,
-                            Ship = fuelingMission.Ship,
-                            Status = 1, // Fueling
-                            DurationType = fuelingMission.DurationType,
-                            Level = fuelingMission.Level,
-                            DurationSeconds = 0, // Not launched yet
-                            Capacity = fuelingMission.Capacity,
-                            QualityBump = 0, // Not applicable for standby
-                            TargetArtifact = fuelingMission.TargetArtifact,
-                            SecondsRemaining = 0, // Not launched yet
-                            LaunchTime = DateTime.MinValue, // Not launched yet
-                            ReturnTime = DateTime.MinValue, // Not launched yet
-                            FuelListObject = fuelingMission.FuelList,
-                            IsStandby = true,
-                            Created = now,
-                            Updated = now
-                        };
+                        PlayerId = player.Id,
+                        PlayerName = playerDto.PlayerName,
+                        Ship = fuelingMission.Ship,
+                        Status = 1, // Fueling
+                        DurationType = fuelingMission.DurationType,
+                        Level = fuelingMission.Level,
+                        DurationSeconds = 0, // Not launched yet
+                        Capacity = fuelingMission.Capacity,
+                        QualityBump = 0, // Not applicable for standby
+                        TargetArtifact = fuelingMission.TargetArtifact,
+                        SecondsRemaining = 0, // Not launched yet
+                        LaunchTime = DateTime.MinValue, // Not launched yet
+                        ReturnTime = DateTime.MinValue, // Not launched yet
+                        FuelListObject = fuelingMission.FuelList,
+                        IsStandby = true,
+                        Created = now,
+                        Updated = now
+                    };
 
-                        context.Missions.Add(standbyMission);
-                        logger?.LogInformation("Added new standby mission for {PlayerName}: Ship={Ship}",
-                            playerDto.PlayerName, fuelingMission.Ship);
-                    }
+                    context.Missions.Add(standbyMission);
+                    logger?.LogInformation("Added standby mission for {PlayerName}: Ship={Ship}",
+                        playerDto.PlayerName, fuelingMission.Ship);
                 }
             }
 
@@ -185,9 +162,9 @@ public static class MissionManager
 
             using var context = new EggIncContext();
 
-            // Get active missions (status 2 = Exploring)
+            // Get active missions (status 2 = Exploring or status 10 = Active in our database)
             var missions = await context.Missions
-                .Where(m => m.PlayerName == playerName && m.Status == 2 && !m.IsStandby)
+                .Where(m => m.PlayerName == playerName && (m.Status == 2 || m.Status == 10) && !m.IsStandby)
                 .OrderBy(m => m.ReturnTime)
                 .ToListAsync();
 

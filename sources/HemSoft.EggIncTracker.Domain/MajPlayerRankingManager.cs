@@ -507,35 +507,36 @@ public static class MajPlayerRankingManager
     {
         try
         {
-            // Build the API URL
-            var apiUrl = $"{_apiBaseUrl}/MajPlayerRankings/latest-all";
+            logger?.LogInformation("Getting latest major player rankings from database");
 
-            // Make the API call
-            var response = await _httpClient.GetAsync(apiUrl);
+            using var context = new EggIncContext();
 
-            // Check if the request was successful
-            if (response.IsSuccessStatusCode)
-            {
-                // Deserialize the response
-                var result = await response.Content.ReadFromJsonAsync<List<MajPlayerRankingDto>>();
+            // Get the most recent date (within the last 3 weeks)
+            var threeWeeksAgo = DateTime.UtcNow.AddDays(-21);
 
-                // Apply the limit if specified
-                return result != null && limitTo > 0 && result.Count > limitTo
-                    ? [.. result.Take(limitTo)]
-                    : result;
-            }
-            else
-            {
-                logger?.LogWarning("API call failed with status code {StatusCode}: {ReasonPhrase}",
-                    (int)response.StatusCode, response.ReasonPhrase);
+            // Get all rankings from the last 3 weeks, grouped by player name
+            var rankings = await context.MajPlayerRankings
+                .Where(r => r.Updated >= threeWeeksAgo)
+                .OrderByDescending(r => r.Updated)
+                .ToListAsync();
 
-                // Return an empty list in case of error
-                return [];
-            }
+            // Group by player name and take the most recent record for each player
+            var latestRankings = rankings
+                .GroupBy(r => r.IGN)
+                .Select(g => g.OrderByDescending(r => r.Updated).First())
+                .OrderBy(r => r.Ranking)
+                .ToList();
+
+            logger?.LogInformation("Found {Count} latest major player rankings in database", latestRankings.Count);
+
+            // Apply the limit if specified
+            return limitTo > 0 && latestRankings.Count > limitTo
+                ? [.. latestRankings.Take(limitTo)]
+                : latestRankings;
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Error getting latest major player rankings");
+            logger?.LogError(ex, "Error getting latest major player rankings from database");
 
             // Return an empty list in case of error
             return [];

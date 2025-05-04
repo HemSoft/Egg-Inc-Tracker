@@ -41,7 +41,11 @@
         else
         {
             <div class="d-flex flex-column gap-4 px-4">
-                @foreach (var mission in Missions.Take(3))
+                <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="mb-2">
+                    Active Missions: @Missions.Count
+                </MudText>
+
+                @foreach (var mission in Missions.OrderBy(m => m.SecondsRemaining).Take(5))
                 {
                     <MudPaper Elevation="2" Class="pa-3 mission-card" Style="@($"border-radius: 8px; border-left: 4px solid {GetStatusColorHex(mission.Status)}")">
                         <div class="d-flex justify-space-between align-center mb-2">
@@ -81,7 +85,7 @@
 
                             <div class="d-flex justify-center align-center flex-column">
                                 <MudText Typo="Typo.h6" Style="@GetReturnTimeStyle(mission.SecondsRemaining)" Class="mb-1 font-weight-bold text-center">
-                                    @CalculateActualTimeRemaining(mission.StartTimeDerived, mission.DurationSeconds)
+                                    @CalculateActualTimeRemaining(mission)
                                 </MudText>
 
                                 <MudTooltip Text="@($"Mission Progress: {GetMissionProgressPercentage(mission):F1}%")">
@@ -99,10 +103,10 @@
                                     </MudText>
                                 </MudTooltip>
 
-                                <MudTooltip Text="@($"Returns on {GetReturnTime(mission.StartTimeDerived, mission.DurationSeconds, true)}")">
+                                <MudTooltip Text="@($"Returns on {GetReturnTime(mission, true)}")">
                                     <MudText Typo="Typo.caption" Style="@GetReturnTimeStyle(mission.SecondsRemaining)">
                                         <MudIcon Icon="@Icons.Material.Filled.FlightLand" Size="Size.Small" Class="mr-1" />
-                                        Returns: @GetReturnTime(mission.StartTimeDerived, mission.DurationSeconds)
+                                        Returns: @GetReturnTime(mission)
                                     </MudText>
                                 </MudTooltip>
                             </div>
@@ -214,7 +218,7 @@
 
                             <div class="d-flex justify-center align-center flex-column">
                                 <MudText Typo="Typo.h6" Style="@GetReturnTimeStyle(mission.SecondsRemaining)" Class="mb-1 font-weight-bold text-center">
-                                    @CalculateActualTimeRemaining(mission.StartTimeDerived, mission.DurationSeconds)
+                                    @CalculateActualTimeRemaining(mission)
                                 </MudText>
 
                                 <MudTooltip Text="@($"Mission Progress: {GetMissionProgressPercentage(mission):F1}%")">
@@ -232,10 +236,10 @@
                                     </MudText>
                                 </MudTooltip>
 
-                                <MudTooltip Text="@($"Returns on {GetReturnTime(mission.StartTimeDerived, mission.DurationSeconds, true)}")">
+                                <MudTooltip Text="@($"Returns on {GetReturnTime(mission, true)}")">
                                     <MudText Typo="Typo.caption" Style="@GetReturnTimeStyle(mission.SecondsRemaining)">
                                         <MudIcon Icon="@Icons.Material.Filled.FlightLand" Size="Size.Small" Class="mr-1" />
-                                        Returns: @GetReturnTime(mission.StartTimeDerived, mission.DurationSeconds)
+                                        Returns: @GetReturnTime(mission)
                                     </MudText>
                                 </MudTooltip>
                             </div>

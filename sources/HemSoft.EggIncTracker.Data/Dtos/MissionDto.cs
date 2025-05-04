@@ -114,7 +114,7 @@ public class MissionDto
     /// <summary>
     /// Fuel list stored as JSON
     /// </summary>
-    public string? FuelList { get; set; }
+    public string? FuelListJson { get; set; }
 
     /// <summary>
     /// Whether this is a standby mission (fueled and ready to launch)
@@ -140,10 +140,10 @@ public class MissionDto
     [NotMapped]
     public List<JsonPlayerFuel>? FuelListObject
     {
-        get => string.IsNullOrEmpty(FuelList)
+        get => string.IsNullOrEmpty(FuelListJson)
             ? null
-            : JsonSerializer.Deserialize<List<JsonPlayerFuel>>(FuelList);
-        set => FuelList = value == null
+            : JsonSerializer.Deserialize<List<JsonPlayerFuel>>(FuelListJson);
+        set => FuelListJson = value == null
             ? null
             : JsonSerializer.Serialize(value);
     }

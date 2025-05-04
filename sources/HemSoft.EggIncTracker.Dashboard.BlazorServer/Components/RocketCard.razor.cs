@@ -75,25 +75,52 @@ public partial class RocketCard : IDisposable
     }
 
     // Calculate actual time remaining based on return time
-    private string CalculateActualTimeRemaining(double startTimeDerived, float durationSeconds)
+    private string CalculateActualTimeRemaining(JsonPlayerExtendedMissionInfo mission)
     {
-        DateTime startTime = DateTimeOffset.FromUnixTimeSeconds((long)startTimeDerived).DateTime;
-        DateTime returnTime = startTime.AddSeconds(durationSeconds);
-        DateTime localReturnTime = TimeZoneInfo.ConvertTimeFromUtc(returnTime, TimeZoneInfo.Local);
+        try
+        {
+            // If we have the actual return time stored in MissionLog, use it
+            DateTime returnTime;
+            if (!string.IsNullOrEmpty(mission.MissionLog) && DateTime.TryParse(mission.MissionLog, out DateTime parsedTime))
+            {
+                returnTime = parsedTime;
+            }
+            else
+            {
+                // Fall back to calculating from start time and duration if MissionLog is not available
+                DateTime startTime = DateTimeOffset.FromUnixTimeSeconds((long)mission.StartTimeDerived).DateTime;
+                returnTime = startTime.AddSeconds(mission.DurationSeconds);
+            }
 
-        TimeSpan timeRemaining = localReturnTime - DateTime.Now;
+            // Convert to local time
+            DateTime localReturnTime = TimeZoneInfo.ConvertTimeFromUtc(returnTime, TimeZoneInfo.Local);
 
-        if (timeRemaining.TotalDays >= 1)
-        {
-            return $"{timeRemaining.Days}d {timeRemaining.Hours}h {timeRemaining.Minutes}m";
+            // Calculate time remaining
+            TimeSpan timeRemaining = localReturnTime - DateTime.Now;
+
+            // If the time remaining is negative, the mission has already returned
+            if (timeRemaining.TotalSeconds <= 0)
+            {
+                return "Ready to collect";
+            }
+            else if (timeRemaining.TotalDays >= 1)
+            {
+                return $"{timeRemaining.Days}d {timeRemaining.Hours}h {timeRemaining.Minutes}m";
+            }
+            else if (timeRemaining.TotalHours >= 1)
+            {
+                return $"{timeRemaining.Hours}h {timeRemaining.Minutes}m {timeRemaining.Seconds}s";
+            }
+            else
+            {
+                return $"{timeRemaining.Minutes:D2}:{timeRemaining.Seconds:D2}";
+            }
         }
-        else if (timeRemaining.TotalHours >= 1)
+        catch (Exception ex)
         {
-            return $"{timeRemaining.Hours}h {timeRemaining.Minutes}m {timeRemaining.Seconds}s";
-        }
-        else
-        {
-            return $"{timeRemaining.Minutes:D2}:{timeRemaining.Seconds:D2}";
+            // Log the error but don't throw to prevent UI crashes
+            System.Diagnostics.Debug.WriteLine($"Error calculating time remaining: {ex.Message}");
+            return "Time unknown";
         }
     }
 
@@ -117,7 +144,7 @@ public partial class RocketCard : IDisposable
         double result = Math.Clamp(percentage, 5, 100);
 
         // Log the calculation for debugging
-        System.Diagnostics.Debug.WriteLine($"Mission progress: Duration={mission.DurationSeconds}, Remaining={secondsRemaining}, Elapsed={elapsed}, Percentage={percentage}, Result={result}");
+        System.Diagnostics.Debug.WriteLine($"Mission progress: Ship={mission.Ship}, Status={mission.Status}, Duration={mission.DurationSeconds}, Remaining={secondsRemaining}, Elapsed={elapsed}, Percentage={percentage}, Result={result}");
 
         return result;
     }
@@ -142,32 +169,90 @@ public partial class RocketCard : IDisposable
     }
 
     // Get return time
+    private string GetReturnTime(JsonPlayerExtendedMissionInfo mission, bool includeSeconds = false)
+    {
+        try
+        {
+            // If we have the actual return time stored in MissionLog, use it
+            DateTime returnTime;
+            if (!string.IsNullOrEmpty(mission.MissionLog) && DateTime.TryParse(mission.MissionLog, out DateTime parsedTime))
+            {
+                returnTime = parsedTime;
+            }
+            else
+            {
+                // Fall back to calculating from start time and duration if MissionLog is not available
+                DateTime startTime = DateTimeOffset.FromUnixTimeSeconds((long)mission.StartTimeDerived).DateTime;
+                returnTime = startTime.AddSeconds(mission.DurationSeconds);
+            }
+
+            // Convert to local time
+            DateTime localReturnTime = TimeZoneInfo.ConvertTimeFromUtc(returnTime, TimeZoneInfo.Local);
+
+            // Format based on when the mission returns
+            if (localReturnTime.Date == DateTime.Today)
+            {
+                return includeSeconds
+                    ? $"Today at {localReturnTime:HH:mm:ss}"
+                    : $"Today at {localReturnTime:HH:mm}";
+            }
+            else if (localReturnTime.Date == DateTime.Today.AddDays(1))
+            {
+                return includeSeconds
+                    ? $"Tomorrow at {localReturnTime:HH:mm:ss}"
+                    : $"Tomorrow at {localReturnTime:HH:mm}";
+            }
+            else
+            {
+                return includeSeconds
+                    ? localReturnTime.ToString("MM/dd HH:mm:ss")
+                    : localReturnTime.ToString("MM/dd HH:mm");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log the error but don't throw to prevent UI crashes
+            System.Diagnostics.Debug.WriteLine($"Error calculating return time: {ex.Message}");
+            return "Time unknown";
+        }
+    }
+
+    // Legacy method for backward compatibility
     private string GetReturnTime(double startTimeDerived, float durationSeconds, bool includeSeconds = false)
     {
-        DateTime startTime = DateTimeOffset.FromUnixTimeSeconds((long)startTimeDerived).DateTime;
-        DateTime returnTime = startTime.AddSeconds(durationSeconds);
+        try
+        {
+            DateTime startTime = DateTimeOffset.FromUnixTimeSeconds((long)startTimeDerived).DateTime;
+            DateTime returnTime = startTime.AddSeconds(durationSeconds);
 
-        // Convert to local time
-        DateTime localReturnTime = TimeZoneInfo.ConvertTimeFromUtc(returnTime, TimeZoneInfo.Local);
+            // Convert to local time
+            DateTime localReturnTime = TimeZoneInfo.ConvertTimeFromUtc(returnTime, TimeZoneInfo.Local);
 
-        // Format based on when the mission returns
-        if (localReturnTime.Date == DateTime.Today)
-        {
-            return includeSeconds
-                ? $"Today at {localReturnTime:HH:mm:ss}"
-                : $"Today at {localReturnTime:HH:mm}";
+            // Format based on when the mission returns
+            if (localReturnTime.Date == DateTime.Today)
+            {
+                return includeSeconds
+                    ? $"Today at {localReturnTime:HH:mm:ss}"
+                    : $"Today at {localReturnTime:HH:mm}";
+            }
+            else if (localReturnTime.Date == DateTime.Today.AddDays(1))
+            {
+                return includeSeconds
+                    ? $"Tomorrow at {localReturnTime:HH:mm:ss}"
+                    : $"Tomorrow at {localReturnTime:HH:mm}";
+            }
+            else
+            {
+                return includeSeconds
+                    ? localReturnTime.ToString("MM/dd HH:mm:ss")
+                    : localReturnTime.ToString("MM/dd HH:mm");
+            }
         }
-        else if (localReturnTime.Date == DateTime.Today.AddDays(1))
+        catch (Exception ex)
         {
-            return includeSeconds
-                ? $"Tomorrow at {localReturnTime:HH:mm:ss}"
-                : $"Tomorrow at {localReturnTime:HH:mm}";
-        }
-        else
-        {
-            return includeSeconds
-                ? localReturnTime.ToString("MM/dd HH:mm:ss")
-                : localReturnTime.ToString("MM/dd HH:mm");
+            // Log the error but don't throw to prevent UI crashes
+            System.Diagnostics.Debug.WriteLine($"Error calculating return time: {ex.Message}");
+            return "Time unknown";
         }
     }
 

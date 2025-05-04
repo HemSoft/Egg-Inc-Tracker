@@ -95,34 +95,8 @@ public class RocketMissionService
 
             if (dbMissions == null || dbMissions.Count == 0)
             {
-                _logger.LogWarning("No missions found in database for player {PlayerName}, falling back to API", playerName);
-
-                // Fall back to API if no missions found in database
-                var (player, fullPlayerInfo) = await Task.Run(() => Api.CallPlayerInfoApi(playerEid, playerName));
-
-                if (fullPlayerInfo?.ArtifactsDb?.MissionInfosList == null)
-                {
-                    _logger.LogWarning("No mission data found in API for player {PlayerName}", playerName);
-                    return new List<JsonPlayerExtendedMissionInfo>();
-                }
-
-                // Save mission data to the database
-                if (player != null)
-                {
-                    _logger.LogInformation("Saving mission data for player {PlayerName}", playerName);
-                    MissionManager.SaveMissions(player, fullPlayerInfo, _logger);
-                }
-
-                // Convert missions to JsonPlayerExtendedMissionInfo
-                var activeMissions = fullPlayerInfo.ArtifactsDb.MissionInfosList
-                    .OrderBy(m => m.Status)
-                    .ThenBy(m => m.SecondsRemaining)
-                    .ToList();
-
-                _logger.LogInformation("Found {Count} active missions from API for player {PlayerName}",
-                    activeMissions.Count, playerName);
-
-                return activeMissions;
+                _logger.LogWarning("No missions found in database for player {PlayerName}", playerName);
+                return new List<JsonPlayerExtendedMissionInfo>();
             }
 
             // Convert database missions to JsonPlayerExtendedMissionInfo
@@ -137,8 +111,10 @@ public class RocketMissionService
                 QualityBump = m.QualityBump,
                 TargetArtifact = m.TargetArtifact,
                 SecondsRemaining = CalculateSecondsRemaining(m.ReturnTime),
-                FuelList = DeserializeFuelList(m.FuelList),
-                StartTimeDerived = new DateTimeOffset(m.LaunchTime).ToUnixTimeSeconds()
+                FuelList = DeserializeFuelList(m.FuelListJson),
+                StartTimeDerived = new DateTimeOffset(m.LaunchTime).ToUnixTimeSeconds(),
+                // Add a custom property to store the actual return time
+                MissionLog = m.ReturnTime.ToString("o") // ISO 8601 format to preserve the exact time
             }).ToList();
 
             _logger.LogInformation("Found {Count} active missions from database for player {PlayerName}",
@@ -210,40 +186,7 @@ public class RocketMissionService
 
             if (dbMission == null)
             {
-                _logger.LogWarning("No standby mission found in database for player {PlayerName}, falling back to API", playerName);
-
-                // Fall back to API if no standby mission found in database
-                var (player, fullPlayerInfo) = await Task.Run(() => Api.CallPlayerInfoApi(playerEid, playerName));
-
-                if (fullPlayerInfo?.ArtifactsDb?.FuelingMission == null)
-                {
-                    _logger.LogWarning("No fueling mission found in API for player {PlayerName}", playerName);
-                    return null;
-                }
-
-                // Check if the fueling mission is fully fueled
-                var fuelingMission = fullPlayerInfo.ArtifactsDb.FuelingMission;
-                bool isFullyFueled = fuelingMission.FuelList.All(f => f.Amount >= 1.0);
-
-                if (isFullyFueled && player != null)
-                {
-                    // Save mission data to the database
-                    _logger.LogInformation("Saving mission data for player {PlayerName}", playerName);
-                    MissionManager.SaveMissions(player, fullPlayerInfo, _logger);
-
-                    // Convert FuelingMission to ExtendedMissionInfo
-                    return new JsonPlayerExtendedMissionInfo
-                    {
-                        Ship = fuelingMission.Ship,
-                        Status = 1, // Fueling
-                        DurationType = fuelingMission.DurationType,
-                        FuelList = fuelingMission.FuelList,
-                        Level = fuelingMission.Level,
-                        Capacity = fuelingMission.Capacity,
-                        TargetArtifact = fuelingMission.TargetArtifact
-                    };
-                }
-
+                _logger.LogWarning("No standby mission found in database for player {PlayerName}", playerName);
                 return null;
             }
 
@@ -258,7 +201,7 @@ public class RocketMissionService
                 Capacity = dbMission.Capacity,
                 QualityBump = dbMission.QualityBump,
                 TargetArtifact = dbMission.TargetArtifact,
-                FuelList = DeserializeFuelList(dbMission.FuelList)
+                FuelList = DeserializeFuelList(dbMission.FuelListJson)
             };
         }
         catch (Exception ex)
@@ -275,7 +218,8 @@ public class RocketMissionService
     /// <returns>Progress percentage (0-100)</returns>
     public double CalculateMissionProgressPercentage(JsonPlayerExtendedMissionInfo mission)
     {
-        if (mission.Status != 2 || mission.DurationSeconds <= 0)
+        // Status 2 = Exploring, Status 10 = In Progress
+        if ((mission.Status != 2 && mission.Status != 10) || mission.DurationSeconds <= 0)
         {
             return 0;
         }
