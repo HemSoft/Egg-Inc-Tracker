@@ -28,7 +28,8 @@ public partial class RocketDashboard : IDisposable, IAsyncDisposable
     private string _timeSinceLastUpdate = "Never";
     private bool IsLoading = false;
     private Timer? _refreshTimer;
-    private const int RefreshIntervalMs = 1800000; // 30 minutes
+    private Timer? _updateTimer;
+    private const int RefreshIntervalMs = 30000; // 30 seconds
 
     private DashboardPlayer _kingFridayPlayer = new();
     private DashboardPlayer _kingSaturdayPlayer = new();
@@ -47,6 +48,9 @@ public partial class RocketDashboard : IDisposable, IAsyncDisposable
 
             // Set up refresh timer
             SetupRefreshTimer();
+
+            // Set up update timer for the "Last updated" text
+            SetupUpdateTimer();
 
             // Subscribe to player data refresh events
             PlayerCardService.OnPlayerDataRefreshed += OnPlayerDataRefreshed;
@@ -70,10 +74,67 @@ public partial class RocketDashboard : IDisposable, IAsyncDisposable
             _refreshTimer.Elapsed += OnRefreshTimerElapsed;
             _refreshTimer.AutoReset = true;
             _refreshTimer.Enabled = true;
+            Logger.LogInformation("Refresh timer started (30 second interval)");
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error setting up refresh timer");
+        }
+    }
+
+    private void SetupUpdateTimer()
+    {
+        try
+        {
+            // Dispose of any existing timer
+            if (_updateTimer != null)
+            {
+                _updateTimer.Elapsed -= OnUpdateTimerElapsed;
+                _updateTimer.Stop();
+                _updateTimer.Dispose();
+                _updateTimer = null;
+            }
+
+            // Create a timer to update the "Last updated" text every second
+            _updateTimer = new Timer(1000); // 1 second
+            _updateTimer.Elapsed += OnUpdateTimerElapsed;
+            _updateTimer.AutoReset = true;
+            _updateTimer.Start();
+            Logger.LogInformation("Update timer started (1 second interval)");
+
+            // Initialize the last updated time
+            _lastUpdated = DateTime.Now;
+            _timeSinceLastUpdate = GetTimeSinceLastUpdate();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error setting up update timer");
+        }
+    }
+
+    private async void OnUpdateTimerElapsed(object? sender, ElapsedEventArgs e)
+    {
+        try
+        {
+            // Update the time since last update
+            _timeSinceLastUpdate = GetTimeSinceLastUpdate();
+
+            // Only update the time display element, not the entire page
+            await InvokeAsync(() =>
+            {
+                // Use a more targeted StateHasChanged approach
+                StateHasChanged();
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            // Component is being disposed, stop the timer
+            _updateTimer?.Stop();
+            Logger.LogInformation("Update timer stopped due to component disposal");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating time display");
         }
     }
 
@@ -93,10 +154,12 @@ public partial class RocketDashboard : IDisposable, IAsyncDisposable
     {
         try
         {
+            // Set loading state but only update the loading indicator, not the whole page
             IsLoading = true;
-            await InvokeAsync(StateHasChanged);
+            await InvokeAsync(() => StateHasChanged());
 
-            // Refresh mission data for all players
+            // Use a more targeted approach to refresh mission data
+            // Process one player at a time with minimal UI updates
             await LoadMissionDataForPlayer(_kingFridayPlayer);
             await LoadMissionDataForPlayer(_kingSaturdayPlayer);
             await LoadMissionDataForPlayer(_kingSundayPlayer);
@@ -105,14 +168,15 @@ public partial class RocketDashboard : IDisposable, IAsyncDisposable
             _lastUpdated = DateTime.Now;
             _timeSinceLastUpdate = GetTimeSinceLastUpdate();
 
+            // Update loading state and refresh UI once at the end
             IsLoading = false;
-            await InvokeAsync(StateHasChanged);
+            await InvokeAsync(() => StateHasChanged());
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error refreshing mission data");
             IsLoading = false;
-            await InvokeAsync(StateHasChanged);
+            await InvokeAsync(() => StateHasChanged());
         }
     }
 
@@ -232,15 +296,23 @@ public partial class RocketDashboard : IDisposable, IAsyncDisposable
         }
 
         var timeSince = DateTime.Now - _lastUpdated;
+
         if (timeSince.TotalSeconds < 60)
         {
             return $"{(int)timeSince.TotalSeconds} seconds ago";
         }
-        if (timeSince.TotalMinutes < 60)
+        else if (timeSince.TotalMinutes < 60)
         {
             return $"{(int)timeSince.TotalMinutes} minutes ago";
         }
-        return $"{(int)timeSince.TotalHours} hours ago";
+        else if (timeSince.TotalHours < 24)
+        {
+            return $"{(int)timeSince.TotalHours} hours ago";
+        }
+        else
+        {
+            return $"{(int)timeSince.TotalDays} days ago";
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -267,6 +339,15 @@ public partial class RocketDashboard : IDisposable, IAsyncDisposable
                 _refreshTimer.Stop();
                 _refreshTimer.Dispose();
                 _refreshTimer = null;
+            }
+
+            // Stop and dispose the update timer
+            if (_updateTimer != null)
+            {
+                _updateTimer.Elapsed -= OnUpdateTimerElapsed;
+                _updateTimer.Stop();
+                _updateTimer.Dispose();
+                _updateTimer = null;
             }
 
             // Unsubscribe from PlayerCardService events
