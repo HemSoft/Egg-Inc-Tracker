@@ -88,60 +88,84 @@ public class RocketMissionService
     {
         try
         {
-            _logger.LogInformation("Getting active missions for player {PlayerName} with EID {PlayerEid}", playerName, playerEid);
+            _logger.LogInformation("Getting active missions for player {PlayerName} from database", playerName);
 
-            var (_, fullPlayerInfo) = await Task.Run(() => Api.CallPlayerInfoApi(playerEid, playerName));
+            // Get missions from the database
+            var dbMissions = await MissionManager.GetActiveMissionsAsync(playerName, _logger);
 
-            if (fullPlayerInfo == null)
+            if (dbMissions == null || dbMissions.Count == 0)
             {
-                _logger.LogWarning("Player info is null for player {PlayerName}", playerName);
+                _logger.LogWarning("No missions found in database for player {PlayerName}", playerName);
                 return new List<JsonPlayerExtendedMissionInfo>();
             }
 
-            if (fullPlayerInfo.ArtifactsDb == null)
+            // Convert database missions to JsonPlayerExtendedMissionInfo
+            var missions = dbMissions.Select(m => new JsonPlayerExtendedMissionInfo
             {
-                _logger.LogWarning("ArtifactsDb is null for player {PlayerName}", playerName);
-                return new List<JsonPlayerExtendedMissionInfo>();
-            }
+                Ship = m.Ship,
+                Status = m.Status,
+                DurationType = m.DurationType,
+                Level = m.Level,
+                DurationSeconds = m.DurationSeconds,
+                Capacity = m.Capacity,
+                QualityBump = m.QualityBump,
+                TargetArtifact = m.TargetArtifact,
+                SecondsRemaining = CalculateSecondsRemaining(m.ReturnTime),
+                FuelList = DeserializeFuelList(m.FuelListJson),
+                StartTimeDerived = new DateTimeOffset(m.LaunchTime).ToUnixTimeSeconds(),
+                // Add a custom property to store the actual return time
+                MissionLog = m.ReturnTime.ToString("o") // ISO 8601 format to preserve the exact time
+            }).ToList();
 
-            if (fullPlayerInfo.ArtifactsDb.MissionInfosList == null)
-            {
-                _logger.LogWarning("MissionInfosList is null for player {PlayerName}", playerName);
-                return new List<JsonPlayerExtendedMissionInfo>();
-            }
+            _logger.LogInformation("Found {Count} active missions from database for player {PlayerName}",
+                missions.Count, playerName);
 
-            _logger.LogInformation("Found {Count} missions for player {PlayerName}",
-                fullPlayerInfo.ArtifactsDb.MissionInfosList.Count, playerName);
-
-            // Log all missions regardless of status
-            foreach (var mission in fullPlayerInfo.ArtifactsDb.MissionInfosList)
-            {
-                _logger.LogInformation("All missions for {PlayerName}: Ship={Ship}, Status={Status}, Level={Level}",
-                    playerName, mission.Ship, mission.Status, mission.Level);
-            }
-
-            // Filter active missions - include ALL missions for now for debugging
-            var activeMissions = fullPlayerInfo.ArtifactsDb.MissionInfosList
-                .OrderBy(m => m.Status)
-                .ThenBy(m => m.SecondsRemaining)
-                .ToList();
-
-            _logger.LogInformation("Filtered to {Count} active missions for player {PlayerName}",
-                activeMissions.Count, playerName);
-
-            // Log details of each mission
-            foreach (var mission in activeMissions)
-            {
-                _logger.LogInformation("Mission for {PlayerName}: Ship={Ship}, Status={Status}, Level={Level}",
-                    playerName, mission.Ship, mission.Status, mission.Level);
-            }
-
-            return activeMissions;
+            return missions;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting active missions for player {PlayerName}", playerName);
             return new List<JsonPlayerExtendedMissionInfo>();
+        }
+    }
+
+    /// <summary>
+    /// Calculate seconds remaining for a mission
+    /// </summary>
+    /// <param name="returnTime">Mission return time</param>
+    /// <returns>Seconds remaining</returns>
+    private float CalculateSecondsRemaining(DateTime returnTime)
+    {
+        var now = DateTime.UtcNow;
+        if (returnTime <= now)
+        {
+            return 0;
+        }
+
+        var timeSpan = returnTime - now;
+        return (float)timeSpan.TotalSeconds;
+    }
+
+    /// <summary>
+    /// Deserialize fuel list from JSON string
+    /// </summary>
+    /// <param name="fuelListJson">JSON string of fuel list</param>
+    /// <returns>List of JsonPlayerFuel objects</returns>
+    private List<JsonPlayerFuel> DeserializeFuelList(string? fuelListJson)
+    {
+        if (string.IsNullOrEmpty(fuelListJson))
+        {
+            return new List<JsonPlayerFuel>();
+        }
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<List<JsonPlayerFuel>>(fuelListJson) ?? new List<JsonPlayerFuel>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deserializing fuel list: {FuelListJson}", fuelListJson);
+            return new List<JsonPlayerFuel>();
         }
     }
 
@@ -155,33 +179,30 @@ public class RocketMissionService
     {
         try
         {
-            var (_, fullPlayerInfo) = await Task.Run(() => Api.CallPlayerInfoApi(playerEid, playerName));
+            _logger.LogInformation("Getting standby mission for player {PlayerName} from database", playerName);
 
-            if (fullPlayerInfo?.ArtifactsDb?.FuelingMission == null)
+            // Get standby mission from the database
+            var dbMission = await MissionManager.GetStandbyMissionAsync(playerName, _logger);
+
+            if (dbMission == null)
             {
+                _logger.LogWarning("No standby mission found in database for player {PlayerName}", playerName);
                 return null;
             }
 
-            // Check if the fueling mission is fully fueled
-            var fuelingMission = fullPlayerInfo.ArtifactsDb.FuelingMission;
-            bool isFullyFueled = fuelingMission.FuelList.All(f => f.Amount >= 1.0);
-
-            if (isFullyFueled)
+            // Convert database mission to JsonPlayerExtendedMissionInfo
+            return new JsonPlayerExtendedMissionInfo
             {
-                // Convert FuelingMission to ExtendedMissionInfo
-                return new JsonPlayerExtendedMissionInfo
-                {
-                    Ship = fuelingMission.Ship,
-                    Status = 1, // Fueling
-                    DurationType = fuelingMission.DurationType,
-                    FuelList = fuelingMission.FuelList,
-                    Level = fuelingMission.Level,
-                    Capacity = fuelingMission.Capacity,
-                    TargetArtifact = fuelingMission.TargetArtifact
-                };
-            }
-
-            return null;
+                Ship = dbMission.Ship,
+                Status = dbMission.Status,
+                DurationType = dbMission.DurationType,
+                Level = dbMission.Level,
+                DurationSeconds = dbMission.DurationSeconds,
+                Capacity = dbMission.Capacity,
+                QualityBump = dbMission.QualityBump,
+                TargetArtifact = dbMission.TargetArtifact,
+                FuelList = DeserializeFuelList(dbMission.FuelListJson)
+            };
         }
         catch (Exception ex)
         {
@@ -197,7 +218,8 @@ public class RocketMissionService
     /// <returns>Progress percentage (0-100)</returns>
     public double CalculateMissionProgressPercentage(JsonPlayerExtendedMissionInfo mission)
     {
-        if (mission.Status != 2 || mission.DurationSeconds <= 0)
+        // Status 2 = Exploring, Status 10 = In Progress
+        if ((mission.Status != 2 && mission.Status != 10) || mission.DurationSeconds <= 0)
         {
             return 0;
         }

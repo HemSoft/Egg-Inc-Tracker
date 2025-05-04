@@ -37,6 +37,7 @@ builder.Services.AddScoped<DashboardState>();
 builder.Services.AddScoped<PlayerDataService>();
 builder.Services.AddScoped<PlayerCardService>();
 builder.Services.AddScoped<RocketMissionService>();
+builder.Services.AddScoped<EventService>();
 
 // NOTE: Static Domain Managers (PlayerManager, etc.) are not registered via DI
 // They instantiate their own DbContext, which is not ideal but kept for now.

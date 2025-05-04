@@ -13,6 +13,7 @@ public class EggIncContext : DbContext
     public DbSet<GoalDto> Goals { get; set; } = null!;
     public DbSet<MajPlayerRankingDto> MajPlayerRankings { get; set; } = null!;
     public virtual DbSet<PlayerStatsDto> PlayerRankings { get; set; } = null!;
+    public DbSet<MissionDto> Missions { get; set; } = null!;
 
     // Default constructor for legacy/standalone usage
     public EggIncContext() { }
@@ -33,7 +34,7 @@ public class EggIncContext : DbContext
         // Skip if options are already configured (means options were passed via constructor)
         if (optionsBuilder.IsConfigured)
             return;
-            
+
         // Fallback for backwards compatibility
         optionsBuilder.UseSqlServer("Data Source=localhost;Initial Catalog=db-egginc;Integrated Security=True;Encrypt=False;Trust Server Certificate=True");
     }
