@@ -110,7 +110,17 @@ public partial class RocketCard : IDisposable
         }
     }
 
-    // Calculate actual time remaining based on return time
+    /// <summary>
+    /// Calculates the actual time remaining for a mission based on its return time.
+    /// </summary>
+    /// <param name="mission">An object containing mission details, including:
+    /// - MissionLog: A string representing the actual return time (if available).
+    /// - StartTimeDerived: The mission's start time in Unix timestamp format.
+    /// - DurationSeconds: The mission's duration in seconds.</param>
+    /// <returns>
+    /// A string representing the time remaining in a human-readable format, or "Ready to collect" 
+    /// if the mission has already returned. Returns "Time unknown" in case of an error.
+    /// </returns>
     private string CalculateActualTimeRemaining(JsonPlayerExtendedMissionInfo mission)
     {
         try
