@@ -240,6 +240,15 @@ public class UpdatePlayerTimerTrigger
     {
         var (player, fullPlayerInfo) = Api.CallPlayerInfoApi(playerEid, playerName).Result;
         var (saveResult, previousEntry) = PlayerManager.SavePlayer(player, fullPlayerInfo, _logger);
+
+        // Save mission data to the database
+        if (fullPlayerInfo?.ArtifactsDb?.MissionInfosList != null)
+        {
+            _logger.LogInformation("Saving mission data for player {PlayerName}", playerName);
+            var missionSaveResult = MissionManager.SaveMissions(player, fullPlayerInfo, _logger);
+            _logger.LogInformation("Mission data save result for {PlayerName}: {Result}", playerName, missionSaveResult);
+        }
+
         await SendDiscordMessage(player, fullPlayerInfo, previousEntry, saveResult);
     }
 
