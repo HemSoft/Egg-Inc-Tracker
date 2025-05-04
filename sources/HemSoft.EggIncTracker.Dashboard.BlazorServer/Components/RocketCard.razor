@@ -40,8 +40,8 @@
         }
         else
         {
-            <div class="d-flex flex-column gap-4 px-4">
-                <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="mb-2">
+            <div class="d-flex flex-column gap-2 px-4">
+                <MudText Typo="Typo.caption" Align="Align.Center" Class="mb-0 missions-count">
                     Active Missions: @Missions.Count
                 </MudText>
 
@@ -60,65 +60,68 @@
                             </MudChip>
                         </div>
 
-                        <MudText Typo="Typo.body2" Class="mb-1">Mission Level: @mission.Level</MudText>
-
-                        @if (mission.Status == 2) // Traveling
-                        {
-                            <div class="d-flex justify-space-between align-center mb-2">
+                        <div class="d-flex justify-space-between align-center mb-1">
+                            <MudTooltip Text="Mission Level">
                                 <MudText Typo="Typo.body2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Small" Class="mr-1" />
-                                    Capacity: @mission.Capacity
+                                    <MudIcon Icon="@Icons.Material.Filled.Stars" Size="Size.Small" Class="mr-1" />
+                                    Level: @mission.Level
                                 </MudText>
+                            </MudTooltip>
+
+                            <div class="d-flex align-center">
+                                <MudTooltip Text="Ship Capacity">
+                                    <MudText Typo="Typo.body2" Class="mr-3">
+                                        <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Small" Class="mr-1" />
+                                        @mission.Capacity
+                                    </MudText>
+                                </MudTooltip>
 
                                 @if (mission.QualityBump > 0)
                                 {
                                     <MudTooltip Text="Quality bonus for this mission">
                                         <MudText Typo="Typo.body2">
                                             <MudIcon Icon="@Icons.Material.Filled.Grade" Size="Size.Small" Class="mr-1" />
-                                            Quality: @GetQualityBonusText(mission.QualityBump)
+                                            @GetQualityBonusText(mission.QualityBump)
                                         </MudText>
                                     </MudTooltip>
                                 }
                             </div>
+                        </div>
+
+                        @if (mission.Status == 2) // Traveling
+                        {
 
                             <MudDivider Class="my-2" />
 
-                            <div class="d-flex justify-center align-center flex-column">
-                                <MudText Typo="Typo.h6" Style="@GetReturnTimeStyle(mission.SecondsRemaining)" Class="mb-1 font-weight-bold text-center">
-                                    @CalculateActualTimeRemaining(mission)
-                                </MudText>
-
-                                <MudTooltip Text="@($"Mission Progress: {GetMissionProgressPercentage(mission):F1}%")">
-                                    <div style="border: 2px solid #4caf50; border-radius: 5px; padding: 2px; margin-top: 4px; margin-bottom: 12px; width: 100%; min-width: 200px;">
-                                        <MudProgressLinear Color="Color.Success" Value="@GetMissionProgressPercentage(mission)" Class="mt-0 mb-0" Style="height: 16px; border-radius: 3px;" />
-                                    </div>
-                                </MudTooltip>
-                            </div>
-
-                            <div class="d-flex justify-space-between align-center mt-2">
+                            <div class="d-flex justify-space-between align-center mb-1">
                                 <MudTooltip Text="@($"Mission started at {GetStartTime(mission.StartTimeDerived)}")">
-                                    <MudText Typo="Typo.caption">
-                                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="mr-1" />
-                                        Started: @GetStartTime(mission.StartTimeDerived)
+                                    <MudText Typo="Typo.caption" Class="mission-time-label">
+                                        @GetStartTime(mission.StartTimeDerived)
                                     </MudText>
                                 </MudTooltip>
 
                                 <MudTooltip Text="@($"Returns on {GetReturnTime(mission, true)}")">
-                                    <MudText Typo="Typo.caption" Style="@GetReturnTimeStyle(mission.SecondsRemaining)">
-                                        <MudIcon Icon="@Icons.Material.Filled.FlightLand" Size="Size.Small" Class="mr-1" />
-                                        Returns: @GetReturnTime(mission)
+                                    <MudText Typo="Typo.caption" Class="mission-time-label" Style="@GetReturnTimeStyle(mission.SecondsRemaining)">
+                                        @GetReturnTime(mission)
                                     </MudText>
+                                </MudTooltip>
+                            </div>
+
+                            <div class="d-flex justify-center align-center">
+                                <MudTooltip Text="@($"Mission Progress: {GetMissionProgressPercentage(mission):F1}%")">
+                                    <div class="progress-container">
+                                        <MudProgressLinear Color="Color.Success" Value="@GetMissionProgressPercentage(mission)" Class="mt-0 mb-0" Style="height: 24px; border-radius: 3px;" />
+                                        <div class="progress-text">
+                                            <MudText Typo="Typo.body1" Class="progress-time">
+                                                @CalculateActualTimeRemaining(mission)
+                                            </MudText>
+                                        </div>
+                                    </div>
                                 </MudTooltip>
                             </div>
                         }
                         else if (mission.Status == 1) // Fueling
                         {
-                            <div class="d-flex justify-space-between align-center mb-2">
-                                <MudText Typo="Typo.body2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Small" Class="mr-1" />
-                                    Capacity: @mission.Capacity
-                                </MudText>
-                            </div>
 
                             <MudDivider Class="my-2" />
 
@@ -130,11 +133,11 @@
                             <div class="d-flex flex-column gap-1 mt-2">
                                 @foreach (var fuel in mission.FuelList)
                                 {
-                                    <div class="d-flex align-center justify-space-between">
-                                        <MudText Typo="Typo.caption">@GetEggName(fuel.Egg)</MudText>
+                                    <div class="d-flex align-center">
+                                        <MudText Typo="Typo.caption" Style="width: 100px; min-width: 100px;">@GetEggName(fuel.Egg)</MudText>
                                         <MudProgressLinear Color="@(GetFuelPercentage(fuel) >= 100 ? Color.Success : Color.Warning)"
-                                                          Value="@GetFuelPercentage(fuel)" Class="mx-2" Style="width: 100px;" />
-                                        <MudText Typo="Typo.caption">@GetFuelPercentage(fuel)%</MudText>
+                                                          Value="@GetFuelPercentage(fuel)" Class="mx-2" Style="width: 100px; flex-grow: 0;" />
+                                        <MudText Typo="Typo.caption" Style="width: 40px; text-align: right;">@GetFuelPercentage(fuel)%</MudText>
                                     </div>
                                 }
                             </div>
@@ -160,38 +163,35 @@
                         }
                         else if (mission.Status == 3) // Returned
                         {
-                            <div class="d-flex justify-space-between align-center mb-2">
-                                <MudText Typo="Typo.body2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Small" Class="mr-1" />
-                                    Capacity: @mission.Capacity items
-                                </MudText>
 
-                                <MudTooltip Text="@GetQualityBonusText(mission.QualityBump)">
-                                    <MudText Typo="Typo.body2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Grade" Size="Size.Small" Class="mr-1" />
-                                        Quality: @GetQualityBonusText(mission.QualityBump)
+                            <MudDivider Class="my-2" />
+
+                            <div class="d-flex justify-space-between align-center mb-1">
+                                <MudTooltip Text="@($"Mission started at {GetStartTime(mission.StartTimeDerived)}")">
+                                    <MudText Typo="Typo.caption" Class="mission-time-label">
+                                        @GetStartTime(mission.StartTimeDerived)
+                                    </MudText>
+                                </MudTooltip>
+
+                                <MudTooltip Text="@($"Returned at {GetStartTime(mission.StartTimeDerived + mission.DurationSeconds)}")">
+                                    <MudText Typo="Typo.caption" Class="mission-time-label" Style="color: var(--mud-palette-success);">
+                                        @GetStartTime(mission.StartTimeDerived + mission.DurationSeconds)
                                     </MudText>
                                 </MudTooltip>
                             </div>
 
-                            <MudDivider Class="my-2" />
-
-                            <div class="d-flex justify-center align-center flex-column">
-                                <MudText Typo="Typo.h6" Style="@GetReturnTimeStyle(mission.SecondsRemaining)" Class="mb-1 font-weight-bold text-center">
-                                    @FormatTimeRemaining(mission.SecondsRemaining)
-                                </MudText>
-
+                            <div class="d-flex justify-center align-center">
                                 <MudTooltip Text="@($"Mission Progress: {GetMissionProgressPercentage(mission):F1}%")">
-                                    <div style="border: 2px solid #4caf50; border-radius: 5px; padding: 2px; margin-top: 4px; margin-bottom: 12px; width: 100%; min-width: 200px;">
-                                        <MudProgressLinear Color="Color.Success" Value="@GetMissionProgressPercentage(mission)" Class="mt-0 mb-0" Style="height: 16px; border-radius: 3px;" />
+                                    <div class="progress-container">
+                                        <MudProgressLinear Color="Color.Success" Value="@GetMissionProgressPercentage(mission)" Class="mt-0 mb-0" Style="height: 24px; border-radius: 3px;" />
+                                        <div class="progress-text">
+                                            <MudText Typo="Typo.body1" Class="progress-time">
+                                                @FormatTimeRemaining(mission.SecondsRemaining)
+                                            </MudText>
+                                        </div>
                                     </div>
                                 </MudTooltip>
                             </div>
-
-                            <MudText Typo="Typo.caption" Class="mb-2">
-                                <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Small" Class="mr-1" />
-                                Returned: @GetStartTime(mission.StartTimeDerived + mission.DurationSeconds)
-                            </MudText>
 
                             <MudButton Color="Color.Success" Variant="Variant.Filled" Size="Size.Small" Class="mt-2" FullWidth="true">
                                 <MudIcon Icon="@Icons.Material.Filled.Inventory" Class="mr-2" />
@@ -200,47 +200,33 @@
                         }
                         else if (mission.Status == 10 || mission.Status == 25) // Complete or Archived
                         {
-                            <div class="d-flex justify-space-between align-center mb-2">
-                                <MudText Typo="Typo.body2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Small" Class="mr-1" />
-                                    Capacity: @mission.Capacity items
-                                </MudText>
-
-                                <MudTooltip Text="@GetQualityBonusText(mission.QualityBump)">
-                                    <MudText Typo="Typo.body2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Grade" Size="Size.Small" Class="mr-1" />
-                                        Quality: @GetQualityBonusText(mission.QualityBump)
-                                    </MudText>
-                                </MudTooltip>
-                            </div>
 
                             <MudDivider Class="my-2" />
 
-                            <div class="d-flex justify-center align-center flex-column">
-                                <MudText Typo="Typo.h6" Style="@GetReturnTimeStyle(mission.SecondsRemaining)" Class="mb-1 font-weight-bold text-center">
-                                    @CalculateActualTimeRemaining(mission)
-                                </MudText>
-
-                                <MudTooltip Text="@($"Mission Progress: {GetMissionProgressPercentage(mission):F1}%")">
-                                    <div style="border: 2px solid #4caf50; border-radius: 5px; padding: 2px; margin-top: 4px; margin-bottom: 12px; width: 100%; min-width: 200px;">
-                                        <MudProgressLinear Color="Color.Success" Value="@GetMissionProgressPercentage(mission)" Class="mt-0 mb-0" Style="height: 16px; border-radius: 3px;" />
-                                    </div>
-                                </MudTooltip>
-                            </div>
-
-                            <div class="d-flex justify-space-between align-center mt-2">
+                            <div class="d-flex justify-space-between align-center mb-1">
                                 <MudTooltip Text="@($"Mission started at {GetStartTime(mission.StartTimeDerived)}")">
-                                    <MudText Typo="Typo.caption">
-                                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="mr-1" />
-                                        Started: @GetStartTime(mission.StartTimeDerived)
+                                    <MudText Typo="Typo.caption" Class="mission-time-label">
+                                        @GetStartTime(mission.StartTimeDerived)
                                     </MudText>
                                 </MudTooltip>
 
                                 <MudTooltip Text="@($"Returns on {GetReturnTime(mission, true)}")">
-                                    <MudText Typo="Typo.caption" Style="@GetReturnTimeStyle(mission.SecondsRemaining)">
-                                        <MudIcon Icon="@Icons.Material.Filled.FlightLand" Size="Size.Small" Class="mr-1" />
-                                        Returns: @GetReturnTime(mission)
+                                    <MudText Typo="Typo.caption" Class="mission-time-label" Style="@GetReturnTimeStyle(mission.SecondsRemaining)">
+                                        @GetReturnTime(mission)
                                     </MudText>
+                                </MudTooltip>
+                            </div>
+
+                            <div class="d-flex justify-center align-center">
+                                <MudTooltip Text="@($"Mission Progress: {GetMissionProgressPercentage(mission):F1}%")">
+                                    <div class="progress-container">
+                                        <MudProgressLinear Color="Color.Success" Value="@GetMissionProgressPercentage(mission)" Class="mt-0 mb-0" Style="height: 24px; border-radius: 3px;" />
+                                        <div class="progress-text">
+                                            <MudText Typo="Typo.body1" Class="progress-time">
+                                                @CalculateActualTimeRemaining(mission)
+                                            </MudText>
+                                        </div>
+                                    </div>
                                 </MudTooltip>
                             </div>
                         }
@@ -260,18 +246,22 @@
                             <MudChip Color="Color.Secondary" Size="Size.Small">Ready to Launch</MudChip>
                         </div>
 
-                        <div class="d-flex justify-space-between align-center mb-2">
-                            <MudText Typo="Typo.body2">
-                                <MudIcon Icon="@Icons.Material.Filled.Stars" Size="Size.Small" Class="mr-1" />
-                                Mission Level: @StandbyMission.Level
-                            </MudText>
-
-                            <MudTooltip Text="@($"Ship capacity: {StandbyMission.Capacity} artifacts")">
+                        <div class="d-flex justify-space-between align-center mb-1">
+                            <MudTooltip Text="Mission Level">
                                 <MudText Typo="Typo.body2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Small" Class="mr-1" />
-                                    Capacity: @StandbyMission.Capacity
+                                    <MudIcon Icon="@Icons.Material.Filled.Stars" Size="Size.Small" Class="mr-1" />
+                                    Level= @StandbyMission.Level
                                 </MudText>
                             </MudTooltip>
+
+                            <div class="d-flex align-center">
+                                <MudTooltip Text="Ship Capacity">
+                                    <MudText Typo="Typo.body2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Small" Class="mr-1" />
+                                        @StandbyMission.Capacity
+                                    </MudText>
+                                </MudTooltip>
+                            </div>
                         </div>
 
                         <MudDivider Class="my-2" />
@@ -284,10 +274,10 @@
                         <div class="d-flex flex-column gap-1 mt-2">
                             @foreach (var fuel in StandbyMission.FuelList)
                             {
-                                <div class="d-flex align-center justify-space-between">
-                                    <MudText Typo="Typo.caption">@GetEggName(fuel.Egg)</MudText>
-                                    <MudProgressLinear Color="Color.Success" Value="100" Class="mx-2" Style="width: 100px;" />
-                                    <MudText Typo="Typo.caption">100%</MudText>
+                                <div class="d-flex align-center">
+                                    <MudText Typo="Typo.caption" Style="width: 100px; min-width: 100px;">@GetEggName(fuel.Egg)</MudText>
+                                    <MudProgressLinear Color="Color.Success" Value="100" Class="mx-2" Style="width: 100px; flex-grow: 0;" />
+                                    <MudText Typo="Typo.caption" Style="width: 40px; text-align: right;">100%</MudText>
                                 </div>
                             }
                         </div>
@@ -315,11 +305,6 @@
                             <MudIcon Icon="@Icons.Material.Filled.EventAvailable" Size="Size.Small" Class="mr-1" />
                             Expected Return: @GetReturnTime(DateTime.UtcNow.ToOADate(), StandbyMission.DurationSeconds)
                         </MudText>
-
-                        <MudButton Color="Color.Secondary" Variant="Variant.Filled" Size="Size.Small" Class="mt-3" FullWidth="true">
-                            <MudIcon Icon="@Icons.Material.Filled.RocketLaunch" Class="mr-2" />
-                            Launch Mission
-                        </MudButton>
                     </MudPaper>
                 }
             </div>
@@ -345,5 +330,45 @@ else
 
     .standby-mission {
         border: 1px dashed var(--mud-palette-secondary);
+    }
+
+    .progress-container {
+        border: 2px solid #4caf50;
+        border-radius: 5px;
+        padding: 2px;
+        margin-bottom: 12px;
+        width: 100%;
+        min-width: 200px;
+        position: relative;
+    }
+
+    .progress-text {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .progress-time {
+        color: #ffffff;
+        font-weight: bold;
+        text-shadow: 0px 0px 3px #000000, 0px 0px 2px #000000;
+    }
+
+    .missions-count {
+        font-size: 0.75rem;
+        opacity: 0.8;
+        line-height: 1;
+    }
+
+    .mission-time-label {
+        font-size: 0.8rem;
+        padding: 2px 6px;
+        background-color: rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
     }
 </style>
