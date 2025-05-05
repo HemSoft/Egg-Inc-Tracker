@@ -120,11 +120,7 @@ public partial class RocketDashboard : IDisposable, IAsyncDisposable
             _timeSinceLastUpdate = GetTimeSinceLastUpdate();
 
             // Only update the time display element, not the entire page
-            await InvokeAsync(() =>
-            {
-                // Use a more targeted StateHasChanged approach
-                StateHasChanged();
-            });
+            await InvokeAsync(StateHasChanged);
         }
         catch (ObjectDisposedException)
         {

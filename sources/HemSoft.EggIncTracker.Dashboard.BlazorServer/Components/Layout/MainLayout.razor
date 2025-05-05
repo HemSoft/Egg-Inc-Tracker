@@ -114,9 +114,9 @@
             </MudButton>
         </MudPaper>
 
-        <!-- Last Updated -->
+        <!-- Current Time -->
         <MudText Typo="Typo.h2" Class="mr-4" Style="z-index: 1;">
-            @(DashboardState.LastUpdated.ToString("HH:mm"))
+            @(_currentTime.ToString("HH:mm"))
         </MudText>
         <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle"
             Style="z-index: 1;" />
@@ -155,11 +155,14 @@
     private DateTime _startTime;
     private TimeSpan _elapsed = TimeSpan.Zero;
     private System.Timers.Timer? _timer;
+    private System.Timers.Timer? _clockTimer;
+    private DateTime _currentTime = DateTime.Now;
 
     // Removed _initialized and _isLoading fields
 
     protected override Task OnInitializedAsync()
     {
+        // Timer for stopwatch
         _timer = new System.Timers.Timer(1000);
         _timer.Elapsed += async (sender, e) =>
         {
@@ -170,6 +173,16 @@
                 await InvokeAsync(StateHasChanged); // Directly call StateHasChanged
             }
         };
+
+        // Timer for clock update
+        _clockTimer = new System.Timers.Timer(1000);
+        _clockTimer.Elapsed += async (sender, e) =>
+        {
+            _currentTime = DateTime.Now;
+            await InvokeAsync(StateHasChanged);
+        };
+        _clockTimer.AutoReset = true;
+        _clockTimer.Start();
 
         _theme = new()
         {
@@ -266,7 +279,22 @@
     public void Dispose()
     {
         DashboardState.OnChange -= StateHasChanged;
-        _timer?.Dispose();
+
+        // Dispose stopwatch timer
+        if (_timer != null)
+        {
+            _timer.Stop();
+            _timer.Dispose();
+            _timer = null;
+        }
+
+        // Dispose clock timer
+        if (_clockTimer != null)
+        {
+            _clockTimer.Stop();
+            _clockTimer.Dispose();
+            _clockTimer = null;
+        }
     }
 
     private void DrawerToggle()

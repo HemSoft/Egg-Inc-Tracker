@@ -363,3 +363,5 @@ MigrationBackup/
 resources/news-database/news.db
 resources/news-database/news.db-shm
 resources/news-database/news.db-wal
+
+db-egginc_backup_20250504.bak

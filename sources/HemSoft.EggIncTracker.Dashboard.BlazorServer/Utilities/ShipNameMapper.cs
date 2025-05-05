@@ -19,7 +19,7 @@ public static class ShipNameMapper
         { 7, "Voyegger" },
         { 8, "Henerprise" },
         { 9, "Defihent" },
-        { 10, "Cornish-Ex Hen" }
+        { 10, "Henliner" }
     };
 
     /// <summary>

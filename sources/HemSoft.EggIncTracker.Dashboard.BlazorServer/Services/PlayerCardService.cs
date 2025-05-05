@@ -182,11 +182,11 @@ public class PlayerCardService
             _refreshTimer?.Dispose(); // Dispose existing timer if any
             _updateTimer?.Dispose();
 
-            _refreshTimer = new Timer(1800000); // 30 minutes
+            _refreshTimer = new Timer(30000); // 30 seconds
             _refreshTimer.Elapsed += OnRefreshTimerElapsed;
             _refreshTimer.AutoReset = true;
             _refreshTimer.Start();
-            _logger.LogInformation("Main refresh timer started (30 minute interval)");
+            _logger.LogInformation("Main refresh timer started (30 second interval)");
 
             _updateTimer = new Timer(1000); // 1 second
             _updateTimer.Elapsed += OnUpdateTimerElapsed;
