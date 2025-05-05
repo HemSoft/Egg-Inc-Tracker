@@ -35,7 +35,7 @@ public class MissionDto
     public string PlayerName { get; set; } = string.Empty;
 
     /// <summary>
-    /// The type of ship (1-8)
+    /// The type of ship (1-10)
     /// 1: Chicken One
     /// 2: BCR
     /// 3: Quintillion Chicken
@@ -44,6 +44,8 @@ public class MissionDto
     /// 6: Defihent
     /// 7: Voyegger
     /// 8: Henerprise
+    /// 9: Defihent
+    /// 10: Henliner
     /// </summary>
     [Required]
     public int Ship { get; set; }

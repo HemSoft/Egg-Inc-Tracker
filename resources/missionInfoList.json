@@ -1,0 +1,98 @@
+    "missionInfosList": [
+        {
+            "ship": 10,
+            "status": 10,
+            "durationType": 2,
+            "fuelList": [
+                {
+                    "egg": 9,
+                    "amount": 2000000000000
+                },
+                {
+                    "egg": 11,
+                    "amount": 6000000000000
+                },
+                {
+                    "egg": 14,
+                    "amount": 6000000000000
+                },
+                {
+                    "egg": 15,
+                    "amount": 6000000000000
+                }
+            ],
+            "level": 7,
+            "durationSeconds": 138240,
+            "capacity": 234,
+            "qualityBump": 2.17,
+            "targetArtifact": 10,
+            "secondsRemaining": 54810.2183701992,
+            "startTimeDerived": 1746159220.9799492,
+            "missionLog": "Computer, Tea, White Jasmine, Hot... no! don't make a log entry that was for the replicator...stop writing this down!",
+            "identifier": "agxhdXhicmFpbmhvbWVyFgsSCUVJTWlzc2lvbhiAgLizlZC4CQw"
+        },
+        {
+            "ship": 10,
+            "status": 10,
+            "durationType": 2,
+            "fuelList": [
+                {
+                    "egg": 9,
+                    "amount": 2000000000000
+                },
+                {
+                    "egg": 11,
+                    "amount": 6000000000000
+                },
+                {
+                    "egg": 14,
+                    "amount": 6000000000000
+                },
+                {
+                    "egg": 15,
+                    "amount": 6000000000000
+                }
+            ],
+            "level": 7,
+            "durationSeconds": 138240,
+            "capacity": 234,
+            "qualityBump": 2.17,
+            "targetArtifact": 10,
+            "secondsRemaining": 55079.13009476662,
+            "startTimeDerived": 1746159489.8916748,
+            "missionLog": "Computer, Tea, White Jasmine, Hot... no! don't make a log entry that was for the replicator...stop writing this down!",
+            "identifier": "agxhdXhicmFpbmhvbWVyFgsSCUVJTWlzc2lvbhiAgLjzy6KeCgw"
+        },
+        {
+            "ship": 10,
+            "status": 10,
+            "durationType": 2,
+            "fuelList": [
+                {
+                    "egg": 9,
+                    "amount": 2000000000000
+                },
+                {
+                    "egg": 11,
+                    "amount": 6000000000000
+                },
+                {
+                    "egg": 14,
+                    "amount": 6000000000000
+                },
+                {
+                    "egg": 15,
+                    "amount": 6000000000000
+                }
+            ],
+            "level": 7,
+            "durationSeconds": 138240,
+            "capacity": 234,
+            "qualityBump": 2.17,
+            "targetArtifact": 10,
+            "secondsRemaining": 109500.53521585464,
+            "startTimeDerived": 1746213911.2967978,
+            "missionLog": "The crew grows weary of the long journey, morale is kept up playing the latest Clickers.\n\n...Download speeds are slow.",
+            "identifier": "agxhdXhicmFpbmhvbWVyFgsSCUVJTWlzc2lvbhiAgLirj7asCww"
+        }
+    ],
