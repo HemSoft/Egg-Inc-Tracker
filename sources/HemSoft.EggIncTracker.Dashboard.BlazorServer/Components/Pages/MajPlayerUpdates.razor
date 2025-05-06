@@ -33,7 +33,7 @@
             {
                 <MudTable Items="@playerUpdates" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@isLoading"
                     LoadingProgressColor="Color.Primary" T="MajPlayerRankingDto" HeaderClass="table-header"
-                    Filter="FilterFunc" RowsPerPage="100">
+                    Filter="FilterFunc" RowsPerPage="100" SortBy="x => x.Updated" SortDirection="SortDirection.Descending">
                     <HeaderContent>
                         <MudTh
                             Style="font-weight: bold; background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">

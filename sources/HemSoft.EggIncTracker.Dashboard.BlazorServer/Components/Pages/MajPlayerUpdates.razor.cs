@@ -151,6 +151,7 @@ public partial class MajPlayerUpdates : IDisposable
                 var latestByPlayer = rankings
                     .GroupBy(r => r.IGN)
                     .Select(g => g.OrderByDescending(r => r.Updated).First())
+                    .OrderByDescending(r => r.Updated) // Sort by newest first
                     .ToList();
 
                 playerUpdates = latestByPlayer;

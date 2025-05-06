@@ -524,7 +524,7 @@ public static class MajPlayerRankingManager
             var latestRankings = rankings
                 .GroupBy(r => r.IGN)
                 .Select(g => g.OrderByDescending(r => r.Updated).First())
-                .OrderBy(r => r.Ranking)
+                .OrderByDescending(r => r.Updated) // Sort by newest first
                 .ToList();
 
             logger?.LogInformation("Found {Count} latest major player rankings in database", latestRankings.Count);
