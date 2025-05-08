@@ -112,7 +112,8 @@ public class RocketMissionService
                 TargetArtifact = m.TargetArtifact,
                 SecondsRemaining = CalculateSecondsRemaining(m.ReturnTime),
                 FuelList = DeserializeFuelList(m.FuelListJson),
-                StartTimeDerived = new DateTimeOffset(m.LaunchTime).ToUnixTimeSeconds(),
+                // Ensure LaunchTime is treated as UTC when converting to Unix timestamp
+                StartTimeDerived = new DateTimeOffset(DateTime.SpecifyKind(m.LaunchTime, DateTimeKind.Utc)).ToUnixTimeSeconds(),
                 // Add a custom property to store the actual return time
                 MissionLog = m.ReturnTime.ToString("o") // ISO 8601 format to preserve the exact time
             }).ToList();

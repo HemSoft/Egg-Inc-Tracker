@@ -4,6 +4,7 @@ using HemSoft.EggIncTracker.Dashboard.BlazorServer.Services;
 using HemSoft.EggIncTracker.Dashboard.BlazorServer.Components.Pages;
 using HemSoft.EggIncTracker.Dashboard.BlazorServer.Utilities;
 using HemSoft.EggIncTracker.Data.Dtos;
+using HemSoft.EggIncTracker.Domain;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
@@ -74,20 +75,7 @@ public partial class RocketCard : IDisposable
     // Helper to format the timestamp for display
     private static string GetLocalTimeString(DateTime? utcTime)
     {
-        if (!utcTime.HasValue || utcTime.Value == DateTime.MinValue)
-        {
-            return string.Empty;
-        }
-
-        TimeZoneInfo cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
-        var cstTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime.Value, cstZone);
-        var cstToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow.Date, cstZone);
-
-        return cstTime.Date == cstToday
-            ? $"Today {cstTime:HH:mm}"
-            : cstTime.Date == cstToday.AddDays(-1)
-                ? $"Yesterday {cstTime:HH:mm}"
-                : cstTime.ToString("MM/dd HH:mm");
+        return TimeZoneUtility.FormatTimeForDisplay(utcTime);
     }
 
     // Format time remaining in a human-readable format
@@ -116,7 +104,7 @@ public partial class RocketCard : IDisposable
     /// - StartTimeDerived: The mission's start time in Unix timestamp format.
     /// - DurationSeconds: The mission's duration in seconds.</param>
     /// <returns>
-    /// A string representing the time remaining in a human-readable format, or "Ready to collect" 
+    /// A string representing the time remaining in a human-readable format, or "Ready to collect"
     /// if the mission has already returned. Returns "Time unknown" in case of an error.
     /// </returns>
     private string CalculateActualTimeRemaining(JsonPlayerExtendedMissionInfo mission)
@@ -132,17 +120,17 @@ public partial class RocketCard : IDisposable
             else
             {
                 // Fall back to calculating from start time and duration if MissionLog is not available
-                var startTime = DateTimeOffset.FromUnixTimeSeconds((long)mission.StartTimeDerived).DateTime;
-                returnTime = startTime.AddSeconds(mission.DurationSeconds);
+                // Use the TimeZoneUtility to convert Unix timestamp directly to UTC time
+                var startTimeUtc = DateTimeOffset.FromUnixTimeSeconds((long)mission.StartTimeDerived).UtcDateTime;
+                returnTime = startTimeUtc.AddSeconds(mission.DurationSeconds);
             }
 
-            // Convert to CST time
-            var cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
-            var cstReturnTime = TimeZoneInfo.ConvertTimeFromUtc(returnTime, cstZone);
-            var cstNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cstZone);
+            // Convert to local time
+            var localReturnTime = TimeZoneUtility.ToLocalTime(returnTime);
+            var localNow = DateTime.Now;
 
             // Calculate time remaining
-            TimeSpan timeRemaining = cstReturnTime - cstNow;
+            TimeSpan timeRemaining = localReturnTime - localNow;
 
             // If the time remaining is negative, the mission has already returned
             if (timeRemaining.TotalSeconds <= 0)
@@ -202,13 +190,10 @@ public partial class RocketCard : IDisposable
     // Get start time
     private string GetStartTime(double startTimeDerived)
     {
-        var startTime = DateTimeOffset.FromUnixTimeSeconds((long)startTimeDerived).DateTime;
+        // Use the TimeZoneUtility to convert Unix timestamp directly to local time
+        var localStartTime = TimeZoneUtility.UnixTimestampToLocalTime(startTimeDerived);
 
-        // Convert to CST time
-        var cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
-        var cstStartTime = TimeZoneInfo.ConvertTimeFromUtc(startTime, cstZone);
-
-        return cstStartTime.ToString("MM/dd HH:mm");
+        return localStartTime.ToString("MM/dd HH:mm");
     }
 
     // Get return time
@@ -225,33 +210,40 @@ public partial class RocketCard : IDisposable
             else
             {
                 // Fall back to calculating from start time and duration if MissionLog is not available
-                var startTime = DateTimeOffset.FromUnixTimeSeconds((long)mission.StartTimeDerived).DateTime;
-                returnTime = startTime.AddSeconds(mission.DurationSeconds);
+                // Use the TimeZoneUtility to convert Unix timestamp directly to UTC time
+                var startTimeUtc = DateTimeOffset.FromUnixTimeSeconds((long)mission.StartTimeDerived).UtcDateTime;
+                returnTime = startTimeUtc.AddSeconds(mission.DurationSeconds);
             }
 
-            // Convert to CST time
-            TimeZoneInfo cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
-            var cstReturnTime = TimeZoneInfo.ConvertTimeFromUtc(returnTime, cstZone);
-            var cstToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow.Date, cstZone);
+            // Convert to local time
+            var localReturnTime = TimeZoneUtility.ToLocalTime(returnTime);
+            var today = DateTime.Today;
 
             // Format based on when the mission returns
-            if (cstReturnTime.Date == cstToday)
+            if (localReturnTime.Date == today)
             {
                 return includeSeconds
-                    ? $"Today at {cstReturnTime:HH:mm:ss}"
-                    : $"Today at {cstReturnTime:HH:mm}";
+                    ? $"Today at {localReturnTime:HH:mm:ss}"
+                    : $"Today at {localReturnTime:HH:mm}";
             }
-            else if (cstReturnTime.Date == cstToday.AddDays(1))
+            else if (localReturnTime.Date == today.AddDays(1))
             {
                 return includeSeconds
-                    ? $"Tomorrow at {cstReturnTime:HH:mm:ss}"
-                    : $"Tomorrow at {cstReturnTime:HH:mm}";
+                    ? $"Tomorrow at {localReturnTime:HH:mm:ss}"
+                    : $"Tomorrow at {localReturnTime:HH:mm}";
+            }
+            else if ((localReturnTime.Date - today).TotalDays < 7)
+            {
+                // If within a week, show the day name
+                return includeSeconds
+                    ? $"{localReturnTime.ToString("dddd")} at {localReturnTime:HH:mm:ss}"
+                    : $"{localReturnTime.ToString("dddd")} at {localReturnTime:HH:mm}";
             }
             else
             {
                 return includeSeconds
-                    ? cstReturnTime.ToString("MM/dd HH:mm:ss")
-                    : cstReturnTime.ToString("MM/dd HH:mm");
+                    ? localReturnTime.ToString("MM/dd HH:mm:ss")
+                    : localReturnTime.ToString("MM/dd HH:mm");
             }
         }
         catch (Exception ex)
@@ -267,32 +259,36 @@ public partial class RocketCard : IDisposable
     {
         try
         {
-            var startTime = DateTimeOffset.FromUnixTimeSeconds((long)startTimeDerived).DateTime;
-            var returnTime = startTime.AddSeconds(durationSeconds);
-
-            // Convert to CST time
-            TimeZoneInfo cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
-            var cstReturnTime = TimeZoneInfo.ConvertTimeFromUtc(returnTime, cstZone);
-            var cstToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow.Date, cstZone);
+            // Use the TimeZoneUtility to convert Unix timestamp directly to local time
+            var localStartTime = TimeZoneUtility.UnixTimestampToLocalTime(startTimeDerived);
+            var localReturnTime = localStartTime.AddSeconds(durationSeconds);
+            var today = DateTime.Today;
 
             // Format based on when the mission returns
-            if (cstReturnTime.Date == cstToday)
+            if (localReturnTime.Date == today)
             {
                 return includeSeconds
-                    ? $"Today at {cstReturnTime:HH:mm:ss}"
-                    : $"Today at {cstReturnTime:HH:mm}";
+                    ? $"Today at {localReturnTime:HH:mm:ss}"
+                    : $"Today at {localReturnTime:HH:mm}";
             }
-            else if (cstReturnTime.Date == cstToday.AddDays(1))
+            else if (localReturnTime.Date == today.AddDays(1))
             {
                 return includeSeconds
-                    ? $"Tomorrow at {cstReturnTime:HH:mm:ss}"
-                    : $"Tomorrow at {cstReturnTime:HH:mm}";
+                    ? $"Tomorrow at {localReturnTime:HH:mm:ss}"
+                    : $"Tomorrow at {localReturnTime:HH:mm}";
+            }
+            else if ((localReturnTime.Date - today).TotalDays < 7)
+            {
+                // If within a week, show the day name
+                return includeSeconds
+                    ? $"{localReturnTime.ToString("dddd")} at {localReturnTime:HH:mm:ss}"
+                    : $"{localReturnTime.ToString("dddd")} at {localReturnTime:HH:mm}";
             }
             else
             {
                 return includeSeconds
-                    ? cstReturnTime.ToString("MM/dd HH:mm:ss")
-                    : cstReturnTime.ToString("MM/dd HH:mm");
+                    ? localReturnTime.ToString("MM/dd HH:mm:ss")
+                    : localReturnTime.ToString("MM/dd HH:mm");
             }
         }
         catch (Exception ex)
