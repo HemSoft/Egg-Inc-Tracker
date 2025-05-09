@@ -75,110 +75,111 @@
                             PlayerDataService.CalculateMissingSEGain(_localPlayerSEThisWeek, PlayerGoals?.WeeklySEGainGoal, PlayerGoals?.EggDayGoal);
 
                         string goalType = !string.IsNullOrEmpty(PlayerGoals?.EggDayGoal) ? "Egg Day" : "Weekly";
-                        string tooltipText = isGoalMet
-                            ? $"Goal met! Current progress: {formattedSEThisWeek} / Expected: {expectedAmount} ({percentComplete}%)"
-                            : $"Missing {missingAmount} to reach today's {goalType} goal of {expectedAmount} ({percentComplete}%)";
 
-                        // Add detailed breakdown for Egg Day goal
+                        // Calculate days until Egg Day for display
+                        var today = DateTime.Today;
+                        var currentYear = today.Year;
+                        var eggDay = new DateTime(currentYear, 7, 14);
+                        if (today > eggDay)
+                        {
+                            eggDay = new DateTime(currentYear + 1, 7, 14);
+                        }
+                        var daysUntilEggDay = (eggDay - today).Days;
+
+                        // Generate clean HTML for the tooltip content
+                        string tooltipHtml = @"<div class=""se-tooltip"">
+                            <div class=""se-tooltip-section"">
+                                <div class=""se-tooltip-header"">";
+
+                        if (isGoalMet)
+                        {
+                            tooltipHtml += @"<strong>Goal met!</strong>
+                                </div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">Current progress:</div>
+                                    <div class=""se-tooltip-value"">" + formattedSEThisWeek + @" (" + percentComplete + @"%)</div>
+                                </div>";
+                        }
+                        else
+                        {
+                            tooltipHtml += @"<strong>Progress toward goal</strong>
+                                </div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">Missing:</div>
+                                    <div class=""se-tooltip-value"">" + missingAmount + @"</div>
+                                </div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">Egg Day Goal:</div>
+                                    <div class=""se-tooltip-value"">" + expectedAmount + @"</div>
+                                </div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">Percent complete:</div>
+                                    <div class=""se-tooltip-value"">" + percentComplete + @"%</div>
+                                </div>";
+                        }
+
+                        // Add the Egg Day section if available
                         if (!string.IsNullOrEmpty(eggDayGoalStr) && !string.IsNullOrEmpty(currentSEStr) &&
                             !string.IsNullOrEmpty(seLeftStr) && weeksRemaining.HasValue && !string.IsNullOrEmpty(weeklySEGoalStr))
                         {
-                            // Calculate days until Egg Day for display
-                            var today = DateTime.Today;
-                            var currentYear = today.Year;
-                            var eggDay = new DateTime(currentYear, 7, 14);
-                            if (today > eggDay)
-                            {
-                                eggDay = new DateTime(currentYear + 1, 7, 14);
-                            }
-                            var daysUntilEggDay = (eggDay - today).Days;
+                            tooltipHtml += @"</div>
+                            <div class=""se-tooltip-section"">
+                                <div class=""se-tooltip-header""><strong>Egg Day Goal Breakdown</strong></div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">Egg Day Goal:</div>
+                                    <div class=""se-tooltip-value"">" + eggDayGoalStr + @"</div>
+                                </div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">Current SE:</div>
+                                    <div class=""se-tooltip-value"">" + currentSEStr + @"</div>
+                                </div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">SE Left:</div>
+                                    <div class=""se-tooltip-value"">" + seLeftStr + @"</div>
+                                </div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">Days until Egg Day:</div>
+                                    <div class=""se-tooltip-value"">" + daysUntilEggDay + @"</div>
+                                </div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">Weeks until Egg Day:</div>
+                                    <div class=""se-tooltip-value"">" + weeksRemaining.Value.ToString("F2") + @"</div>
+                                </div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">Weekly SE Goal:</div>
+                                    <div class=""se-tooltip-value"">" + weeklySEGoalStr + @"</div>
+                                </div>";
 
-                            // Update the status message at the top with div-based formatting
-                            string statusMessage = isGoalMet
-                                ? $@"<div style=""font-weight: bold; margin-bottom: 5px;"">Goal met!</div>
-<div style=""display: table; width: 100%;"">
-    <div style=""display: table-row;"">
-        <div style=""display: table-cell; text-align: left;"">Current progress:</div>
-        <div style=""display: table-cell; text-align: right;"">{formattedSEThisWeek} ({percentComplete}%)</div>
-    </div>
-</div>"
-                                : $@"<div style=""display: table; width: 100%;"">
-    <div style=""display: table-row;"">
-        <div style=""display: table-cell; text-align: left;"">Missing:</div>
-        <div style=""display: table-cell; text-align: right;"">{missingAmount}</div>
-    </div>
-    <div style=""display: table-row;"">
-        <div style=""display: table-cell; text-align: left;"">Egg Day Goal:</div>
-        <div style=""display: table-cell; text-align: right;"">{expectedAmount}</div>
-    </div>
-    <div style=""display: table-row;"">
-        <div style=""display: table-cell; text-align: left;"">Percent complete:</div>
-        <div style=""display: table-cell; text-align: right;"">{percentComplete}%</div>
-    </div>
-</div>";
-
-                            // Format the tooltip with a div-based table structure
-                            tooltipText = $@"{statusMessage}
-
-<div style=""margin-top: 10px; font-weight: bold;"">Egg Day Goal Breakdown:</div>
-
-<div style=""display: table; width: 100%; margin-top: 5px;"">
-    <div style=""display: table-row;"">
-        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Egg Day Goal:</div>
-        <div style=""display: table-cell; text-align: right;"">{eggDayGoalStr}</div>
-    </div>
-    <div style=""display: table-row;"">
-        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Current SE:</div>
-        <div style=""display: table-cell; text-align: right;"">{currentSEStr}</div>
-    </div>
-    <div style=""display: table-row;"">
-        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">SE Left:</div>
-        <div style=""display: table-cell; text-align: right;"">{seLeftStr}</div>
-    </div>
-    <div style=""display: table-row;"">
-        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Days until Egg Day:</div>
-        <div style=""display: table-cell; text-align: right;"">{daysUntilEggDay}</div>
-    </div>
-    <div style=""display: table-row;"">
-        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Weeks until Egg Day:</div>
-        <div style=""display: table-cell; text-align: right;"">{weeksRemaining:F2}</div>
-    </div>
-    <div style=""display: table-row;"">
-        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Weekly SE Goal:</div>
-        <div style=""display: table-cell; text-align: right;"">{weeklySEGoalStr}</div>
-    </div>
-</div>
-
-<div style=""display: table; width: 100%; margin-top: 10px;"">
-    <div style=""display: table-row;"">
-        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Estimated prestiges left (total):</div>
-        <div style=""display: table-cell; text-align: right;"">{CalculateEstimatedPrestigesLeftTotal(seLeftStr, Player?.PrestigesThisWeek, _localPlayerSEThisWeek)}</div>
-    </div>
-    <div style=""display: table-row;"">
-        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Estimated prestiges left/week:</div>
-        <div style=""display: table-cell; text-align: right;"">{CalculateEstimatedPrestigesLeftPerWeek(seLeftStr, Player?.PrestigesThisWeek, _localPlayerSEThisWeek, weeksRemaining)}</div>
-    </div>
-    <div style=""display: table-row;"">
-        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Estimated prestiges left/day:</div>
-        <div style=""display: table-cell; text-align: right;"">{CalculateEstimatedPrestigesLeftPerDay(seLeftStr, Player?.PrestigesThisWeek, _localPlayerSEThisWeek, daysUntilEggDay)}</div>
-    </div>
-    <div style=""display: table-row;"">
-        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Estimated prestiges left/today:</div>
-        <div style=""display: table-cell; text-align: right;"">{CalculateEstimatedPrestigesLeftForTodayConsistent(missingAmount, Player?.PrestigesThisWeek, _localPlayerSEThisWeek, (int)DateTime.Now.DayOfWeek == 0 ? 7 : (int)DateTime.Now.DayOfWeek)}</div>
-    </div>
-</div>
-
-<div style=""margin-top: 10px; border-top: 1px solid #444; padding-top: 5px;"">
-    <div style=""display: table; width: 100%;"">
-        <div style=""display: table-row;"">
-            <div style=""display: table-cell; text-align: left; padding-right: 10px;"">SE Gain/Prestige:</div>
-            <div style=""display: table-cell; text-align: right;"">{CalculateSEGainPerPrestige(Player?.PrestigesThisWeek, _localPlayerSEThisWeek)}</div>
-        </div>
-    </div>
-</div>";
+                            // Add Prestige estimates
+                            tooltipHtml += @"</div>
+                            <div class=""se-tooltip-section"">
+                                <div class=""se-tooltip-header""><strong>Prestige Estimates</strong></div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">Est. prestiges left (total):</div>
+                                    <div class=""se-tooltip-value"">" + CalculateEstimatedPrestigesLeftTotal(seLeftStr, Player?.PrestigesThisWeek, _localPlayerSEThisWeek) + @"</div>
+                                </div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">Est. prestiges left/week:</div>
+                                    <div class=""se-tooltip-value"">" + CalculateEstimatedPrestigesLeftPerWeek(seLeftStr, Player?.PrestigesThisWeek, _localPlayerSEThisWeek, weeksRemaining) + @"</div>
+                                </div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">Est. prestiges left/day:</div>
+                                    <div class=""se-tooltip-value"">" + CalculateEstimatedPrestigesLeftPerDay(seLeftStr, Player?.PrestigesThisWeek, _localPlayerSEThisWeek, daysUntilEggDay) + @"</div>
+                                </div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">Est. prestiges left/today:</div>
+                                    <div class=""se-tooltip-value"">" + CalculateEstimatedPrestigesLeftForTodayConsistent(missingAmount, Player?.PrestigesThisWeek, _localPlayerSEThisWeek, (int)DateTime.Now.DayOfWeek == 0 ? 7 : (int)DateTime.Now.DayOfWeek) + @"</div>
+                                </div>
+                                <div class=""se-tooltip-row"">
+                                    <div class=""se-tooltip-label"">SE Gain/Prestige:</div>
+                                    <div class=""se-tooltip-value"">" + CalculateSEGainPerPrestige(Player?.PrestigesThisWeek, _localPlayerSEThisWeek) + @"</div>
+                                </div>
+                            </div>";
                         }
 
-                        <MudTooltip Arrow="true" Placement="Placement.Top" Style="max-width: 500px; width: 500px;">
+                        tooltipHtml += "</div>"; // Close the main tooltip div
+
+                        <MudTooltip Arrow="true" Placement="Placement.Top" Color="Color.Dark" TransformOrigin="Origin.BottomCenter" Class="mud-tooltip-custom">
                             <ChildContent>
                                 <span>
                                     SE This Week: <span style="@PlayerDataService.GetSEProgressColorStyle(_localPlayerSEThisWeek, PlayerGoals?.WeeklySEGainGoal, PlayerGoals?.EggDayGoal)">@formattedSEThisWeek</span>
@@ -189,7 +190,7 @@
                                 </span>
                             </ChildContent>
                             <TooltipContent>
-                                <div style="min-width: 450px;">@((MarkupString)tooltipText)</div>
+                                <div style="min-width: 450px; max-width: 480px;">@((MarkupString)tooltipHtml)</div>
                             </TooltipContent>
                         </MudTooltip>
                     }
@@ -397,218 +398,4 @@ else
     <MudPaper Class="pa-4 d-flex justify-center">
         <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
     </MudPaper>
-}
-
-
-<style>
-    /* Trophy indicator */
-    .goals-achieved-indicator {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 5;
-        animation: pulse 2s infinite;
-    }
-
-    /* Fireworks container */
-    .fireworks-container {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 10;
-    }
-
-    /* Firework animation */
-    .firework {
-        position: absolute;
-        width: 5px;
-        height: 5px;
-        border-radius: 50%;
-        box-shadow: 0 0 10px 5px rgba(255, 255, 255, 0.8);
-        animation: firework-animation 2s infinite;
-    }
-
-    /* Firework particles */
-    .firework-particles {
-        position: absolute;
-        width: 3px;
-        height: 3px;
-        border-radius: 50%;
-        box-shadow: 0 0 5px 2px rgba(255, 255, 255, 0.6);
-        animation: particles-animation 3s infinite;
-    }
-
-    /* Position fireworks at different locations */
-    .firework:nth-child(1) {
-        top: 20%;
-        left: 20%;
-        animation-delay: 0s;
-        background: rgba(255, 0, 0, 0.8);
-    }
-
-    .firework:nth-child(2) {
-        top: 30%;
-        left: 60%;
-        animation-delay: 0.3s;
-        background: rgba(0, 255, 0, 0.8);
-    }
-
-    .firework:nth-child(3) {
-        top: 70%;
-        left: 30%;
-        animation-delay: 0.6s;
-        background: rgba(0, 0, 255, 0.8);
-    }
-
-    .firework:nth-child(4) {
-        top: 40%;
-        left: 80%;
-        animation-delay: 0.9s;
-        background: rgba(255, 255, 0, 0.8);
-    }
-
-    .firework:nth-child(5) {
-        top: 60%;
-        left: 50%;
-        animation-delay: 1.2s;
-        background: rgba(255, 0, 255, 0.8);
-    }
-
-    .firework:nth-child(6) {
-        top: 25%;
-        left: 40%;
-        animation-delay: 0.4s;
-        background: rgba(0, 255, 255, 0.8);
-    }
-
-    .firework:nth-child(7) {
-        top: 75%;
-        left: 70%;
-        animation-delay: 0.7s;
-        background: rgba(255, 165, 0, 0.8);
-    }
-
-    .firework:nth-child(8) {
-        top: 50%;
-        left: 25%;
-        animation-delay: 1.0s;
-        background: rgba(128, 0, 128, 0.8);
-    }
-
-    .firework:nth-child(9) {
-        top: 15%;
-        left: 75%;
-        animation-delay: 1.3s;
-        background: rgba(0, 128, 0, 0.8);
-    }
-
-    .firework:nth-child(10) {
-        top: 85%;
-        left: 15%;
-        animation-delay: 1.6s;
-        background: rgba(255, 192, 203, 0.8);
-    }
-
-    /* Position particles */
-    .firework-particles:nth-child(11) {
-        top: 30%;
-        left: 30%;
-        animation-delay: 0.2s;
-        background: rgba(255, 255, 255, 0.8);
-    }
-
-    .firework-particles:nth-child(12) {
-        top: 40%;
-        left: 70%;
-        animation-delay: 0.5s;
-        background: rgba(255, 255, 255, 0.8);
-    }
-
-    .firework-particles:nth-child(13) {
-        top: 60%;
-        left: 40%;
-        animation-delay: 0.8s;
-        background: rgba(255, 255, 255, 0.8);
-    }
-
-    .firework-particles:nth-child(14) {
-        top: 70%;
-        left: 60%;
-        animation-delay: 1.1s;
-        background: rgba(255, 255, 255, 0.8);
-    }
-
-    .firework-particles:nth-child(15) {
-        top: 50%;
-        left: 50%;
-        animation-delay: 1.4s;
-        background: rgba(255, 255, 255, 0.8);
-    }
-</style>
-
-@code {
-    /* Firework explosion animation */
-    public string FireworkAnimationKeyframes => @"
-        @keyframes firework-animation {
-            0% {
-                transform: scale(0.1);
-                opacity: 0;
-            }
-            50% {
-                transform: scale(1);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(1.5);
-                opacity: 0;
-            }
-        }
-    ";
-
-    /* Particles animation */
-    public string ParticlesAnimationKeyframes => @"
-        @keyframes particles-animation {
-            0% {
-                transform: scale(0.1) translate(0, 0);
-                opacity: 0;
-            }
-            25% {
-                transform: scale(1) translate(20px, -30px);
-                opacity: 1;
-            }
-            50% {
-                transform: scale(0.8) translate(40px, -10px);
-                opacity: 0.8;
-            }
-            75% {
-                transform: scale(0.6) translate(10px, -40px);
-                opacity: 0.6;
-            }
-            100% {
-                transform: scale(0.4) translate(30px, -20px);
-                opacity: 0;
-            }
-        }
-    ";
-
-    /* Pulse animation for the trophy icon */
-    public string PulseAnimationKeyframes => @"
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-                opacity: 0.8;
-            }
-            50% {
-                transform: scale(1.2);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 0.8;
-            }
-        }
-    ";
 }
