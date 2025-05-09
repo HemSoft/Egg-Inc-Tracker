@@ -65,22 +65,132 @@
                 </span>
                 <span class="d-inline-flex align-center mr-2">
                     @* Use null-conditional access for PlayerGoals properties *@
-                    @if (PlayerGoals?.WeeklySEGainGoal != null && !string.IsNullOrEmpty(PlayerGoals.WeeklySEGainGoal) && _localPlayerSEThisWeek.HasValue)
+                    @if ((_localPlayerSEThisWeek.HasValue) &&
+                         ((PlayerGoals?.WeeklySEGainGoal != null && !string.IsNullOrEmpty(PlayerGoals.WeeklySEGainGoal)) ||
+                          (PlayerGoals?.EggDayGoal != null && !string.IsNullOrEmpty(PlayerGoals.EggDayGoal))))
                     {
                         string formattedSEThisWeek = FormatBigIntegerDisplay(_localPlayerSEThisWeek);
-                        var (isGoalMet, missingAmount, expectedAmount, percentComplete) = PlayerDataService.CalculateMissingSEGain(_localPlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal);
+                        var (isGoalMet, missingAmount, expectedAmount, percentComplete,
+                             eggDayGoalStr, currentSEStr, seLeftStr, weeksRemaining, weeklySEGoalStr) =
+                            PlayerDataService.CalculateMissingSEGain(_localPlayerSEThisWeek, PlayerGoals?.WeeklySEGainGoal, PlayerGoals?.EggDayGoal);
+
+                        string goalType = !string.IsNullOrEmpty(PlayerGoals?.EggDayGoal) ? "Egg Day" : "Weekly";
                         string tooltipText = isGoalMet
                             ? $"Goal met! Current progress: {formattedSEThisWeek} / Expected: {expectedAmount} ({percentComplete}%)"
-                            : $"Missing {missingAmount} to reach today's goal of {expectedAmount} ({percentComplete}%)";
+                            : $"Missing {missingAmount} to reach today's {goalType} goal of {expectedAmount} ({percentComplete}%)";
 
-                        <MudTooltip Text="@tooltipText" Arrow="true" Placement="Placement.Top">
-                            <span>
-                                SE This Week: <span style="@PlayerDataService.GetSEProgressColorStyle(_localPlayerSEThisWeek, PlayerGoals.WeeklySEGainGoal)">@formattedSEThisWeek</span>
-                                @if (isGoalMet)
-                                {
-                                    <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" Color="Color.Success" Class="ml-1"></MudIcon>
-                                }
-                            </span>
+                        // Add detailed breakdown for Egg Day goal
+                        if (!string.IsNullOrEmpty(eggDayGoalStr) && !string.IsNullOrEmpty(currentSEStr) &&
+                            !string.IsNullOrEmpty(seLeftStr) && weeksRemaining.HasValue && !string.IsNullOrEmpty(weeklySEGoalStr))
+                        {
+                            // Calculate days until Egg Day for display
+                            var today = DateTime.Today;
+                            var currentYear = today.Year;
+                            var eggDay = new DateTime(currentYear, 7, 14);
+                            if (today > eggDay)
+                            {
+                                eggDay = new DateTime(currentYear + 1, 7, 14);
+                            }
+                            var daysUntilEggDay = (eggDay - today).Days;
+
+                            // Update the status message at the top with div-based formatting
+                            string statusMessage = isGoalMet
+                                ? $@"<div style=""font-weight: bold; margin-bottom: 5px;"">Goal met!</div>
+<div style=""display: table; width: 100%;"">
+    <div style=""display: table-row;"">
+        <div style=""display: table-cell; text-align: left;"">Current progress:</div>
+        <div style=""display: table-cell; text-align: right;"">{formattedSEThisWeek} ({percentComplete}%)</div>
+    </div>
+</div>"
+                                : $@"<div style=""display: table; width: 100%;"">
+    <div style=""display: table-row;"">
+        <div style=""display: table-cell; text-align: left;"">Missing:</div>
+        <div style=""display: table-cell; text-align: right;"">{missingAmount}</div>
+    </div>
+    <div style=""display: table-row;"">
+        <div style=""display: table-cell; text-align: left;"">Egg Day Goal:</div>
+        <div style=""display: table-cell; text-align: right;"">{expectedAmount}</div>
+    </div>
+    <div style=""display: table-row;"">
+        <div style=""display: table-cell; text-align: left;"">Percent complete:</div>
+        <div style=""display: table-cell; text-align: right;"">{percentComplete}%</div>
+    </div>
+</div>";
+
+                            // Format the tooltip with a div-based table structure
+                            tooltipText = $@"{statusMessage}
+
+<div style=""margin-top: 10px; font-weight: bold;"">Egg Day Goal Breakdown:</div>
+
+<div style=""display: table; width: 100%; margin-top: 5px;"">
+    <div style=""display: table-row;"">
+        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Egg Day Goal:</div>
+        <div style=""display: table-cell; text-align: right;"">{eggDayGoalStr}</div>
+    </div>
+    <div style=""display: table-row;"">
+        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Current SE:</div>
+        <div style=""display: table-cell; text-align: right;"">{currentSEStr}</div>
+    </div>
+    <div style=""display: table-row;"">
+        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">SE Left:</div>
+        <div style=""display: table-cell; text-align: right;"">{seLeftStr}</div>
+    </div>
+    <div style=""display: table-row;"">
+        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Days until Egg Day:</div>
+        <div style=""display: table-cell; text-align: right;"">{daysUntilEggDay}</div>
+    </div>
+    <div style=""display: table-row;"">
+        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Weeks until Egg Day:</div>
+        <div style=""display: table-cell; text-align: right;"">{weeksRemaining:F2}</div>
+    </div>
+    <div style=""display: table-row;"">
+        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Weekly SE Goal:</div>
+        <div style=""display: table-cell; text-align: right;"">{weeklySEGoalStr}</div>
+    </div>
+</div>
+
+<div style=""display: table; width: 100%; margin-top: 10px;"">
+    <div style=""display: table-row;"">
+        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Estimated prestiges left (total):</div>
+        <div style=""display: table-cell; text-align: right;"">{CalculateEstimatedPrestigesLeftTotal(seLeftStr, Player?.PrestigesThisWeek, _localPlayerSEThisWeek)}</div>
+    </div>
+    <div style=""display: table-row;"">
+        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Estimated prestiges left/week:</div>
+        <div style=""display: table-cell; text-align: right;"">{CalculateEstimatedPrestigesLeftPerWeek(seLeftStr, Player?.PrestigesThisWeek, _localPlayerSEThisWeek, weeksRemaining)}</div>
+    </div>
+    <div style=""display: table-row;"">
+        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Estimated prestiges left/day:</div>
+        <div style=""display: table-cell; text-align: right;"">{CalculateEstimatedPrestigesLeftPerDay(seLeftStr, Player?.PrestigesThisWeek, _localPlayerSEThisWeek, daysUntilEggDay)}</div>
+    </div>
+    <div style=""display: table-row;"">
+        <div style=""display: table-cell; text-align: left; padding-right: 10px;"">Estimated prestiges left/today:</div>
+        <div style=""display: table-cell; text-align: right;"">{CalculateEstimatedPrestigesLeftForTodayConsistent(missingAmount, Player?.PrestigesThisWeek, _localPlayerSEThisWeek, (int)DateTime.Now.DayOfWeek == 0 ? 7 : (int)DateTime.Now.DayOfWeek)}</div>
+    </div>
+</div>
+
+<div style=""margin-top: 10px; border-top: 1px solid #444; padding-top: 5px;"">
+    <div style=""display: table; width: 100%;"">
+        <div style=""display: table-row;"">
+            <div style=""display: table-cell; text-align: left; padding-right: 10px;"">SE Gain/Prestige:</div>
+            <div style=""display: table-cell; text-align: right;"">{CalculateSEGainPerPrestige(Player?.PrestigesThisWeek, _localPlayerSEThisWeek)}</div>
+        </div>
+    </div>
+</div>";
+                        }
+
+                        <MudTooltip Arrow="true" Placement="Placement.Top" Style="max-width: 500px; width: 500px;">
+                            <ChildContent>
+                                <span>
+                                    SE This Week: <span style="@PlayerDataService.GetSEProgressColorStyle(_localPlayerSEThisWeek, PlayerGoals?.WeeklySEGainGoal, PlayerGoals?.EggDayGoal)">@formattedSEThisWeek</span>
+                                    @if (isGoalMet)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" Color="Color.Success" Class="ml-1"></MudIcon>
+                                    }
+                                </span>
+                            </ChildContent>
+                            <TooltipContent>
+                                <div style="min-width: 450px;">@((MarkupString)tooltipText)</div>
+                            </TooltipContent>
                         </MudTooltip>
                     }
                     else

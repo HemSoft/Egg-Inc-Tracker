@@ -203,9 +203,12 @@ public class PlayerDataService
             return "color: #FF0000"; // Dark red
     }
 
-    public string GetSEProgressColorStyle(BigInteger? seThisWeekValue, string? weeklySEGainGoalStr)
+    public string GetSEProgressColorStyle(BigInteger? seThisWeekValue, string? weeklySEGainGoalStr, string? eggDayGoalStr = null)
     {
-        if (!seThisWeekValue.HasValue || string.IsNullOrEmpty(weeklySEGainGoalStr))
+        if (!seThisWeekValue.HasValue)
+            return "color: white";
+
+        if (string.IsNullOrEmpty(weeklySEGainGoalStr) && string.IsNullOrEmpty(eggDayGoalStr))
             return "color: white";
 
         var localNow = DateTime.Now;
@@ -219,7 +222,45 @@ public class PlayerDataService
 
         try
         {
-            weeklySEGoal = BigNumberCalculator.ParseBigNumber(weeklySEGainGoalStr);
+            // Use the same calculation logic as in CalculateMissingSEGain
+            // If EggDayGoal is present, it overrides the WeeklySEGainGoal
+            if (!string.IsNullOrEmpty(eggDayGoalStr))
+            {
+                // Calculate weeks remaining until Egg Day
+                var today = DateTime.Today;
+                var currentYear = today.Year;
+                var eggDay = new DateTime(currentYear, 7, 14);
+
+                // If Egg Day has already passed this year, use next year's date
+                if (today > eggDay)
+                {
+                    eggDay = new DateTime(currentYear + 1, 7, 14);
+                }
+
+                // Calculate days and weeks remaining
+                var daysUntilEggDay = (eggDay - today).Days;
+                var weeksRemaining = Math.Max(1, daysUntilEggDay / 7.0); // Calculate exact weeks (with decimals)
+
+                // Parse the Egg Day goal
+                BigInteger eggDayGoal = BigNumberCalculator.ParseBigNumber(eggDayGoalStr);
+
+                // Use a hardcoded value for King Friday's SE to avoid blocking database calls
+                // This is a temporary solution to prevent UI freezing
+                string kingFridaySE = "72.213s"; // Default value for King Friday's SE
+
+                // Use the hardcoded value for calculations
+                BigInteger currentSE = BigNumberCalculator.ParseBigNumber(kingFridaySE);
+
+                // Calculate SE left to reach Egg Day goal
+                BigInteger seLeft = eggDayGoal - currentSE;
+
+                // Calculate how much SE is needed per week to reach the Egg Day goal
+                weeklySEGoal = seLeft / (BigInteger)weeksRemaining;
+            }
+            else
+            {
+                weeklySEGoal = BigNumberCalculator.ParseBigNumber(weeklySEGainGoalStr!);
+            }
 
             if (weeklySEGoal <= BigInteger.Zero)
                 return "color: white";
@@ -239,7 +280,8 @@ public class PlayerDataService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error parsing or calculating SE gain goal for color style. Goal string: {GoalString}", weeklySEGainGoalStr);
+            _logger.LogError(ex, "Error parsing or calculating SE gain goal for color style. Weekly Goal: {WeeklyGoal}, Egg Day Goal: {EggDayGoal}",
+                weeklySEGainGoalStr, eggDayGoalStr);
             return "color: white";
         }
 
@@ -284,10 +326,12 @@ public class PlayerDataService
         return (isGoalMet, missingAmount, expectedPrestiges, percentComplete);
     }
 
-    public (bool IsGoalMet, string MissingAmount, string ExpectedAmount, int PercentComplete) CalculateMissingSEGain(BigInteger? seThisWeekValue, string? weeklySEGainGoalStr)
+    public (bool IsGoalMet, string MissingAmount, string ExpectedAmount, int PercentComplete,
+            string? EggDayGoalStr, string? CurrentSEStr, string? SELeftStr, double? WeeksRemaining, string? WeeklySEGoalStr)
+        CalculateMissingSEGain(BigInteger? seThisWeekValue, string? weeklySEGainGoalStr, string? eggDayGoalStr = null)
     {
-        if (!seThisWeekValue.HasValue || string.IsNullOrEmpty(weeklySEGainGoalStr))
-            return (false, "0", "0", 0);
+        if (!seThisWeekValue.HasValue)
+            return (false, "0", "0", 0, null, null, null, null, null);
 
         var localNow = DateTime.Now;
         var dayOfWeek = (int)localNow.DayOfWeek;
@@ -300,12 +344,72 @@ public class PlayerDataService
         int percentComplete = 0;
         bool isGoalMet = false;
 
+        // Additional calculation details for Egg Day goal
+        string? calculatedEggDayGoalStr = null;
+        string? currentSEStr = null;
+        string? seLeftStr = null;
+        double? weeksRemainingValue = null;
+        string? calculatedWeeklySEGoalStr = null;
+
         try
         {
-            weeklySEGoal = BigNumberCalculator.ParseBigNumber(weeklySEGainGoalStr);
+            // If EggDayGoal is present, it overrides the WeeklySEGainGoal
+            if (!string.IsNullOrEmpty(eggDayGoalStr))
+            {
+                // Calculate weeks remaining until Egg Day
+                var today = DateTime.Today;
+                var currentYear = today.Year;
+                var eggDay = new DateTime(currentYear, 7, 14);
+
+                // If Egg Day has already passed this year, use next year's date
+                if (today > eggDay)
+                {
+                    eggDay = new DateTime(currentYear + 1, 7, 14);
+                }
+
+                // Calculate days and weeks remaining
+                var daysUntilEggDay = (eggDay - today).Days;
+                weeksRemainingValue = daysUntilEggDay / 7.0; // Calculate exact weeks (with decimals)
+                var weeksRemaining = Math.Max(1, weeksRemainingValue.Value);
+
+                _logger.LogInformation("Using Egg Day goal: {EggDayGoal}, Days until Egg Day: {DaysUntilEggDay}, Weeks remaining: {WeeksRemaining}",
+                    eggDayGoalStr, daysUntilEggDay, weeksRemaining);
+
+                // Parse the Egg Day goal
+                BigInteger eggDayGoal = BigNumberCalculator.ParseBigNumber(eggDayGoalStr);
+                calculatedEggDayGoalStr = eggDayGoalStr;
+
+                // Use a hardcoded value for King Friday's SE to avoid blocking database calls
+                // This is a temporary solution to prevent UI freezing
+                string kingFridaySE = "72.213s"; // Default value for King Friday's SE
+                currentSEStr = kingFridaySE;
+
+                // Use the hardcoded value for calculations
+                BigInteger currentSE = BigNumberCalculator.ParseBigNumber(kingFridaySE);
+
+                // Calculate SE left to reach Egg Day goal
+                BigInteger seLeft = eggDayGoal - currentSE;
+                seLeftStr = Utils.FormatBigInteger(seLeft.ToString(CultureInfo.InvariantCulture), false, false);
+
+                // Calculate how much SE is needed per week to reach the Egg Day goal
+                weeklySEGoal = seLeft / (BigInteger)weeksRemaining;
+                calculatedWeeklySEGoalStr = Utils.FormatBigInteger(weeklySEGoal.ToString(CultureInfo.InvariantCulture), false, false);
+
+                _logger.LogInformation("Calculated weekly SE goal from Egg Day goal: {WeeklySEGoal}",
+                    Utils.FormatBigInteger(weeklySEGoal.ToString(CultureInfo.InvariantCulture), false, false));
+            }
+            else if (!string.IsNullOrEmpty(weeklySEGainGoalStr))
+            {
+                weeklySEGoal = BigNumberCalculator.ParseBigNumber(weeklySEGainGoalStr);
+                calculatedWeeklySEGoalStr = weeklySEGainGoalStr;
+            }
+            else
+            {
+                return (false, "0", "0", 0, null, null, null, null, null);
+            }
 
             if (weeklySEGoal <= BigInteger.Zero)
-                return (false, "0", "0", 0);
+                return (false, "0", "0", 0, null, null, null, null, null);
 
             expectedSEGain = (weeklySEGoal * daysSinceMonday) / 7;
             isGoalMet = currentSEGain >= expectedSEGain;
@@ -325,14 +429,16 @@ public class PlayerDataService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error parsing or calculating SE gain goal. Goal string: {GoalString}", weeklySEGainGoalStr);
-            return (false, "Error", "Error", 0);
+            _logger.LogError(ex, "Error parsing or calculating SE gain goal. Weekly Goal: {WeeklyGoal}, Egg Day Goal: {EggDayGoal}",
+                weeklySEGainGoalStr, eggDayGoalStr);
+            return (false, "Error", "Error", 0, null, null, null, null, null);
         }
 
         string formattedMissingAmount = Utils.FormatBigInteger(missingAmount.ToString(CultureInfo.InvariantCulture), false, false);
         string formattedExpectedAmount = Utils.FormatBigInteger(expectedSEGain.ToString(CultureInfo.InvariantCulture), false, false);
 
-        return (isGoalMet, formattedMissingAmount, formattedExpectedAmount, percentComplete);
+        return (isGoalMet, formattedMissingAmount, formattedExpectedAmount, percentComplete,
+                calculatedEggDayGoalStr, currentSEStr, seLeftStr, weeksRemainingValue, calculatedWeeklySEGoalStr);
     }
 
     public async Task<(int? PrestigesToday, int? PrestigesThisWeek)> CalculatePrestigesAsync(PlayerDto player)

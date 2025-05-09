@@ -28,6 +28,7 @@ public static class GoalManager
                 existingGoal.MERGoal = goal.MERGoal;
                 existingGoal.JERGoal = goal.JERGoal;
                 existingGoal.WeeklySEGainGoal = goal.WeeklySEGainGoal;
+                existingGoal.EggDayGoal = goal.EggDayGoal;
                 logger?.LogInformation("Updating existing goal...");
             }
             else

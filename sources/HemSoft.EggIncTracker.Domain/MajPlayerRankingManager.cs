@@ -503,6 +503,44 @@ public static class MajPlayerRankingManager
         }
     }
 
+    public static async Task<List<MajPlayerRankingDto>?> GetLatestMajPlayerRankingsByIGNAsync(string? playerName, ILogger? logger = null)
+    {
+        try
+        {
+            logger?.LogInformation("Getting latest major player rankings for player {PlayerName}", playerName ?? "all players");
+
+            using var context = new EggIncContext();
+
+            // Get the most recent date (within the last 3 weeks)
+            var threeWeeksAgo = DateTime.UtcNow.AddDays(-21);
+
+            // Get all rankings from the last 3 weeks
+            var query = context.MajPlayerRankings
+                .Where(r => r.Updated >= threeWeeksAgo);
+
+            // Filter by player name if provided
+            if (!string.IsNullOrEmpty(playerName))
+            {
+                query = query.Where(r => r.IGN == playerName);
+            }
+
+            var rankings = await query
+                .OrderByDescending(r => r.Updated)
+                .ToListAsync();
+
+            logger?.LogInformation("Found {Count} rankings for player {PlayerName}",
+                rankings.Count, playerName ?? "all players");
+
+            return rankings;
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Error getting latest major player rankings for player {PlayerName}",
+                playerName ?? "all players");
+            return new List<MajPlayerRankingDto>();
+        }
+    }
+
     public static async Task<List<MajPlayerRankingDto>?> GetLatestMajPlayerRankingsAsync(int limitTo = 30, ILogger? logger = null)
     {
         try
