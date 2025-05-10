@@ -1,157 +1,16 @@
-/* Trophy indicator */
-.goals-achieved-indicator {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 5;
-    animation: pulse 2s infinite;
-}
-
-/* Fireworks container */
-.fireworks-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 10;
-}
-
-/* Firework animation */
-.firework {
-    position: absolute;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    box-shadow: 0 0 10px 5px rgba(255, 255, 255, 0.8);
-    animation: firework-animation 2s infinite;
-}
-
-/* Firework particles */
-.firework-particles {
-    position: absolute;
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    box-shadow: 0 0 5px 2px rgba(255, 255, 255, 0.6);
-    animation: particles-animation 3s infinite;
-}
-
-/* Position fireworks at different locations */
-.firework:nth-child(1) {
-    top: 20%;
-    left: 20%;
-    animation-delay: 0s;
-    background: rgba(255, 0, 0, 0.8);
-}
-
-.firework:nth-child(2) {
-    top: 30%;
-    left: 60%;
-    animation-delay: 0.3s;
-    background: rgba(0, 255, 0, 0.8);
-}
-
-.firework:nth-child(3) {
-    top: 70%;
-    left: 30%;
-    animation-delay: 0.6s;
-    background: rgba(0, 0, 255, 0.8);
-}
-
-.firework:nth-child(4) {
-    top: 40%;
-    left: 80%;
-    animation-delay: 0.9s;
-    background: rgba(255, 255, 0, 0.8);
-}
-
-.firework:nth-child(5) {
-    top: 60%;
-    left: 50%;
-    animation-delay: 1.2s;
-    background: rgba(255, 0, 255, 0.8);
-}
-
-.firework:nth-child(6) {
-    top: 25%;
-    left: 40%;
-    animation-delay: 0.4s;
-    background: rgba(0, 255, 255, 0.8);
-}
-
-.firework:nth-child(7) {
-    top: 75%;
-    left: 70%;
-    animation-delay: 0.7s;
-    background: rgba(255, 165, 0, 0.8);
-}
-
-.firework:nth-child(8) {
-    top: 50%;
-    left: 25%;
-    animation-delay: 1.0s;
-    background: rgba(128, 0, 128, 0.8);
-}
-
-.firework:nth-child(9) {
-    top: 15%;
-    left: 75%;
-    animation-delay: 1.3s;
-    background: rgba(0, 128, 0, 0.8);
-}
-
-.firework:nth-child(10) {
-    top: 85%;
-    left: 15%;
-    animation-delay: 1.6s;
-    background: rgba(255, 192, 203, 0.8);
-}
-
-/* Position particles */
-.firework-particles:nth-child(11) {
-    top: 30%;
-    left: 30%;
-    animation-delay: 0.2s;
-    background: rgba(255, 255, 255, 0.8);
-}
-
-.firework-particles:nth-child(12) {
-    top: 40%;
-    left: 70%;
-    animation-delay: 0.5s;
-    background: rgba(255, 255, 255, 0.8);
-}
-
-.firework-particles:nth-child(13) {
-    top: 60%;
-    left: 40%;
-    animation-delay: 0.8s;
-    background: rgba(255, 255, 255, 0.8);
-}
-
-.firework-particles:nth-child(14) {
-    top: 70%;
-    left: 60%;
-    animation-delay: 1.1s;
-    background: rgba(255, 255, 255, 0.8);
-}
-
-.firework-particles:nth-child(15) {
-    top: 50%;
-    left: 50%;
-    animation-delay: 1.4s;
-    background: rgba(255, 255, 255, 0.8);
-}
-
 /* SE Tooltip Styles */
 .se-tooltip {
     font-family: 'Roboto', sans-serif;
-    width: 100%;
+    /* width: 100%; -- Let this be controlled by parent or min/max */
     color: white;
     /* Default text color for the tooltip */
     padding: 8px;
+    min-width: 400px;
+    /* Adjusted from inline style */
+    max-width: 480px;
+    /* From inline style */
+    box-sizing: border-box;
+    /* Include padding in width calculation */
 }
 
 .se-tooltip-section {
@@ -184,10 +43,15 @@
 .se-tooltip-row {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 6px;
-    /* Increased margin */
-    padding: 4px 6px;
-    /* Increased padding */
+    /* Distributes space between label and value */
+    align-items: flex-start;
+    /* Align items to the top if they wrap */
+    margin-bottom: 5px;
+    /* Slightly reduced margin */
+    padding: 3px 5px;
+    /* Slightly reduced padding */
+    line-height: 1.4;
+    /* Improve readability */
 }
 
 .se-tooltip-row:nth-child(odd) {
@@ -197,20 +61,25 @@
 
 .se-tooltip-label {
     text-align: left;
-    flex: 1;
-    padding-right: 15px;
-    /* Increased padding */
+    padding-right: 10px;
+    /* Space between label and value */
     color: #e0e0e0;
     /* Lighter grey for labels */
+    flex-basis: 65%;
+    /* Allocate more space to label */
+    word-wrap: break-word;
+    /* Allow long labels to wrap */
 }
 
 .se-tooltip-value {
     text-align: right;
     font-weight: bold;
-    min-width: 120px;
-    /* Ensure values have enough space */
     color: #81c784;
     /* Lighter green for values, better contrast */
+    flex-basis: 35%;
+    /* Allocate less space to value, assuming values are shorter */
+    word-wrap: break-word;
+    /* Allow long values to wrap */
 }
 
 /* Custom MudTooltip styling */
@@ -229,68 +98,4 @@
     /* More rounded corners */
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6) !important;
     /* Enhanced shadow */
-}
-
-/* Firework explosion animation */
-@keyframes firework-animation {
-    0% {
-        transform: scale(0.1);
-        opacity: 0;
-    }
-
-    50% {
-        transform: scale(1);
-        opacity: 1;
-    }
-
-    100% {
-        transform: scale(1.5);
-        opacity: 0;
-    }
-}
-
-/* Particles animation */
-@keyframes particles-animation {
-    0% {
-        transform: scale(0.1) translate(0, 0);
-        opacity: 0;
-    }
-
-    25% {
-        transform: scale(1) translate(20px, -30px);
-        opacity: 1;
-    }
-
-    50% {
-        transform: scale(0.8) translate(40px, -10px);
-        opacity: 0.8;
-    }
-
-    75% {
-        transform: scale(0.6) translate(10px, -40px);
-        opacity: 0.6;
-    }
-
-    100% {
-        transform: scale(0.4) translate(30px, -20px);
-        opacity: 0;
-    }
-}
-
-/* Pulse animation for the trophy icon */
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-        opacity: 0.8;
-    }
-
-    50% {
-        transform: scale(1.2);
-        opacity: 1;
-    }
-
-    100% {
-        transform: scale(1);
-        opacity: 0.8;
-    }
 }
